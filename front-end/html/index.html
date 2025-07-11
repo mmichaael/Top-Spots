@@ -1,93 +1,88 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Top Spots</title>
-        <link rel="stylesheet" href="/styles/main_page_styles.css" />
-    </head>
-    <body>
-        <div class="wrapper">
-            <!-- - - - - - ---- - --- - - - -    Хедер    - - - - - - -- - - -->
-            <div class="main__page">
-                <div class="main__header">
-                    <div class="header__topspot">
-                        <div class="logo_video_header">
-                            <video
-                                class="logo_video"
-                                height="100px"
-                                autoplay
-                                muted
-                                playsinline
-                                noloop
-                            >
-                                <source
-                                    src="./img/output_video1.webm"
-                                    type="video/webm"
-                                />
-                                Logo don't opened
-                            </video>
-                            <!-- <img src="./img/TopSpots2-ezgif.com-animated-gif-maker (1).gif" alt="GIF" class="logo_img"> -->
-                        </div>
-                    </div>
-                    <ul class="header_list">
-                        <li class="header-ul_element"><a href="">Home</a></li>
-                        <li class="header-ul_element"><a href="">GeoMap</a></li>
-                        <li class="header-ul_element">
-                            <a href="">Contact</a>
-                        </li>
-
-                        <button
-                            class="button_header"
-                            id="SignUp"
-                            onclick="window.location.href='/checkUser'"
-                        >
-                            <span>Sign Up</span>
-                        </button>
-                    </ul>
-                </div>
-
-                <div class="main__page-text">
-                    <h1>The whole world awaits.</h1>
-                </div>
-
-                <!--     ----- -- - - - -  - Пошукова система         --- --- - --- --    -->
-                <div class="search-bar">
-                    <div class="search-section">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                            <path
-                                d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40
-                C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"
-                            />
-                        </svg>
-                        <input type="text" id="searchInput" placeholder="Search City, District, Street" />
-                    </div>
-                    <ul id="suggestionsList"></ul>
-                    <button class="search-button">Search</button>
-                </div>
-                
-
-                <!--    ------------------      Video       --------------------------->
-                <video
-                    class="video_background"
-                    autoplay
-                    muted
-                    loop
-                    height="100%"
-                    width="100%"
-                >
-                    <source
-                        src="img/4895-181257833_medium.mp4"
-                        type="video/mp4"
-                    />
-                </video>
-            </div>
-            <!--end main page-->
-            <a href="/auth/google">
-                <button>Увійти через Google</button>
-            </a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Top Spots</title>
+    <link rel="stylesheet" href="/styles/main_page_styles.css" />
+  </head>
+  <body>
+    <div class="wrapper">
+      <!-- ---------------- Хедер ---------------- -->
+      <div class="main__header">
+        <div class="header__topspot">
+          <div class="logo_video_header">
+            <video
+              class="logo_video"
+              height="100px"
+              autoplay
+              muted
+              playsinline
+              loop
+            >
+              <source src="./img/output_video1.webm" type="video/webm" />
+              Logo don't opened
+            </video>
+          </div>
         </div>
 
-        <script type="module" src="/js/front_index.js"></script>
-    </body>
+        <ul class="header_list">
+          <li class="header-ul_element"><a href="">Home</a></li>
+          <li class="header-ul_element"><a href="">GeoMap</a></li>
+          <li class="header-ul_element"><a href="">Contact</a></li>
+
+          <button
+            class="button_header"
+            id="SignUp"
+            onclick="window.location.href='/checkUser'"
+          >
+            <span>Sign Up</span>
+          </button>
+        </ul>
+      </div>
+
+      <!-- ---------------- Основний контент ---------------- -->
+      <div class="main__page">
+        <div class="main__page-text">
+          <h1>The whole world awaits.</h1>
+        </div>
+
+        <!-- Пошукова панель -->
+        <div class="search-bar">
+          <div class="search-section">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+              <path
+                d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40
+                C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"
+              />
+            </svg>
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search City, District, Street"
+            />
+          </div>
+          <ul id="suggestionsList"></ul>
+          <button class="search-button">Search</button>
+        </div>
+
+ 
+
+<div class="main_categories">
+  <div class="city-card" id="city1"></div>
+  <div class="city-card" id="city2"></div>
+  <div class="city-card" id="city3"></div>
+</div>
+
+      </div>
+
+      <!-- Фонове відео -->
+      <video class="video-background" autoplay muted loop>
+        <source src="img/4895-181257833_medium.mp4" type="video/mp4" />
+      </video>
+
+   
+
+    <script type="module" src="../js/front_index.js"></script>
+  </body>
 </html>
