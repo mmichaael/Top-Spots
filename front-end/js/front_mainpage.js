@@ -112,3 +112,17 @@ logOutBtn.addEventListener('click', async (event) => {
 //     suggestionsList.style.display = "none"; // Сховати список після вибору
 //     suggestionsList.classList.remove("show"); // Прибираємо клас анімації
 // }
+const suggestion = document.getElementById('suggestionsList');
+const inputField = document.getElementById('searchInput');
+let timer;
+inputField.addEventListener('input', () => {
+    clearTimeout(timer);
+    
+    const inputValue = inputField.value;
+    if(!inputValue.trim()) return suggestion.innerHTML = ``;
+
+    timer = setTimeout(()=>{
+    const searchingSug = mainPageFunctions.searchingSugges(inputValue)
+        clearTimeout(timer);
+    }, 400);
+})

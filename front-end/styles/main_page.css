@@ -64,21 +64,17 @@ color:black;
     top: 0;
     width: 100%;
     padding: 10px 20px;
-    background: rgba(255, 255, 255, 0.121); 
+    background: rgba(18, 18, 18, 0.724); 
     color: white;
     z-index: 2;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.304);
     backdrop-filter: blur(10px); 
 }
 .logo_video{
-  margin-top: -20px;
-  max-height: 150px;
-}
-.logo_video_header{
-  max-height: 100px;
+    max-height: 100px;
 }
 .header__topspot {
     font-weight: 800;
@@ -166,7 +162,7 @@ svg{
 
 .search-bar {
   width: 100%;
-z-index: 1;
+z-index: 3;
 margin-top: 400px;
 margin-left: 50px;
 position: absolute;
@@ -186,6 +182,7 @@ position: absolute;
     align-items: center;
     flex: 1;
     padding: 5px 20px;
+    position: relative;
 
   }
 
@@ -250,62 +247,83 @@ position: absolute;
     box-shadow: 0px 0px 5px rgba(0, 0, 0, 1) ;
     color: rgba(0, 0, 0, 1);
   }
-/* Стилі для випадаючого списку */
-#suggestionsList {
+.suggestionsList{
   position: absolute;
-  top: calc(100% + 5px); /* Випадає під полем */
+  left: 1.5%;
+  top: 42px;
+  height: auto;
+  width: 70%;
+  background-color: #464646;
+  opacity: 1;
+  z-index: 16;
+}
+.suggestionsList li{
+  color: black;
+  background-color: #9b9b9b;
+  font-size: 19px;
+  padding: 3px 0px 10px 3px;
+  border-bottom-width: 1px;
+  border-bottom-color: #f3f3f3;
+  border-bottom-style: solid;
+  cursor: pointer;
+}
+/* Стилі для випадаючого списку */
+/* #suggestionsList {
+  position: absolute;
+  top: calc(100% + 5px); 
   left: 0;
   width: calc(100% - 1px);
   background: rgba(255, 255, 255, 0.9);
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Тінь для глибини */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
   max-height: 250px;
   overflow-y: auto;
   list-style-type: none;
   padding: 5px 0;
   margin: 0;
   z-index: 1000;
-  backdrop-filter: blur(15px); /* Розмиття */
-  display: none; /* Спочатку схований */
-  transition: all 0.3s ease-in-out; /* Плавний ефект */
-  opacity: 0; /* Початково список невидимий */
-}
+  backdrop-filter: blur(15px); 
+  display: none; 
+  transition: all 0.3s ease-in-out; 
+  opacity: 0; 
+} */
 
 /* Стиль для кожного елемента списку */
-#suggestionsList li {
+/* #suggestionsList li {
   padding: 12px 20px;
   cursor: pointer;
   font-size: 16px;
-  color: #333; /* Темніший текст для контрасту */
+  color: #333; 
   transition: all 0.3s ease;
   border-radius: 8px;
-}
+}  */
+
 
 /* При наведенні */
-#suggestionsList li:hover {
-  background-color: rgba(100, 100, 100, 0.1); /* Легкий фон при наведенні */
-  transform: translateX(5px); /* Легке зміщення вбік */
-  color: #007BFF; /* Зміна кольору тексту */
-}
+/* #suggestionsList li:hover {
+  background-color: rgba(100, 100, 100, 0.1); 
+  transform: translateX(5px); 
+  color: #007BFF; 
+} */
 
 /* При натисканні */
-#suggestionsList li:active {
-  background-color: rgba(0, 123, 255, 0.2); /* Легке виділення */
-  color: #0056b3; /* Темніший колір */
-}
+/* #suggestionsList li:active {
+  background-color: rgba(0, 123, 255, 0.2); 
+  color: #0056b3; 
+} */
 
 /* Анімація для появи списку */
-#suggestionsList.show {
+/* #suggestionsList.show {
   opacity: 1;
-}
+} */
 
 /* Стиль для повідомлення "Нічого не знайдено" */
-#suggestionsList li.no-results {
+/* #suggestionsList li.no-results {
   font-style: italic;
   color: #777;
   text-align: center;
   padding: 15px;
-}
+} */
 
   .main_categories {
     z-index: 1;
@@ -324,3 +342,158 @@ margin-left: 50px;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.navbar {
+  position: relative;
+  padding: 10px;
+  color: white;
+  text-align: right;
+}
+
+.menu-icon {
+  font-size: 30px;
+  cursor: pointer;
+  user-select: none;
+  padding: 10px;
+  color: white;
+  transition: transform 0.3s ease;
+}
+
+.menu-icon:hover {
+  transform: rotate(90deg);
+}
+
+.menu {
+  overflow: hidden;
+  position: fixed;
+  top: 1px; 
+  right: -250px;
+  height: 100vh;
+  backdrop-filter: blur(10px); 
+  background: rgba(0, 0, 0, 0.9);
+  box-shadow: 1px 1px 3px rgba(255, 255, 255, 0.87);
+  width: 250px;
+  transition: right 0.7s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px 10px;
+}
+
+.menu.active {
+  right: 0;
+}
+
+.close-container {
+  position: absolute;
+  top: -8px;
+  right: -9px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #f13434c2;
+  border-radius: 45%;
+  transition: background 0.3s ease;
+  transition: padding-right 0.3s ease;
+  transition: padding-top 0.3s ease;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.close-container:hover {
+  background: #e41b1b;
+  width: 52px;
+  height: 52px;
+  border-radius: 25%;
+  padding-right: 3px;
+  padding-top: 3px;
+
+}
+
+.close-icon {
+  position: relative;
+  width: 30px;
+  height: 30px;
+}
+
+.close-icon::before, .close-icon::after {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 4px;
+  background: #fff;
+  border-radius: 2px;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+}
+
+.close-icon::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.close-icon::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.menu li {
+  text-align: left;
+}
+
+.menu a {
+  display: block;
+  padding: 12px 20px;
+  color: rgb(255, 255, 255);
+  text-decoration: none;
+  transition: background 0.3s, padding-left 0.3s ease;
+  border-radius: 5px;
+}
+
+.menu a:hover {
+  background: #a4a4a4;
+  padding-left: 30px;
+}
+
+.logout_btn {
+  width: 100%;
+  padding: 10px;
+  background: #db5050;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.4s ease, transform 0.3s ease;
+  border-radius: 10px;
+}
+
+.logout_btn:hover {
+  background: #d31e1e;
+  transform: scale(1.05);
+}

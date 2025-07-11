@@ -305,27 +305,79 @@
  }
 
 //----------------Class with functions for front_mainpage.js --> mainpage.html------------------------------------------------------
-class mainPageFunctionsHandler{
-
+class mainPageFunctionsHandler {
     //------------------------ Sending Cookie for Log Out ----------------------------------
-    logOut = async () =>{
-        try{
+    logOut = async () => {
+        try {
             const sendingTokens = await fetch('http://localhost:3500/logOut', {
                 method: 'POST',
-                credentials: 'include' // Sending Cookie
+                credentials: 'include', // Sending Cookie
             });
             if (!sendingTokens.ok) {
-                throw new Error(`Server error: ${sendingTokens.status} ${sendingTokens.statusText}`);
+                throw new Error(
+                    `Server error: ${sendingTokens.status} ${sendingTokens.statusText}`,
+                );
             }
             const response = await sendingTokens.json();
-            if(sendingTokens.status === 200){
-                console.log(`Auth Page successfully opened, Redirected Url:${response.redirectUrl}`);
+            if (sendingTokens.status === 200) {
+                console.log(
+                    `Auth Page successfully opened, Redirected Url:${response.redirectUrl}`,
+                );
                 window.location.href = response.redirectUrl;
-            }else{
+            } else {
                 console.log(`Probllem with Log Out btn`);
             }
-        }catch(err){
+        } catch (err) {
             return console.log(`Log Out is faied: ${err.message}`);
+        }
+    };
+
+    //------------------------ Search Field, Searching and Showing Suggestions ----------------------------------
+    searchingSugges = async (city) => {
+        try{
+            const suggestionsElement = document.getElementById('suggestionsList');
+            const sendingInf = await fetch(`/api/suggestions?query=${encodeURIComponent(city)}`);
+            if(!sendingInf.ok) {
+                 console.log(`Function searchingSugges isn't working`)
+                 suggestionsElement.innerHTML = ``;
+                 return;
+            }
+            const data = await sendingInf.json();
+            suggestionsElement.innerHTML = ``;
+
+            data.forEach(obj => {
+                const placeId = obj.place_id;
+                const listElement = document.createElement('li');
+                listElement.textContent = obj.description;
+                suggestionsElement.appendChild(listElement);
+             
+                listElement.addEventListener('click', async () => {
+                    try{
+                        const suggesMoreInf = await fetch(`/api/suggestions/placeInf?query=${placeId}`);
+                        if(!suggesMoreInf.ok) {
+                            console.log(`Geting more info about place is failed`)
+                            suggestionsElement.innerHTML = ``;
+                            return
+                        }
+                        const placeInf = await suggesMoreInf.json();
+                        console.log(placeInf);
+                        return;
+
+
+                    }catch(err){
+                        console.log(`Internal sevrver error`);
+                        throw new Error(`Problem with server: ${err.statusText}`);
+                    }
+                });
+
+            });
+            
+       
+            return
+
+        }catch(err){
+            console.log(`Internal sevrver error`);
+            throw new Error(`Problem with server: ${err.statusText}`);
         }
     }
 }

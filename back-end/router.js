@@ -41,6 +41,14 @@ router.post('/api/resetPassword/OpenEnterPage/checkVerificationCode', controller
 router.post('/api/resetPassword/OpenEnterPage/creatingNewPassword', controller.creatingNewPassword);
 router.post('/api/resetPassword/OpenEnterPage/deleteResetCode', controller.deletingResetCode);
 
+router.get('/api/suggestions', controller.searchingSugges);
+router.get('/api/suggestions/placeInf', controller.placeInfFromSugg);
+
+
+
+
+
+
 // router.get('/api/city', getCityInfo);
 // router.post('/api/city/review', addReview);
 

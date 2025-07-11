@@ -6,6 +6,7 @@ const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const pool = require('./database');
 const passport = require('passport');
+const { default: axios } = require('axios');
  require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
 
 class Controller {
@@ -13,8 +14,14 @@ class Controller {
     pageFullMain = path.join(__dirname, '../Front-end/html/mainpage.html');
     pageError = path.join(__dirname, '../front-end/html/error.html');
     pageAuth = path.join(__dirname, '../front-end/html/authentication.html');
-    pageEmailConfirmation = path.join(__dirname,'../front-end/html/email_confirmation.html');
-    pageResetPasswordEnterPage = path.join(__dirname,'../front-end/html/reset_password.html');
+    pageEmailConfirmation = path.join(
+        __dirname,
+        '../front-end/html/email_confirmation.html',
+    );
+    pageResetPasswordEnterPage = path.join(
+        __dirname,
+        '../front-end/html/reset_password.html',
+    );
 
     //Open Main page
     openBaseMainPage = (req, res) => {
@@ -336,7 +343,7 @@ class Controller {
                     .status(500)
                     .json({ error: 'JWT token generation failed' });
             }
-           this.createCookies(res, refreshToken, accessToken);
+            this.createCookies(res, refreshToken, accessToken);
 
             // res.status(200).json({accessToken})
             res.redirect('/email-confirmition');
@@ -493,7 +500,7 @@ class Controller {
                     .json({ error: 'JWT token generation failed' });
             }
 
-           this.createCookies(res, refreshToken, accessToken);
+            this.createCookies(res, refreshToken, accessToken);
 
             console.log(`User with this email ${email} successfully logged in`);
             res.status(200).json({ redirectUrl: '/new-main' });
@@ -517,8 +524,8 @@ class Controller {
             // maxAge: 2 * 60 * 1000,
         });
     };
-     //Create Cookies
-     createCookies = (res, refreshToken, accessToken) => {
+    //Create Cookies
+    createCookies = (res, refreshToken, accessToken) => {
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true, // Defend from XSS
             secure: false, // Only  HTTPS
@@ -925,151 +932,245 @@ class Controller {
 
     //Authentification with Google, Send user to Google
     openGoogleAuth = () => {
-       return passport.authenticate('google', { scope : ['profile', 'email']})
-    }
+        return passport.authenticate('google', { scope: ['profile', 'email'] });
+    };
 
     //Authentification with Google, Get user from Google
     getGoogleDataAuth = (req, res, next) => {
-        passport.authenticate('google', { session: false, failureRedirect: '/checkUser' }, async (err, user, info) =>{
-            if(err | !user) return res.redirect('/checkUser');
-            const { id:googleId, displayName:name, emails } = user;
-            const email = emails?.[0]?.value;
-            const provider = 'google';
-            const rememberMe = true;
-            const isVerified = true;
+        passport.authenticate(
+            'google',
+            { session: false, failureRedirect: '/checkUser' },
+            async (err, user, info) => {
+                if (err | !user) return res.redirect('/checkUser');
+                const { id: googleId, displayName: name, emails } = user;
+                const email = emails?.[0]?.value;
+                const provider = 'google';
+                const rememberMe = true;
+                const isVerified = true;
 
-            const searchForGoogleId = await pool.query (`SELECT * FROM "Users" WHERE google_id = $1`, [googleId]);
-            if(searchForGoogleId.rowCount > 0){
-                const { refreshToken, accessToken } = await this.creatingJwtAccRefTokens(name, email, rememberMe)
-                if (!refreshToken || !accessToken) {
-                    console.log(`Error: JWT tokens were not created properly in searchForGoogleId function`);
-                    return res.redirect('/checkUser')
-                }
-                this.createCookies(res, refreshToken, accessToken);
-                console.log(`User logged in via Google`);
-                return res.redirect('/new-main');
-            };
-
-            const searchForEmail = await pool.query (`SELECT * FROM "Users" WHERE email = $1`, [email]);
-            if(searchForEmail.rowCount > 0){
-                const changeUserDataInDb = await pool.query(`UPDATE "Users" SET google_id = $1 WHERE email = $2 RETURNING user_id`, [googleId, email]);
-                if(changeUserDataInDb.rowCount == 0){
-                    console.log(`Changing users data in searching user via email was failed`)
-                    return res.redirect('/checkUser')
-                }
-                const { refreshToken, accessToken } = await this.creatingJwtAccRefTokens(name, email, rememberMe)
-                if (!refreshToken || !accessToken) {
-                    console.log(`Error: JWT tokens were not created properly in searchForEmail function`);
-                    return res.redirect('/checkUser')
-                }
-                this.createCookies(res, refreshToken, accessToken);
-                console.log(`User account merged: Google ID linked to existing email ${email} was successfully`);
-                return res.redirect('/new-main');
-            }else{
-                const createNewUserGoogle = await pool.query(
-                    `INSERT INTO "Users" (username, email, is_verified, remember_me, google_id, provider) VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id`,
-                    [name, email, isVerified, rememberMe, googleId, provider]
+                const searchForGoogleId = await pool.query(
+                    `SELECT * FROM "Users" WHERE google_id = $1`,
+                    [googleId],
                 );
-                if(createNewUserGoogle.rowCount == 0){
-                    console.log(`Creating new user in createNewUserGoogle was failed`);
-                    return res.redirect('/checkUser')
+                if (searchForGoogleId.rowCount > 0) {
+                    const { refreshToken, accessToken } =
+                        await this.creatingJwtAccRefTokens(
+                            name,
+                            email,
+                            rememberMe,
+                        );
+                    if (!refreshToken || !accessToken) {
+                        console.log(
+                            `Error: JWT tokens were not created properly in searchForGoogleId function`,
+                        );
+                        return res.redirect('/checkUser');
+                    }
+                    this.createCookies(res, refreshToken, accessToken);
+                    console.log(`User logged in via Google`);
+                    return res.redirect('/new-main');
                 }
-                const { refreshToken, accessToken } = await this.creatingJwtAccRefTokens(name, email, rememberMe)
-                if (!refreshToken || !accessToken) {
-                    console.log(`Error: JWT tokens were not created properly in createNewUserGoogle function`);
-                    return res.redirect('/checkUser')
+
+                const searchForEmail = await pool.query(
+                    `SELECT * FROM "Users" WHERE email = $1`,
+                    [email],
+                );
+                if (searchForEmail.rowCount > 0) {
+                    const changeUserDataInDb = await pool.query(
+                        `UPDATE "Users" SET google_id = $1 WHERE email = $2 RETURNING user_id`,
+                        [googleId, email],
+                    );
+                    if (changeUserDataInDb.rowCount == 0) {
+                        console.log(
+                            `Changing users data in searching user via email was failed`,
+                        );
+                        return res.redirect('/checkUser');
+                    }
+                    const { refreshToken, accessToken } =
+                        await this.creatingJwtAccRefTokens(
+                            name,
+                            email,
+                            rememberMe,
+                        );
+                    if (!refreshToken || !accessToken) {
+                        console.log(
+                            `Error: JWT tokens were not created properly in searchForEmail function`,
+                        );
+                        return res.redirect('/checkUser');
+                    }
+                    this.createCookies(res, refreshToken, accessToken);
+                    console.log(
+                        `User account merged: Google ID linked to existing email ${email} was successfully`,
+                    );
+                    return res.redirect('/new-main');
+                } else {
+                    const createNewUserGoogle = await pool.query(
+                        `INSERT INTO "Users" (username, email, is_verified, remember_me, google_id, provider) VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id`,
+                        [
+                            name,
+                            email,
+                            isVerified,
+                            rememberMe,
+                            googleId,
+                            provider,
+                        ],
+                    );
+                    if (createNewUserGoogle.rowCount == 0) {
+                        console.log(
+                            `Creating new user in createNewUserGoogle was failed`,
+                        );
+                        return res.redirect('/checkUser');
+                    }
+                    const { refreshToken, accessToken } =
+                        await this.creatingJwtAccRefTokens(
+                            name,
+                            email,
+                            rememberMe,
+                        );
+                    if (!refreshToken || !accessToken) {
+                        console.log(
+                            `Error: JWT tokens were not created properly in createNewUserGoogle function`,
+                        );
+                        return res.redirect('/checkUser');
+                    }
+                    this.createCookies(res, refreshToken, accessToken);
+                    console.log(
+                        `Creating new user via Google was successfully`,
+                    );
+                    res.redirect('/new-main');
                 }
-                this.createCookies(res, refreshToken, accessToken);
-                console.log(`Creating new user via Google was successfully`);
-                res.redirect('/new-main');
-            };
-        })(req, res, next);
+            },
+        )(req, res, next);
     };
-    
- 
-//  async function getCityInfo(req, res) {
-//   try {
-//     const city = req.query.city;
-//     if (!city) return res.status(400).json({ error: 'City is required' });
-    
+
+    // Searching Suggestions for SearchBar
+    searchingSugges = async (req, res) => {
+        const query = req.query.query;
+        if (!query) {
+            console.log(`searchingSugges function havn't recive any info`);
+            return res.status(400).json();
+        }
+
+        const searchingInApi = await axios.get(
+            'https://maps.googleapis.com/maps/api/place/autocomplete/json',
+            {
+                params: {
+                    input: query,
+                    key: process.env.GOOGLE_API_KEY,
+                    types: 'establishment',
+                    language: 'uk',
+                    components: 'country:ua',
+                },
+            },
+        );
+        const suggestions = searchingInApi.data.predictions.map((place) => ({
+            description: place.description,
+            place_id: place.place_id,
+        }));
+        res.json(suggestions);
+    };
+
+
+    //Searching Information about Place from Suggestions
+    placeInfFromSugg = async (req, res) => {
+    const query = req.query.query
+    if(!query) {
+        console.log(`Place Inf From Suggestions Function havn't recive any data`);
+        return res.status(400).json()
+    }
+    const gettingData = await axios.get(
+        'https://maps.googleapis.com/maps/api/place/details/json',
+        {
+            params: {
+                place_id: query,
+                key: process.env.GOOGLE_API_KEY,
+                fields: 'name',
+            },
+        },
+    );
+    console.log(`Data:${gettingData.data}`);
+    return res.status(200).json(gettingData.data);
+
+};
 
 
 
-//     // Основна інформація про місто
-//     const cityQuery = `
-//       SELECT name, description, rating, population
-//       FROM cities
-//       WHERE LOWER(name) = LOWER($1)
-//       LIMIT 1
-//     `;
-//     const cityResult = await pool.query(cityQuery, [city]);
-//     if (cityResult.rows.length === 0) {
-//       return res.status(404).json({ error: 'City not found' });
-//     }
-//     const cityInfo = cityResult.rows[0];
+    //  async function getCityInfo(req, res) {
+    //   try {
+    //     const city = req.query.city;
+    //     if (!city) return res.status(400).json({ error: 'City is required' });
 
-//     // Круті місця поряд
-//     const placesQuery = `
-//       SELECT id, name, category, address, lat, lon
-//       FROM places
-//       WHERE city_id = (SELECT id FROM cities WHERE LOWER(name) = LOWER($1))
-//         AND category IN ('кафе', 'готель', 'торговий центр', 'історичне місце')
-//       LIMIT 5
-//     `;
-//     const placesResult = await pool.query(placesQuery, [city]);
+    //     // Основна інформація про місто
+    //     const cityQuery = `
+    //       SELECT name, description, rating, population
+    //       FROM cities
+    //       WHERE LOWER(name) = LOWER($1)
+    //       LIMIT 1
+    //     `;
+    //     const cityResult = await pool.query(cityQuery, [city]);
+    //     if (cityResult.rows.length === 0) {
+    //       return res.status(404).json({ error: 'City not found' });
+    //     }
+    //     const cityInfo = cityResult.rows[0];
 
-//     // Відгуки про місто 
-//     let reviews = [];
-//     if (placesResult.rows.length > 0) {
-//       const reviewsQuery = `
-//         SELECT id, user_name, rating, comment, created_at
-//         FROM reviews
-//         WHERE city_id = (SELECT id FROM cities WHERE LOWER(name) = LOWER($1))
-//         ORDER BY created_at DESC
-//         LIMIT 10
-//       `;
-//       const reviewsResult = await pool.query(reviewsQuery, [city]);
-//       reviews = reviewsResult.rows;
-//     }
+    //     // Круті місця поряд
+    //     const placesQuery = `
+    //       SELECT id, name, category, address, lat, lon
+    //       FROM places
+    //       WHERE city_id = (SELECT id FROM cities WHERE LOWER(name) = LOWER($1))
+    //         AND category IN ('кафе', 'готель', 'торговий центр', 'історичне місце')
+    //       LIMIT 5
+    //     `;
+    //     const placesResult = await pool.query(placesQuery, [city]);
 
-//     res.json({
-//       city: cityInfo,
-//       places: placesResult.rows,
-//       reviews,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// }
+    //     // Відгуки про місто
+    //     let reviews = [];
+    //     if (placesResult.rows.length > 0) {
+    //       const reviewsQuery = `
+    //         SELECT id, user_name, rating, comment, created_at
+    //         FROM reviews
+    //         WHERE city_id = (SELECT id FROM cities WHERE LOWER(name) = LOWER($1))
+    //         ORDER BY created_at DESC
+    //         LIMIT 10
+    //       `;
+    //       const reviewsResult = await pool.query(reviewsQuery, [city]);
+    //       reviews = reviewsResult.rows;
+    //     }
 
-//  addReview(req, res) {
-//   try {
-//     const { city, user_name, rating, comment } = req.body;
-//     if (!city || !user_name || !rating || !comment) {
-//       return res.status(400).json({ error: 'Missing required fields' });
-//     }
+    //     res.json({
+    //       city: cityInfo,
+    //       places: placesResult.rows,
+    //       reviews,
+    //     });
+    //   } catch (error) {
+    //     console.error(error);
+    //     res.status(500).json({ error: 'Server error' });
+    //   }
+    // }
 
+    //  addReview(req, res) {
+    //   try {
+    //     const { city, user_name, rating, comment } = req.body;
+    //     if (!city || !user_name || !rating || !comment) {
+    //       return res.status(400).json({ error: 'Missing required fields' });
+    //     }
 
-//     const cityCheck = await pool.query('SELECT id FROM cities WHERE LOWER(name) = LOWER($1)', [city]);
-//     if (cityCheck.rows.length === 0) return res.status(404).json({ error: 'City not found' });
-//     const cityId = cityCheck.rows[0].id;
+    //     const cityCheck = await pool.query('SELECT id FROM cities WHERE LOWER(name) = LOWER($1)', [city]);
+    //     if (cityCheck.rows.length === 0) return res.status(404).json({ error: 'City not found' });
+    //     const cityId = cityCheck.rows[0].id;
 
-//     // Додати відгук
-//     const insertQuery = `
-//       INSERT INTO reviews(city_id, user_name, rating, comment, created_at)
-//       VALUES ($1, $2, $3, $4, NOW())
-//       RETURNING id
-//     `;
-//     const insertResult = await pool.query(insertQuery, [cityId, user_name, rating, comment]);
-//     res.json({ success: true, reviewId: insertResult.rows[0].id });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// }
-
-
+    //     // Додати відгук
+    //     const insertQuery = `
+    //       INSERT INTO reviews(city_id, user_name, rating, comment, created_at)
+    //       VALUES ($1, $2, $3, $4, NOW())
+    //       RETURNING id
+    //     `;
+    //     const insertResult = await pool.query(insertQuery, [cityId, user_name, rating, comment]);
+    //     res.json({ success: true, reviewId: insertResult.rows[0].id });
+    //   } catch (error) {
+    //     console.error(error);
+    //     res.status(500).json({ error: 'Server error' });
+    //   }
+    // }
 }
 
 module.exports = Controller;
