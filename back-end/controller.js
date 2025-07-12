@@ -11,7 +11,7 @@ const { default: axios } = require('axios');
 
 class Controller {
     pageBaseMain = path.join(__dirname, '../Front-end/html/index.html');
-    pageFullMain = path.join(__dirname, '../Front-end/html/mainpage.html');
+    pageFullMain = path.join(__dirname, '../Front-end/html/logged_index.html');
     pageError = path.join(__dirname, '../front-end/html/error.html');
     pageAuth = path.join(__dirname, '../front-end/html/authentication.html');
     pageEmailConfirmation = path.join(
