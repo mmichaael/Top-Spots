@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('./database');
 const passport = require('passport');
 const { default: axios } = require('axios');
- require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
+require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
 
 class Controller {
     pageBaseMain = path.join(__dirname, '../Front-end/html/index.html');

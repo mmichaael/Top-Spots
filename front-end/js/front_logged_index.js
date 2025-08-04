@@ -126,3 +126,24 @@ inputField.addEventListener('input', () => {
         clearTimeout(timer);
     }, 400);
 })
+
+
+const card = document.querySelector('.block_for_card');
+const blockForCards = document.getElementById('blockForCards');
+blockForCards.addEventListener('wheel', (e)=>{
+    if (e.deltaY === 0) return; // If vertical mouse movement exist
+    
+    const cardWidth = card.getBoundingClientRect().width
+    const scrolAmount = e.deltaY > 0 ? cardWidth : -cardWidth;
+
+
+
+    e.preventDefault();
+
+    blockForCards.scrollBy({
+        left: scrolAmount,
+        behavior: 'smooth',
+    });
+
+
+}, { passive: false })
