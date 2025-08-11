@@ -411,7 +411,7 @@ micBtn.innerHTML = "🎤";
 micBtn.className = "mic-button";
 micBtn.style.cssText = `
   position: absolute;
-  right: 38px;
+  right: 38.1px;
   font-size: 25px;
   color: #333;
   cursor: pointer;
