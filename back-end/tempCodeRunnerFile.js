@@ -30,7 +30,6 @@ passport.use(new GoogleStrategy(
     ),
 );
 
-
 app.use(cookieParser());
 
 // Статичні файли

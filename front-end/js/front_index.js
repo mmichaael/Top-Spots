@@ -242,36 +242,74 @@ searchButton.addEventListener("click", async () => {
         alert('Місто не знайдено.');
     }
 });
-
-
-
 const cities = [
   {
     name: "Київ",
     description: "Столиця України з багатою історією, унікальною архітектурою та культурним серцем країни.",
     rating: 4.8,
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Kyiv_cityscape.jpg/1024px-Kyiv_cityscape.jpg",
+    image: "../img/ciid.jpeg",
     mapsQuery: "Kyiv, Ukraine"
   },
   {
     name: "Львів",
     description: "Культурна столиця України, відома своєю архітектурою, кав'ярнями та старовинним центром.",
     rating: 4.7,
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Lviv_view_2020.jpg/1024px-Lviv_view_2020.jpg",
+    image: "../img/двів.jpg",
     mapsQuery: "Lviv, Ukraine"
   },
   {
     name: "Одеса",
     description: "Морська перлина на березі Чорного моря з веселим духом і неповторним колоритом.",
     rating: 4.6,
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Odessa%2C_Potemkin_Stairs.jpg/1024px-Odessa%2C_Potemkin_Stairs.jpg",
+    image: "../img/одеса.avif",
     mapsQuery: "Odesa, Ukraine"
-  }
+  },
+  {
+    name: "Харків",
+    description: "Велике студентське місто з багатою історією та сучасною атмосферою. атмосферою.",
+    rating: 4.5,
+    image: "../img/харьков.jpg",
+    mapsQuery: "Kharkiv, Ukraine"
+  },
+  {
+    name: "Дніпро",
+    description: "Промисловий центр України з красивою набережною та сучасною інфраструктурою.",
+    rating: 4.4,
+    image: "../img/днепр.jpg",
+    mapsQuery: "Dnipro, Ukraine"
+  },
+  {
+    name: "Чернівці",
+    description: "Місто з унікальною архітектурою та затишною атмосферою.",
+    rating: 4.6,
+    image: "../img/черновци.jpg",
+    mapsQuery: "Chernivtsi, Ukraine"
+  },
+  {
+    name: "Івано-Франківськ",
+    description: "Затишне місто біля Карпат, відоме своєю гостинністю.",
+    rating: 4.5,
+    image: "../img/иванофр.jpg",
+    mapsQuery: "Ivano-Frankivsk, Ukraine"
+  },
+  {
+    name: "Ужгород",
+    description: "Місто на заході України з багатою історією та традиціями.",
+    rating: 4.4,
+    image: "../img/місто ужгород житло.jpeg",
+    mapsQuery: "Uzhhorod, Ukraine"
+  },
 ];
 
 function createCityCards() {
+  const container = document.querySelector(".scroll-container");
+  const indicators = document.querySelector(".scroll-indicators");
+  container.innerHTML = "";
+  indicators.innerHTML = "";
+
   cities.forEach((city, index) => {
-    const card = document.getElementById(`city${index + 1}`);
+    const card = document.createElement("div");
+    card.classList.add("city-card");
     card.innerHTML = `
       <img src="${city.image}" alt="${city.name}" class="city-image">
       <div class="city-content">
@@ -283,8 +321,131 @@ function createCityCards() {
         </button>
       </div>
     `;
+    container.appendChild(card);
+
+    const dot = document.createElement("div");
+    dot.classList.add("dot");
+    if (index === 0) dot.classList.add("active");
+    indicators.appendChild(dot);
   });
 }
 
-document.addEventListener("DOMContentLoaded", createCityCards);
+document.addEventListener("DOMContentLoaded", () => {
+  createCityCards();
 
+  const scrollContainer = document.querySelector('.scroll-container');
+  const leftButton = document.querySelector('.scroll-button.left');
+  const rightButton = document.querySelector('.scroll-button.right');
+  const dots = document.querySelectorAll('.scroll-indicators .dot');
+  const cards = document.querySelectorAll('.city-card');
+
+  const cardWidth = 330 + 30; // ширина картки + gap
+
+  // IntersectionObserver для анімації появи
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting) {
+        entry.target.classList.add('show');
+      } else {
+        entry.target.classList.remove('show');
+      }
+    });
+  }, { threshold: 0.5 });
+
+  cards.forEach(card => observer.observe(card));
+
+  // Scroll buttons
+  leftButton.addEventListener('click', () => {
+    scrollContainer.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+  });
+
+  rightButton.addEventListener('click', () => {
+    scrollContainer.scrollBy({ left: cardWidth, behavior: 'smooth' });
+  });
+
+  // Оновлення активної точки
+  scrollContainer.addEventListener('scroll', () => {
+    const scrollLeft = scrollContainer.scrollLeft;
+    const activeIndex = Math.round(scrollLeft / cardWidth);
+
+    dots.forEach(dot => dot.classList.remove('active'));
+    if (dots[activeIndex]) dots[activeIndex].classList.add('active');
+  });
+});
+
+const input = document.getElementById("searchInput");
+
+
+
+
+// Кнопка "очистити" з’являється при введенні
+const clearBtn = document.createElement("span");
+clearBtn.innerHTML = "✖";
+clearBtn.className = "clear-button";
+clearBtn.style.cssText = `
+  position: absolute;
+  right: 55px;
+  font-size: 20px;
+  color: #333;
+  cursor: pointer;
+  display: none;
+  z-index: 10;
+`;
+
+document.querySelector(".search-section").appendChild(clearBtn);
+
+input.addEventListener("input", () => {
+  clearBtn.style.display = input.value ? "block" : "none";
+});
+
+clearBtn.addEventListener("click", () => {
+  input.value = "";
+  suggestionsList.innerHTML = "";
+  clearBtn.style.display = "none";
+  input.focus();
+});
+
+//  Голосовий пошук
+const micBtn = document.createElement("span");
+micBtn.innerHTML = "🎤";
+micBtn.className = "mic-button";
+micBtn.style.cssText = `
+  position: absolute;
+  right: 38px;
+  font-size: 25px;
+  color: #333;
+  cursor: pointer;
+  z-index: 10;
+`;
+
+document.querySelector(".search-section").appendChild(micBtn);
+
+micBtn.addEventListener("click", () => {
+  if (!("webkitSpeechRecognition" in window)) {
+    alert("Ваш браузер не підтримує голосовий пошук.");
+    return;
+  }
+
+  const recognition = new webkitSpeechRecognition();
+recognition.lang = "uk-UA"; 
+
+
+
+
+
+
+
+
+
+  recognition.start();
+
+  recognition.onresult = function (event) {
+    const result = event.results[0][0].transcript;
+    input.value = result;
+    input.dispatchEvent(new Event("input")); 
+  };
+
+  recognition.onerror = function () {
+    alert("Сталася помилка під час розпізнавання голосу.");
+  };
+});

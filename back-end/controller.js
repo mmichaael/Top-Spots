@@ -19,6 +19,7 @@ class Controller {
         '../front-end/html/email_confirmation.html',
     );
     pageResetPasswordEnterPage = path.join(
+
         __dirname,
         '../front-end/html/reset_password.html',
     );
@@ -39,7 +40,7 @@ class Controller {
             res.status(500).json();
         }
     };
-    //Open New Main page
+
     openFullMainPage = (req, res) => {
         try {
             res.sendFile(this.pageFullMain, (err) => {
@@ -695,6 +696,7 @@ class Controller {
                 error: err.message,
             });
         }
+        
     };
     //Reset Passwordd Email HTML Content
     resentPasswordEmailContent = (username, reset_code) => {
