@@ -9,9 +9,10 @@ require("dotenv").config({ path: path.resolve(__dirname, './privateInf.env') });
 const app = express();
 const PORT = process.env.PORT || 3500;
 
-// CORS
+// CORS — працює локально і на продакшн
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3500";
 app.use(cors({
-    origin: process.env.CLIENT_URL || '*',
+    origin: CLIENT_URL,
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type,Authorization'
@@ -20,24 +21,27 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// Passport Google OAuth
-app.use(passport.initialize());
+// Google OAuth Callback
+const GOOGLE_CALLBACK_URL = process.env.CLIENT_URL
+    ? `${process.env.CLIENT_URL}/auth/google/callback`
+    : process.env.GOOGLE_CALLBACK_URL;
+
 passport.use(new GoogleStrategy(
     {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL
+        callbackURL: GOOGLE_CALLBACK_URL
     },
     function (accessToken, refreshToken, profile, done) {
         return done(null, profile);
     }
 ));
 
-// Роутер API
+app.use(passport.initialize());
+
 const router = require('./router.js');
 app.use('/api', router);
 
-// Статичні файли фронтенду (після збірки)
 app.use(express.static(path.join(__dirname, '../front-end/build')));
 
 // Всі інші маршрути віддають index.html (для SPA)
