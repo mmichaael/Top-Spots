@@ -376,7 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
 const input = document.getElementById("searchInput");
 
 
-
+ 
 
 // Кнопка "очистити" з’являється при введенні
 const clearBtn = document.createElement("span");
