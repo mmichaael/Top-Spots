@@ -1,10 +1,11 @@
 {
   "name": "top-spots",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "back-end/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon ./back-end/server.js"
+    "start": "node back-end/server.js",
+    "dev": "nodemon back-end/server.js",
+    "build": "cd front-end && npm install && npm run build"
   },
   "author": "",
   "license": "ISC",
