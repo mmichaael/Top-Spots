@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "back-end/server.js",
   "scripts": {
-    "start": "node back-end/server.js",
+    "start":   "node back-end/server.js",
     "dev": "nodemon back-end/server.js"
   },
   "dependencies": {
