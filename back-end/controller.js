@@ -1,13 +1,13 @@
 const express = require('express');
 const path = require('path');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const pool = require('./database');
 const passport = require('passport');
 const { default: axios } = require('axios');
-require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
+ require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
 
 class Controller {
     pageBaseMain = path.join(__dirname, '../Front-end/html/index.html');
@@ -696,7 +696,7 @@ class Controller {
                 error: err.message,
             });
         }
-        
+  
     };
     //Reset Passwordd Email HTML Content
     resentPasswordEmailContent = (username, reset_code) => {
@@ -725,7 +725,7 @@ class Controller {
       background-color: #F4F4F4;
       padding: 12px 20px;
       text-align: center;
-      border-radius: 8px;
+     border-radius: 8px;
       margin: 20px 0;
       color: #003366;
       letter-spacing: 3px;">${reset_code}</div>
