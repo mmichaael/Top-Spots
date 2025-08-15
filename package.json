@@ -4,12 +4,8 @@
   "main": "back-end/server.js",
   "scripts": {
     "start": "node back-end/server.js",
-    "dev": "nodemon back-end/server.js",
-    "build": "cd front-end && npm install && npm run build"
+    "dev": "nodemon back-end/server.js"
   },
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
     "axios": "^1.9.0",
