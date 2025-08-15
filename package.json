@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "main": "back-end/server.js",
   "scripts": {
-    "start":   "node back-end/server.js",
+    "start": "node back-end/server.js",
     "dev": "nodemon back-end/server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
     "axios": "^1.9.0",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
