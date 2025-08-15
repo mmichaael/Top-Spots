@@ -9,7 +9,7 @@ const cookieParser = require('cookie-parser');
 require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
 
 app.use(cors({
-    origin: 'http://localhost:3500',
+ origin: process.env.CLIENT_URL || '*',
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type,Authorization'
@@ -30,7 +30,6 @@ passport.use(new GoogleStrategy(
     ),
 );
 
-
 app.use(cookieParser());
 
 // Статичні файли
@@ -39,9 +38,8 @@ app.use(express.static(path.join(__dirname, '../Front-end'), { cacheControl: fal
 // Роутер
 app.use('/', router);   
 
-const PORT = process.env.PORT;
-const HOST = process.env.HOST;
 
+const PORT = process.env.PORT || 3500;
 app.listen(PORT, () => {
-  console.log(`Server running at http://${HOST}:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
