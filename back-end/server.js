@@ -34,23 +34,20 @@ passport.use(
   )
 );
 
-// API роутер
-app.use("/api", router); // всi твої API запити повинні починатися з /api
+// API роутер (⚡ тут більше НЕ додаємо "/api")
+app.use("/", router);
 
 // Статика фронтенду
 const frontEndPath = path.join(__dirname, "../front-end");
 app.use(express.static(frontEndPath));
 
-// SPA fallback — віддаємо index.html тільки для маршрутів без крапки
+// SPA fallback — віддаємо index.html для всіх не-API запитів
 app.get("*", (req, res) => {
-  if (req.path.includes(".")) {
-    // Якщо це файл (.js, .css, .png...) — повертаємо 404
-    return res.status(404).send("File not found");
+  if (req.path.startsWith("/api")) {
+    return res.status(404).send("API route not found");
   }
   res.sendFile(path.join(frontEndPath, "index.html"));
 });
-
-
 
 // Порт
 const PORT = process.env.PORT || 3500;
