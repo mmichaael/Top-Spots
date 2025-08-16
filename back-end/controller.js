@@ -10,18 +10,18 @@ const { default: axios } = require('axios');
  require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
 
 class Controller {
-    pageBaseMain = path.join(__dirname, '../Front-end/html/index.html');
-    pageFullMain = path.join(__dirname, '../Front-end/html/logged_index.html');
-    pageError = path.join(__dirname, '../Front-end/html/error.html');
-    pageAuth = path.join(__dirname, '../Front-end/html/authentication.html');
+    pageBaseMain = path.join(__dirname, '../front-end/html/index.html');
+    pageFullMain = path.join(__dirname, '../front-end/html/logged_index.html');
+    pageError = path.join(__dirname, '../front-end/html/error.html');
+    pageAuth = path.join(__dirname, '../front-end/html/authentication.html');
     pageEmailConfirmation = path.join(
         __dirname,
-        '../Front-end/html/email_confirmation.html',
+        '../front-end/html/email_confirmation.html',
     );
     pageResetPasswordEnterPage = path.join(
 
         __dirname,
-        '../Front-end/html/reset_password.html',
+        '../front-end/html/reset_password.html',
     );
 
     //Open Main page

@@ -38,7 +38,7 @@ passport.use(
 app.use("/api", router); // всi твої API запити повинні починатися з /api
 
 // Статика фронтенду
-const frontEndPath = path.join(__dirname, "../front-end");
+const frontEndPath = path.join(__dirname, "../Front-end");
 app.use(express.static(frontEndPath));
 
 // SPA fallback — віддаємо index.html тільки для маршрутів без крапки
@@ -49,6 +49,13 @@ app.get("*", (req, res) => {
   }
   res.sendFile(path.join(frontEndPath, "index.html"));
 });
+
+
+
+
+
+
+
 
 
 
