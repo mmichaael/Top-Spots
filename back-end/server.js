@@ -7,7 +7,7 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 require("dotenv").config({ path: path.resolve(__dirname, "./privateInf.env") });
 
 const app = express();
-
+  
 // --- CORS ---
 app.use(cors({
   origin: "http://localhost:3500",
