@@ -4,10 +4,9 @@ const passport = require('passport');
 const Controller = require('./controller.js');
 const controller = new Controller();
 
-
 // Main Page
 router.get('/', controller.openBaseMainPage);
-
+ 
 // Authentification Page
 router.get('/checkUser', controller.openAuthPage);
 

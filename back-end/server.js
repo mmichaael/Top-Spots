@@ -37,7 +37,7 @@ app.use(express.static(path.join(__dirname, "../front-end")));
 
 // --- API роутер ---
 app.use("/api", router); 
-
+app.use("/", router);
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../front-end/html/index.html"));
