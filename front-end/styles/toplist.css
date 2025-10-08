@@ -1,0 +1,52 @@
+:root{
+  --bg: #0f1724;
+  --card: rgba(255,255,255,0.06);
+  --accent: #ff9f1c;
+  --glass: rgba(255,255,255,0.04);
+  --text: #e6eef6;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family: 'Montserrat', sans-serif;background: linear-gradient(180deg,#071028 0%, #0e1630 100%);color:var(--text);-webkit-font-smoothing:antialiased}
+.toplist-header{
+  height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter:blur(6px);position:sticky;top:0;z-index:30;
+}
+.back-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 14px;border-radius:10px;color:var(--text);cursor:pointer}
+.header-actions button{background:var(--glass);border:none;padding:8px 12px;border-radius:10px;cursor:pointer}
+.toplist-main{padding:28px;max-width:1100px;margin:0 auto}
+.toplist-meta{margin-bottom:18px}
+.places-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap:18px;
+}
+.place-card{
+  background:var(--card);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:220px;box-shadow:0 8px 30px rgba(2,6,23,0.6);transform:translateY(12px);opacity:0;
+  transition:transform 420ms cubic-bezier(.2,.9,.2,1), opacity 420ms;
+}
+.place-card.show{transform:none;opacity:1}
+.place-photo{width:100%;height:150px;object-fit:cover;background:#111}
+.place-info{padding:14px;display:flex;flex-direction:column;gap:10px}
+.place-name{font-size:18px;margin:0}
+.place-addr{font-size:13px;color:rgba(255,255,255,0.7);margin:0}
+.place-meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
+.place-rating{background:linear-gradient(90deg,var(--accent),#ffd37a);padding:6px 10px;border-radius:10px;font-weight:700;color:#111}
+.details-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:10px;color:var(--text);cursor:pointer}
+.places-empty{padding:40px;text-align:center;color:rgba(255,255,255,0.6)}
+.places-empty.hidden{display:none}
+
+/* Responsive */
+@media (max-width:640px){
+  .toplist-main{padding:16px}
+  .place-photo{height:140px}
+}
+
+/* Idea cards (from main page preview) */
+.ideas-section{padding:30px 28px}
+.ideas-title{color:var(--text);margin:0 0 14px 6px;font-size:22px}
+.ideas-grid{display:flex;gap:14px;flex-wrap:wrap}
+.idea-card{width:220px;background:var(--glass);padding:12px;border-radius:12px;display:flex;gap:10px;align-items:center;cursor:pointer;transform:translateY(12px);opacity:0}
+.idea-card.visible{transform:none;opacity:1}
+.idea-emoji{font-size:28px}
+.idea-title{margin:0;font-size:16px}
+.idea-sub{margin:0;font-size:12px;color:rgba(255,255,255,0.7)}

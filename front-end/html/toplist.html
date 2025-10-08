@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Top Places — Toplist</title>
+  <link rel="stylesheet" href="../styles/toplist.css" />
+</head>
+<body>
+  <header class="toplist-header">
+    <button class="back-btn" onclick="history.back()">← Назад</button>
+    <h1 id="pageTitle">Ідеї</h1>
+    <div class="header-actions">
+      <button id="refreshBtn">⟳ Оновити</button>
+    </div>
+  </header>
+
+  <main class="toplist-main">
+    <section class="toplist-meta">
+      <p id="metaText">Завантажую місця…</p>
+    </section>
+
+    <section class="places-grid" id="placesGrid">
+      <!-- сюди підвантажуються картки -->
+    </section>
+
+    <section class="places-empty hidden" id="emptyState">
+      <p>Нічого не знайдено за вашим запитом.</p>
+    </section>
+  </main>
+
+  <template id="placeCardTpl">
+    <article class="place-card">
+      <img class="place-photo" src="" alt="photo" />
+      <div class="place-info">
+        <h3 class="place-name"></h3>
+        <p class="place-addr"></p>
+        <div class="place-meta">
+          <span class="place-rating"></span>
+          <button class="details-btn">Деталі</button>
+        </div>
+      </div>
+    </article>
+  </template>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBaWd1yK7Y3sO-gNw6VWv9Gqsu6b8iB2zY&libraries=places&callback=initToplistPage" async defer></script>
+
+  <script type="module" src="../js/toplist.js"></script>
+</body>
+</html>

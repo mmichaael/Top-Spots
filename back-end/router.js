@@ -6,7 +6,11 @@ const controller = new Controller();
 
 // Main Page
 router.get('/', controller.openBaseMainPage);
- 
+
+router.post("/places/autocomplete", controller.autocompletePlaces);
+router.post("/places/details", controller.placeDetails);
+
+
 // Authentification Page
 router.get('/checkUser', controller.openAuthPage);
 

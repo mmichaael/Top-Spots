@@ -1,59 +1,63 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Інформація про місто</title>
-  <link rel="stylesheet" href="city.css" />
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
-  />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Деталі місцевості</title>
+  <link rel="stylesheet" href="../styles/city_page.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>Пошук міста</h1>
-    <div class="search-bar">
-      <input type="text" id="city-input" placeholder="Введіть назву міста..." />
-      <button id="search-btn">Пошук</button>
-    </div>
+  <main class="wrap">
+    <section class="hero">
+      <div class="title-block">
+        <h1 id="place-name">Завантаження...</h1>
+        <div id="rating" class="rating hidden"></div>
+      </div>
 
-    <section class="city-info">
-      <h2 id="city-name"></h2>
-      <p id="city-description"></p>
-      <p id="city-rating"></p>
-      <p id="city-population"></p>
+      <div id="meta" class="meta">
+        <p id="address" class="address"></p>
+        <p id="description" class="description hidden"></p>
+      </div>
     </section>
 
-    <section class="places-section">
-      <h3>Круті місця поряд</h3>
-      <ul id="places-list"></ul>
+    <section class="media-row">
+      <div class="photo-column">
+        <div id="photo-slider" class="photo-slider hidden">
+          <button id="prevBtn" class="slide-btn prev">‹</button>
+          <div class="slides-wrap">
+            <div id="slides" class="slides"></div>
+          </div>
+          <button id="nextBtn" class="slide-btn next">›</button>
+          <div id="dot-wrap" class="dot-wrap"></div>
+        </div>
+
+        <div id="no-photo" class="no-photo hidden">Фото відсутні — показано панораму</div>
+      </div>
+
+      <div class="map-column">
+        <div id="map" class="map"></div>
+        
+        <div id="nearby-section" class="nearby-section hidden">
+          <h3>Популярні місця поруч</h3>
+          <ul id="nearby-list" class="nearby-list"></ul>
+        </div>
+      </div>
     </section>
 
-    <section class="reviews-section">
+    <section id="reviews-section" class="reviews-section hidden">
       <h3>Відгуки</h3>
-      <form id="review-form" style="display:none;">
-        <input name="user_name" placeholder="Ваше ім'я" required />
-        <select name="rating" required>
-          <option value="">Оцініть</option>
-          <option value="1">1 ⭐</option>
-          <option value="2">2 ⭐</option>
-          <option value="3">3 ⭐</option>
-          <option value="4">4 ⭐</option>
-          <option value="5">5 ⭐</option>
-        </select>
-        <textarea name="comment" placeholder="Ваш відгук" required></textarea>
-        <button type="submit">Додати відгук</button>
-      </form>
-      <div id="reviews-list"></div>
+      <div id="reviews" class="reviews"></div>
     </section>
 
-    <section id="map" style="height: 400px; margin-top: 20px;"></section>
-  </div>
+    <footer class="footer">
+      <small>© 2025 — TopSpots (Офіційний Додаток)</small>
+    </footer>
+  </main>
 
-  <script
-    src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
-  ></script>
-  <script src="city.js"></script>
+  <!-- Google Maps JS (ключ вставлено) -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBaWd1yK7Y3sO-gNw6VWv9Gqsu6b8iB2zY&libraries=places" defer></script>
+
+  <!-- Сценарій сторінки -->
+  <script src="../js/city.js" defer></script>
 </body>
 </html>

@@ -24,6 +24,63 @@ class Controller {
         '../front-end/html/reset_password.html',
     );
 
+autocompletePlaces = async (req, res) => {
+  const { input, type } = req.body;
+
+  if (!input) {
+    console.log("No input provided for autocomplete");
+    return res.status(403).json();
+  }
+
+  try {
+    let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+      input
+    )}&components=country:ua&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+
+    // якщо передали категорію
+    if (type) {
+      url += `&types=${encodeURIComponent(type)}`;
+    }
+
+    const response = await fetch(url);
+    const data = await response.json();
+    console.log("Google response:", JSON.stringify(data, null, 2));
+
+    return res.status(200).json(data);
+  } catch (err) {
+    console.log(`Google Places Autocomplete error: ${err.message}`);
+    return res.status(500).json();
+  }
+};
+
+
+placeDetails = async (req, res) => {
+    const { place_id } = req.body;
+
+    if (!place_id) {
+        console.log("No place_id provided for place details");
+        return res.status(403).json();
+    }
+
+    try {
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        console.log(`Place details fetched for ${place_id}`);
+        return res.status(200).json(data);
+    } catch (err) {
+        console.log(`Google Place Details error: ${err.message}`);
+        return res.status(500).json();
+    }
+};
+
+
+
+
+
+    
     //Open Main page
     openBaseMainPage = (req, res) => {
         try {
@@ -876,45 +933,45 @@ class Controller {
     };
 
     //Reset Password Creating new Password
-    creatingNewPassword = async (req, res) => {
-        const { newPassword01, resetCode } = req.body;
-        const saltLvl = 10;
+        creatingNewPassword = async (req, res) => {
+            const { newPassword01, resetCode } = req.body;
+            const saltLvl = 10;
 
-        if (!newPassword01 || !resetCode) {
-            console.log(
-                `Creating New Password havn't recive new password or reset code`,
-            );
-            return res.status(403).json();
-        }
-        try {
-            const resetPasswordId = await pool.query(
-                `SELECT reset_password_id FROM "ResetPassword" WHERE reset_code = $1`,
-                [resetCode],
-            );
-            if (resetPasswordId.rowCount == 0) {
-                console.log(`User not found for updating password`);
-                return res.status(404).json();
+            if (!newPassword01 || !resetCode) {
+                console.log(
+                    `Creating New Password havn't recive new password or reset code`,
+                );
+                return res.status(403).json();
             }
-            const resetPasswordCodeId =
-                resetPasswordId.rows[0].reset_password_id;
-            const hashedPassword = await bcrypt.hash(newPassword01, saltLvl);
-            const updatingPassword = await pool.query(
-                `UPDATE "Users" SET password = $1 WHERE reset_password_id = $2 RETURNING user_id`,
-                [hashedPassword, resetPasswordCodeId],
-            );
-            if (updatingPassword.rowCount == 0) {
-                console.log(`Updating new Password in database was failed`);
-                return res.status(404).json();
-            }
+            try {
+                const resetPasswordId = await pool.query(
+                    `SELECT reset_password_id FROM "ResetPassword" WHERE reset_code = $1`,
+                    [resetCode],
+                );
+                if (resetPasswordId.rowCount == 0) {
+                    console.log(`User not found for updating password`);
+                    return res.status(404).json();
+                }
+                const resetPasswordCodeId =
+                    resetPasswordId.rows[0].reset_password_id;
+                const hashedPassword = await bcrypt.hash(newPassword01, saltLvl);
+                const updatingPassword = await pool.query(
+                    `UPDATE "Users" SET password = $1 WHERE reset_password_id = $2 RETURNING user_id`,
+                    [hashedPassword, resetPasswordCodeId],
+                );
+                if (updatingPassword.rowCount == 0) {
+                    console.log(`Updating new Password in database was failed`);
+                    return res.status(404).json();
+                }
 
-            console.log(`New Password is updated`);
-            res.status(200).json();
-            return;
-        } catch (err) {
-            console.log(`Problem with server, cause: ${err.message}`);
-            return res.status(500).json();
-        }
-    };
+                console.log(`New Password is updated`);
+                res.status(200).json();
+                return;
+            } catch (err) {
+                console.log(`Problem with server, cause: ${err.message}`);
+                return res.status(500).json();
+            }
+        };
 
     //Reset Password Deleting Reset Code
     deletingResetCode = async (req, res) => {

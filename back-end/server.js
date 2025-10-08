@@ -7,7 +7,6 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 require("dotenv").config({ path: path.resolve(__dirname, "./privateInf.env") });
 
 const app = express();
-   
 
 // --- CORS ---
 app.use(cors({
@@ -33,15 +32,20 @@ passport.use(new GoogleStrategy(
   }
 ));
 
-// --- Статичні файли Front-end ---
-app.use(express.static(path.join(__dirname, "../front-end"))); 
+app.use(express.static(path.join(__dirname, "../front-end")));
+
 
 // --- API роутер ---
-app.use("/api", router); 
+app.use("/api", router);
 app.use("/", router);
 
-app.get("*", (req, res) => {
+// --- HTML-файли окремо ---
+app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../front-end/html/index.html"));
+});
+
+app.get("/city_page.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "../front-end/html/city_page.html"));
 });
 
 // --- Сервер ---

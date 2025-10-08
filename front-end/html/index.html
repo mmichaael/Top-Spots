@@ -36,62 +36,161 @@
           <h1>The whole world awaits.</h1>
         </div>
 
+        <!-- Пошукова панель -->
+        <div class="search-wrapper">
+          <div class="search-bar">
+            <div class="search-section">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                <path
+                  d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40
+                  C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"
+                />
+              </svg>
+              <input type="text" id="searchInput" placeholder="Search City, District, Street" />
+            </div>
+            <!-- Список підказок -->
+            <ul id="suggestionsList"></ul>
+            <button class="search-button">Search</button>
 
-
-<!-- Пошукова панель -->
-<div class="search-wrapper">
-  <div class="search-bar">
-    <div class="search-section">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-        <path
-          d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40
-          C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"
-        />
-      </svg>
-      <input type="text" id="searchInput" placeholder="Search City, District, Street" />
-    </div>
-    <ul id="suggestionsList"></ul>
-    <button class="search-button">Search</button>
-
-    <div class="search-categories">
-      <h3>Categories:</h3>
-      <div class="search-category-list">
-        <span class="search-category">🏞️ Attractions</span>
-        <span class="search-category">🍽️ Restaurants</span>
-        <span class="search-category">☕ Cafes</span>
-        <span class="search-category">🏨 Hotels</span>
-        <span class="search-category">🎉 Events</span>
-             <span class="search-category">🏞️ Attractions</span>
-        <span class="search-category">🍽️ Restaurants</span>
-        <span class="search-category">☕ Cafes</span>
-        <span class="search-category">🏨 Hotels</span>
-        <span class="search-category">🎉 Events</span>
-      </div>
-    </div>
+       <div class="search-categories">
+  <h3>Categories:</h3>
+  <div class="search-category-list">
+    <span class="search-category" data-type="tourist_attraction">🏞️ Атракціони</span>
+    <span class="search-category" data-type="restaurant">🍽️ Ресторани</span>
+    <span class="search-category" data-type="cafe">☕ Кафе</span>
+    <span class="search-category" data-type="lodging">🏨 Готелі</span>
+    <span class="search-category" data-type="event">🎉 Івенти</span>
+     <span class="search-category" data-type="hospital">🏥 Лікарні</span>
+    <span class="search-category" data-type="police">👮‍♂️ Участки</span>
+    <span class="search-category" data-type="museum">🏛️ Музеї</span>
+    <span class="search-category" data-type="shopping_mall">🛍️ ТЦ</span>
+    <span class="search-category" data-type="park">🌳 Парки</span>
+        <span class="search-category" data-type="beach">🏖️ Пляжі</span>
+    <span class="search-category" data-type="castle">🏰 Замки</span>
+    <span class="search-category" data-type="resort">⛷️ Курорти</span>
+    <span class="search-category" data-type="transport">🚆 Транспорт</span>
   </div>
 </div>
 
+          </div>
+        </div>
 
 
-<!-- Горизонтальне скрол-меню -->
-<div class="scroll-container-wrapper">
-  <button class="scroll-button left">&#10094;</button>
+        <div class="scroll-container-wrapper">
+          <button class="scroll-button left">&#10094;</button>
+          <div class="scroll-container"></div>
+          <button class="scroll-button right">&#10095;</button>
+          <div class="scroll-indicators"></div>
+        </div>
 
-<div class="scroll-container">
-  <!-- Карточки створюються динамічно JS -->
-</div>
 
-  <button class="scroll-button right">&#10095;</button>
-      <div class="scroll-indicators"></div>
-</div>
+
+<!-- ---------------- Теми ---------------- -->
+<section class="themes">
+  <div class="theme-cards">
+    <div class="theme-card" data-theme="romantic">
+      <div class="theme-content">
+        <h3>💞 Романтичні місця</h3>
+        <p>Для двох: атмосферні парки, оглядові майданчики та вузькі вулички</p>
+      </div>
+    </div>
+
+    <div class="theme-card" data-theme="active">
+      <div class="theme-content">
+        <h3>🏕️ Активний відпочинок</h3>
+        <p>Походи, скелелазіння, сплави — для любителів драйву</p>
+      </div>
+    </div>
+
+    <div class="theme-card" data-theme="summer">
+      <div class="theme-content">
+        <h3>☀️ Літні тури</h3>
+        <p>Сонце, море та пригоди — відкрий Україну влітку</p>
+      </div>
+    </div>
+
+    <div class="theme-card" data-theme="historic">
+      <div class="theme-content">
+        <h3>🏰 Історичні локації</h3>
+        <p>Замки, фортеці та легенди минулих століть</p>
+      </div>
+    </div>
+
+    <div class="theme-card" data-theme="top">
+      <div class="theme-content">
+        <h3>⭐ Топові місця України</h3>
+        <p>10 найвідоміших точок, які варто побачити</p>
+      </div>
+    </div>
+
+
+    <div class="theme-card" data-theme="night_life">
+      <div class="theme-content">
+        <h3>🌃 Нічне життя</h3>
+        <p>Клуби, бари, вечірки та атмосферні нічні локації</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
 
       </div>
 
-      <!-- Фонове відео -->
+
+      <!-- ---------------- Footer ---------------- -->
+<footer class="main-footer">
+  <div class="footer-container">
+    <div class="footer-logo">
+      <img src="../img/Top Spots (3).png" width="160px" height="160px" alt="Logo" />
+      <span>Top Spots</span>
+    </div>
+
+    <div class="footer-links">
+      <div class="footer-section">
+        <h4>Навігація</h4>
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">GeoMap</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-section">
+        <h4>Категорії</h4>
+        <ul>
+          <li><a href="#">Атракціони</a></li>
+          <li><a href="#">Ресторани</a></li>
+          <li><a href="#">Кафе</a></li>
+          <li><a href="#">Готелі</a></li>
+          <li><a href="#">Парки</a></li>
+          <li><a href="#">Замки</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-section">
+        <h4>Соцмережі</h4>
+        <ul class="social-icons">
+          <li><a href="#"><img src="../img" alt="Facebook" /></a></li>
+          <li><a href="#"><img src="./img/instagram.svg" alt="Instagram" /></a></li>
+          <li><a href="#"><img src="./img/twitter.svg" alt="Twitter" /></a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p>© 2025 Top Spots. Всі права захищені.</p>
+  </div>
+</footer>
+
       <video class="video-background" autoplay muted loop>
         <source src="img/4895-181257833_medium.mp4" type="video/mp4" />
       </video>
     </div>
+
+
 
     <script type="module" src="../js/front_index.js"></script>
   </body>

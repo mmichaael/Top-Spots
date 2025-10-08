@@ -1,311 +1,164 @@
-
 import { mainPageFunctionsHandler } from './functions.js';
 const mainPageFunctions = new mainPageFunctionsHandler();
 
-// // Пошук елементів
-// const searchInput = document.getElementById("searchInput");
-// const searchButton = document.querySelector(".search-button");
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM повністю завантажено");
 
-// // Створення списку підказок
-// const suggestionsList = document.createElement("ul");
-// suggestionsList.id = "suggestionsList";
-// document.querySelector(".search-bar").appendChild(suggestionsList);
+  // ---------------- Пошукова панель ----------------
+  const searchInput = document.getElementById("searchInput");
+  const searchButton = document.querySelector(".search-button");
+  const suggestionsList = document.getElementById("suggestionsList");
 
-// // Час останнього запиту
-// let lastRequestTime = 0;
+  // === Голосовий пошук ===
+  const micBtn = document.createElement("span");
+  micBtn.innerHTML = "🎤";
+  micBtn.className = "mic-button";
+  micBtn.style.cssText = `position:absolute; right:32px; font-size:25px; color:#333; cursor:pointer; z-index:10;`;
+  document.querySelector(".search-section").appendChild(micBtn);
 
-// // Спочатку ховаємо список
-// suggestionsList.style.display = "none";
+  // === Кнопка "очистити" ===
+  const clearBtn = document.createElement("span");
+  clearBtn.innerHTML = "✖";
+  clearBtn.className = "clear-button";
+  clearBtn.style.cssText = `position:absolute; right:75px; font-size:25px; color:#333; cursor:pointer; display:none; z-index:10;`;
+  document.querySelector(".search-section").appendChild(clearBtn);
 
-// // Обробка введення в поле пошуку
-// searchInput.addEventListener("input", async (e) => {
-//     const query = e.target.value.trim();
+  let selectedCategory = null;
 
-//     if (query.length < 2) {
-//         suggestionsList.innerHTML = "";
-//         suggestionsList.style.display = "none";
-//         return;
-//     }
+  // === Клік по категоріях ===
+  document.querySelectorAll(".search-category").forEach(cat => {
+    cat.addEventListener("click", () => {
+      document.querySelectorAll(".search-category").forEach(c => c.classList.remove("active"));
+      cat.classList.add("active");
+      selectedCategory = cat.dataset.type;
+      console.log("Обрана категорія:", selectedCategory);
 
-//     const currentTime = Date.now();
-//     if (currentTime - lastRequestTime < 1000) {
-//         return;
-//     }
-//     lastRequestTime = currentTime;
+      if (searchInput.value.trim()) {
+        searchInput.dispatchEvent(new Event("input"));
+      }
+    });
+  });
 
-//     const results = await searchCity(query);
-//     showSuggestions(results);
-// });
-
-// // Пошук міста через Nominatim API
-// async function searchCity(query) {
-//     const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&accept-language=uk&countrycodes=UA`;
-//     try {
-//         const response = await fetch(url, {
-//             headers: {
-//                 "User-Agent": "TopSpotsSearch/1.0 (contact@topspots.com)",
-//             }
-//         });
-//         const data = await response.json();
-//         return data;
-//     } catch (error) {
-//         console.error("Помилка запиту:", error);
-//         return [];
-//     }
-// }
-
-// // Показати підказки
-// function showSuggestions(results) {
-//     suggestionsList.innerHTML = "";
-
-//     if (results.length === 0) {
-//         suggestionsList.innerHTML = "<li class='no-results'>Нічого не знайдено</li>";
-//     } else {
-//         results.forEach(result => {
-//             const li = document.createElement("li");
-//             li.textContent = result.display_name;
-//             li.addEventListener("click", () => selectSuggestion(result));
-//             suggestionsList.appendChild(li);
-//         });
-//     }
-
-//     suggestionsList.style.display = "block";
-//     suggestionsList.classList.add("show");
-// }
-
-// // Вибір підказки
-// function selectSuggestion(result) {
-//     searchInput.value = result.display_name;
-//     suggestionsList.innerHTML = "";
-//     suggestionsList.style.display = "none";
-//     suggestionsList.classList.remove("show");
-
-//     const cityName = encodeURIComponent(
-//         result.address.city ||
-//         result.address.town ||
-//         result.address.village ||
-//         result.address.county ||
-//         result.display_name.split(",")[0]
-//     );
-
-//     window.location.href = `html/city_page.html?city=${cityName}`;
-// }
-
-// // Обробка кліку на кнопку "Search"
-// searchButton.addEventListener("click", async () => {
-//     const query = searchInput.value.trim();
-//     if (query.length < 2) {
-//         alert('Введіть назву міста.');
-//         return;
-//     }
-
-//     const results = await searchCity(query);
-
-//     if (results.length > 0) {
-//         const firstResult = results[0];
-//         const cityName = encodeURIComponent(
-//             firstResult.address.city ||
-//             firstResult.address.town ||
-//             firstResult.address.village ||
-//             firstResult.address.county ||
-//             firstResult.display_name.split(",")[0]
-//         );
-//         window.location.href = `html/city_page.html?city=${cityName}`;
-//     } else {
-//         alert('Місто не знайдено.');
-//     }
-// });
-const suggestion = document.getElementById('suggestionsList');
-const inputField = document.getElementById('searchInput');
-let timer;
-inputField.addEventListener('input', () => {
-    clearTimeout(timer);
-    const inputValue = inputField.value;
-    if (!inputValue.trim()) return (suggestion.innerHTML = ``);
-
-    timer = setTimeout(() => {
-        const searchingSug = mainPageFunctions.searchingSugges(inputValue);
-        clearTimeout(timer);
-    }, 400);
-});
-
-// Пошук елементів
-const searchInput = document.getElementById("searchInput");
-const searchButton = document.querySelector(".search-button");
-
-// Створення списку підказок
-const suggestionsList = document.createElement("ul");
-suggestionsList.id = "suggestionsList";
-document.querySelector(".search-bar").appendChild(suggestionsList);
-
-// Час останнього запиту
-let lastRequestTime = 0;
-
-// Спочатку ховаємо список
-suggestionsList.style.display = "none"; 
-
-// Обробка введення в поле пошуку
-searchInput.addEventListener("input", async (e) => {
-    const query = e.target.value.trim();
-    
-    if (query.length < 2) {
-        suggestionsList.innerHTML = "";  
-        suggestionsList.style.display = "none"; 
-        return;
-    }
-
-    const currentTime = Date.now();
-    if (currentTime - lastRequestTime < 1000) { 
-        return;
-    }
-    lastRequestTime = currentTime;
-
-    const results = await searchCity(query);
-    showSuggestions(results);
-});
-
-// Пошук міста через Nominatim API
-async function searchCity(query) {
-    const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&accept-language=uk&countrycodes=UA`;
+  // === Автокомпліт ===
+  async function fetchSuggestions(query) {
     try {
-        const response = await fetch(url, {
-            headers: {
-                "User-Agent": "TopSpotsSearch/1.0 (contact@topspots.com)",
-            }
-        });
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error("Помилка запиту:", error);
-        return [];
+      const response = await fetch("http://localhost:3500/api/places/autocomplete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: query, type: selectedCategory })
+      });
+      if (!response.ok) throw new Error("Backend API error: " + response.status);
+      const data = await response.json();
+      return data.predictions || [];
+    } catch (err) {
+      console.error("Помилка автокомпліту:", err);
+      return [];
     }
-}
+  }
 
-// Показати підказки
-function showSuggestions(results) {
-    suggestionsList.innerHTML = ""; 
+  // === Деталі місця ===
+  async function fetchPlaceDetails(placeId) {
+    try {
+      const response = await fetch("http://localhost:3500/api/places/details", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ place_id: placeId })
+      });
+      if (!response.ok) throw new Error("Backend API error: " + response.status);
+      const data = await response.json();
+      return data.result || null;
+    } catch (err) {
+      console.error("Помилка деталей місця:", err);
+      return null;
+    }
+  }
 
-    if (results.length === 0) {
-        suggestionsList.innerHTML = "<li class='no-results'>Нічого не знайдено</li>";
-    } else {
-        results.forEach(result => {
-            const li = document.createElement("li");
-            li.textContent = result.display_name;
-            li.addEventListener("click", () => selectSuggestion(result));
-            suggestionsList.appendChild(li);
-        });
+  // === Обробка введення ===
+  searchInput.addEventListener("input", async (e) => {
+    const query = e.target.value.trim();
+    clearBtn.style.display = query ? "block" : "none";
+
+    if (!query) {
+      suggestionsList.innerHTML = "";
+      suggestionsList.classList.remove("show");
+      return;
     }
 
-    suggestionsList.style.display = "block"; 
-    suggestionsList.classList.add("show");
-}
-
-// Вибір підказки
-function selectSuggestion(result) {
-    searchInput.value = result.display_name;
+    const suggestions = await fetchSuggestions(query);
     suggestionsList.innerHTML = "";
-    suggestionsList.style.display = "none";
+
+    if (!suggestions || suggestions.length === 0) {
+      suggestionsList.innerHTML = "<li class='no-results'>Нічого не знайдено</li>";
+      suggestionsList.classList.add("show");
+      return;
+    }
+
+    suggestions.forEach((s) => {
+      const li = document.createElement("li");
+      li.textContent = s.description;
+
+      li.addEventListener("click", async () => {
+        console.log("Клік на підказку:", s.description);
+        const details = await fetchPlaceDetails(s.place_id);
+        if (!details) return;
+        const url = `/html/city_page.html?placeId=${s.place_id}`;
+        console.log("Переходимо на:", url);
+        window.location.href = url;
+      });
+
+      suggestionsList.appendChild(li);
+    });
+
+    suggestionsList.classList.add("show");
+  });
+
+  // === Кнопка "очистити" ===
+  clearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    suggestionsList.innerHTML = "";
     suggestionsList.classList.remove("show");
+    clearBtn.style.display = "none";
+    searchInput.focus();
+  });
 
-    const cityName = encodeURIComponent(
-        result.address.city ||
-        result.address.town ||
-        result.address.village ||
-        result.address.county ||
-        result.display_name.split(",")[0]
-    );
+  // === Голосовий пошук ===
+  micBtn.addEventListener("click", () => {
+    if (!("webkitSpeechRecognition" in window)) {
+      alert("Ваш браузер не підтримує голосовий пошук.");
+      return;
+    }
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = "uk-UA";
+    recognition.start();
+    recognition.onresult = (event) => {
+      searchInput.value = event.results[0][0].transcript;
+      searchInput.dispatchEvent(new Event("input"));
+    };
+    recognition.onerror = () => alert("Сталася помилка під час розпізнавання голосу.");
+  });
 
-    window.location.href = `html/city_page.html?city=${cityName}`;
-}
-
-// Обробка кліку на кнопку "Search"
-searchButton.addEventListener("click", async () => {
+  // === Кнопка Search ===
+  searchButton.addEventListener("click", async () => {
     const query = searchInput.value.trim();
-    if (query.length < 2) {
-        alert('Введіть назву міста.');
-        return;
-    }
+    if (!query) return alert("Введіть назву міста.");
+    const suggestions = await fetchSuggestions(query);
+    if (!suggestions || suggestions.length === 0) return alert("Місто не знайдено.");
+    const url = `/html/city_page.html?placeId=${suggestions[0].place_id}`;
+    console.log("Переходимо на:", url);
+    window.location.href = url;
+  });
 
-    const results = await searchCity(query);
+  // ---------------- Картки міст ----------------
+  const cities = [
+    { name: "Київ", description: "Столиця України", rating: 4.8, image: "../img/киев ночной.jpg", mapsQuery: "Kyiv, Ukraine" },
+    { name: "Львів", description: "Культурна столиця", rating: 4.7, image: "../img/львов нічний.jpg", mapsQuery: "Lviv, Ukraine" },
+    { name: "Одеса", description: "Морська перлина", rating: 4.6, image: "../img/одеса.avif", mapsQuery: "Odesa, Ukraine" },
+    { name: "Харків", description: "Студентське місто", rating: 4.5, image: "../img/харьков.jpg", mapsQuery: "Kharkiv, Ukraine" },
+    { name: "Дніпро", description: "Промисловий центр", rating: 4.4, image: "../img/днепр.jpg", mapsQuery: "Dnipro, Ukraine" },
+  ];
 
-    if (results.length > 0) {
-        const firstResult = results[0];
-        const cityName = encodeURIComponent(
-            firstResult.address.city ||
-            firstResult.address.town ||
-            firstResult.address.village ||
-            firstResult.address.county ||
-            firstResult.display_name.split(",")[0]
-        );
-        window.location.href = `html/city_page.html?city=${cityName}`;
-    } else {
-        alert('Місто не знайдено.');
-    }
-});
-const cities = [
-  {
-    name: "Київ",
-    description: "Столиця України з багатою історією, унікальною архітектурою та культурним серцем країни.",
-    rating: 4.8,
-    image: "../img/ciid.jpeg",
-    mapsQuery: "Kyiv, Ukraine"
-  },
-  {
-    name: "Львів",
-    description: "Культурна столиця України, відома своєю архітектурою, кав'ярнями та старовинним центром.",
-    rating: 4.7,
-    image: "../img/двів.jpg",
-    mapsQuery: "Lviv, Ukraine"
-  },
-  {
-    name: "Одеса",
-    description: "Морська перлина на березі Чорного моря з веселим духом і неповторним колоритом.",
-    rating: 4.6,
-    image: "../img/одеса.avif",
-    mapsQuery: "Odesa, Ukraine"
-  },
-  {
-    name: "Харків",
-    description: "Велике студентське місто з багатою історією та сучасною атмосферою. атмосферою.",
-    rating: 4.5,
-    image: "../img/харьков.jpg",
-    mapsQuery: "Kharkiv, Ukraine"
-  },
-  {
-    name: "Дніпро",
-    description: "Промисловий центр України з красивою набережною та сучасною інфраструктурою.",
-    rating: 4.4,
-    image: "../img/днепр.jpg",
-    mapsQuery: "Dnipro, Ukraine"
-  },
-  {
-    name: "Чернівці",
-    description: "Місто з унікальною архітектурою та затишною атмосферою.",
-    rating: 4.6,
-    image: "../img/черновци.jpg",
-    mapsQuery: "Chernivtsi, Ukraine"
-  },
-  {
-    name: "Івано-Франківськ",
-    description: "Затишне місто біля Карпат, відоме своєю гостинністю.",
-    rating: 4.5,
-    image: "../img/иванофр.jpg",
-    mapsQuery: "Ivano-Frankivsk, Ukraine"
-  },
-  {
-    name: "Ужгород",
-    description: "Місто на заході України з багатою історією та традиціями.",
-    rating: 4.4,
-    image: "../img/місто ужгород житло.jpeg",
-    mapsQuery: "Uzhhorod, Ukraine"
-  },
-];
-
-function createCityCards() {
   const container = document.querySelector(".scroll-container");
   const indicators = document.querySelector(".scroll-indicators");
-  container.innerHTML = "";
-  indicators.innerHTML = "";
 
   cities.forEach((city, index) => {
     const card = document.createElement("div");
@@ -313,8 +166,8 @@ function createCityCards() {
     card.innerHTML = `
       <img src="${city.image}" alt="${city.name}" class="city-image">
       <div class="city-content">
-        <div class="city-name">${city.name}</div>
-        <div class="city-description">${city.description}</div>
+        <h3 class="city-name">${city.name}</h3>
+        <p class="city-description">${city.description}</p>
         <div class="city-rating">⭐ ${city.rating}</div>
         <button class="map-button" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city.mapsQuery)}', '_blank')">
           Показати на Google Maps
@@ -328,124 +181,162 @@ function createCityCards() {
     if (index === 0) dot.classList.add("active");
     indicators.appendChild(dot);
   });
-}
 
-document.addEventListener("DOMContentLoaded", () => {
-  createCityCards();
+  setTimeout(() => {
+    document.querySelectorAll(".city-card").forEach(card => card.classList.add("show"));
+  }, 100);
 
-  const scrollContainer = document.querySelector('.scroll-container');
-  const leftButton = document.querySelector('.scroll-button.left');
-  const rightButton = document.querySelector('.scroll-button.right');
-  const dots = document.querySelectorAll('.scroll-indicators .dot');
-  const cards = document.querySelectorAll('.city-card');
+  // Скрол кнопки
+  const leftButton = document.querySelector(".scroll-button.left");
+  const rightButton = document.querySelector(".scroll-button.right");
+  const dots = document.querySelectorAll(".scroll-indicators .dot");
+  const cardWidth = 301;
 
-  const cardWidth = 330 + 30; // ширина картки + gap
+  leftButton.addEventListener("click", () =>
+    container.scrollBy({ left: -cardWidth, behavior: "smooth" })
+  );
+  rightButton.addEventListener("click", () =>
+    container.scrollBy({ left: cardWidth, behavior: "smooth" })
+  );
 
-  // IntersectionObserver для анімації появи
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if(entry.isIntersecting) {
-        entry.target.classList.add('show');
-      } else {
-        entry.target.classList.remove('show');
-      }
+  container.addEventListener("scroll", () => {
+    const activeIndex = Math.round(container.scrollLeft / cardWidth);
+    dots.forEach(dot => dot.classList.remove("active"));
+    if (dots[activeIndex]) dots[activeIndex].classList.add("active");
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM завантажено. Починаємо ініціалізацію...");
+
+  // ---------------- Ідеї для подорожей ----------------
+  function createIdeaCard({ id, title, subtitle, emoji }) {
+    console.log(`Створюємо картку: ${title || id} (id: ${id})`);
+    const card = document.createElement('div');
+    card.className = 'idea-card';
+    card.dataset.category = id;
+    card.innerHTML = `
+      <div class="idea-emoji">${emoji}</div>
+      <div class="idea-body">
+        <h4 class="idea-title">${title || id}</h4>
+        <p class="idea-sub">${subtitle}</p>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      const url = `/html/toplist.html?category=${encodeURIComponent(id)}`;
+      console.log(`Клік на картку: ${title || id} | Переходимо на: ${url}`);
+      window.location.href = url;
     });
-  }, { threshold: 0.5 });
 
-  cards.forEach(card => observer.observe(card));
-
-  // Scroll buttons
-  leftButton.addEventListener('click', () => {
-    scrollContainer.scrollBy({ left: -cardWidth, behavior: 'smooth' });
-  });
-
-  rightButton.addEventListener('click', () => {
-    scrollContainer.scrollBy({ left: cardWidth, behavior: 'smooth' });
-  });
-
-  // Оновлення активної точки
-  scrollContainer.addEventListener('scroll', () => {
-    const scrollLeft = scrollContainer.scrollLeft;
-    const activeIndex = Math.round(scrollLeft / cardWidth);
-
-    dots.forEach(dot => dot.classList.remove('active'));
-    if (dots[activeIndex]) dots[activeIndex].classList.add('active');
-  });
-});
-
-const input = document.getElementById("searchInput");
-
-
- 
-
-// Кнопка "очистити" з’являється при введенні
-const clearBtn = document.createElement("span");
-clearBtn.innerHTML = "✖";
-clearBtn.className = "clear-button";
-clearBtn.style.cssText = `
-  position: absolute;
-  right: 55px;
-  font-size: 20px;
-  color: #333;
-  cursor: pointer;
-  display: none;
-  z-index: 10;
-`;
-
-document.querySelector(".search-section").appendChild(clearBtn);
-
-input.addEventListener("input", () => {
-  clearBtn.style.display = input.value ? "block" : "none";
-});
-
-clearBtn.addEventListener("click", () => {
-  input.value = "";
-  suggestionsList.innerHTML = "";
-  clearBtn.style.display = "none";
-  input.focus();
-});
-
-//  Голосовий пошук
-const micBtn = document.createElement("span");
-micBtn.innerHTML = "🎤";
-micBtn.className = "mic-button";
-micBtn.style.cssText = `
-  position: absolute;
-  right: 38.1px;
-  font-size: 25px;
-  color: #333;
-  cursor: pointer;
-  z-index: 10;
-`;
-
-document.querySelector(".search-section").appendChild(micBtn);
-
-micBtn.addEventListener("click", () => {
-  if (!("webkitSpeechRecognition" in window)) {
-    alert("Ваш браузер не підтримує голосовий пошук.");
-    return;
+    return card;
   }
 
-  const recognition = new webkitSpeechRecognition();
-recognition.lang = "uk-UA"; 
+  const wrapper = document.querySelector('.scroll-container-wrapper');
+  if (!wrapper) console.warn('Не знайдено .scroll-container-wrapper для ідей');
+
+  const ideasWrap = document.createElement('section');
+  ideasWrap.className = 'ideas-section';
+  ideasWrap.innerHTML = `<h2 class="ideas-title">Ідеї для подорожей</h2><div class="ideas-grid"></div>`;
+  wrapper.insertAdjacentElement('afterend', ideasWrap);
+
+  const ideasList = [
+    { id: 'popular', title: 'Популярні зараз', subtitle: 'Топ-10 найпопулярніших місць', emoji: '⭐' },
+    { id: 'romantic', title: 'Романтичні локації', subtitle: 'Ідеально для побачень', emoji: '💘' },
+    { id: 'active', title: 'Активний відпочинок', subtitle: 'Трекинг, байкінг, адреналін', emoji: '🏃‍♂️' },
+    { id: 'summer', title: 'Літні тури', subtitle: 'Пляжі та відпочинок на сонці', emoji: '🌞' },
+    { id: 'family', title: 'Сімейні напрямки', subtitle: 'Для дітей і батьків', emoji: '🎈' },
+    { id: 'night_life', title: 'Нічне життя', subtitle: 'Клуби, бари та вечірки', emoji: '🎉' },
+  ];
+
+  const grid = document.querySelector('.ideas-grid');
+  if (!grid) console.error('Не знайдено .ideas-grid');
+  else {
+    ideasList.forEach(it => grid.appendChild(createIdeaCard(it)));
+    console.log('✅ Всі картки ідей додані в DOM');
+
+    // Анімація появи
+    setTimeout(() => {
+      document.querySelectorAll('.idea-card').forEach((c, i) => {
+        c.style.transition = `transform 450ms cubic-bezier(.2,.9,.2,1) ${i*60}ms, opacity 350ms`;
+        c.classList.add('visible');
+        console.log(`Картка "${c.querySelector('.idea-title').textContent}" з'явилась`);
+      });
+    }, 120);
+  }
+
+  // ---------------- Теми ----------------
+  const themeCards = document.querySelectorAll(".theme-card");
+  console.log(`Знайдено theme-card: ${themeCards.length}`);
+  themeCards.forEach(card => {
+    card.addEventListener("click", () => {
+      const theme = card.dataset.theme;
+      const url = `/html/toplist.html?theme=${theme}`;
+      console.log(`Клік на тему: ${theme} | Переходимо на: ${url}`);
+      window.location.href = url;
+    });
+
+    // Додаткові логи для hover та відображення
+    card.addEventListener('mouseenter', () => {
+      console.log(`Наведено на тему: ${card.dataset.theme}`);
+    });
+    card.addEventListener('mouseleave', () => {
+      console.log(`Вийшли з теми: ${card.dataset.theme}`);
+    });
+  });
+});
 
 
 
 
+console.log("✅ front_index.js підключено");
+console.log("✅ front_index.js підключено — режим без створення DOM");
+
+// ---------------- Ідеї для подорожей ----------------
+const ideaCards = document.querySelectorAll(".idea-card");
+console.log(`🔍 Знайдено карток ідей: ${ideaCards.length}`);
+
+ideaCards.forEach(card => {
+  const id = card.dataset.category || "невідомо";
+  console.log(`➡️ Обробляємо картку: ${id}`);
+
+  card.addEventListener("click", () => {
+    const url = `/html/toplist.html?category=${encodeURIComponent(id)}`;
+    console.log(`🖱️ Клік на картку ідеї: ${id} | Переходимо на: ${url}`);
+    window.location.href = url;
+  });
+
+  card.addEventListener("mouseenter", () => {
+    console.log(`👀 Наведено на картку: ${id}`);
+  });
+  card.addEventListener("mouseleave", () => {
+    console.log(`👋 Вийшли з картки: ${id}`);
+  });
+});
+
+// ---------------- Теми ----------------
+const themeCards = document.querySelectorAll(".theme-card");
+console.log(`🔎 Знайдено theme-card: ${themeCards.length}`);
+
+themeCards.forEach(card => {
+  const theme = card.dataset.theme || "невідомо";
+  console.log(`➡️ Обробляємо тему: ${theme}`);
+
+  card.addEventListener("click", () => {
+ const url = `/html/toplist.html?category=${encodeURIComponent(theme)}`;
+
+    console.log(`🖱️ Клік на тему: ${theme} | Переходимо на: ${url}`);
+    window.location.href = url;
+  });
+
+  card.addEventListener("mouseenter", () => {
+    console.log(`👀 Наведено на тему: ${theme}`);
+  });
+  card.addEventListener("mouseleave", () => {
+    console.log(`👋 Вийшли з теми: ${theme}`);
+  });
+});
 
 
 
 
-
-  recognition.start();
-
-  recognition.onresult = function (event) {
-    const result = event.results[0][0].transcript;
-    input.value = result;
-    input.dispatchEvent(new Event("input")); 
-  };
-
-  recognition.onerror = function () {
-    alert("Сталася помилка під час розпізнавання голосу.");
-  };
 });
