@@ -802,6 +802,10 @@ font-weight: 700;
   height: 25px;
   filter: brightness(0) invert(1);
   transition: transform 0.3s ease, filter 0.3s ease;
+
+}
+.social-icons a{
+  font-weight: 700; font-size: 17px; padding-top: -20px;
 }
 
 .social-icons img:hover {
