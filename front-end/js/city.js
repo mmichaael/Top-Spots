@@ -91,23 +91,61 @@ document.addEventListener("DOMContentLoaded", () => {
         photoSlider.classList.add("hidden");
       }
 
-      // 💬 Відгуки
-      reviewsContainer.innerHTML = "";
-      if (place.reviews && place.reviews.length > 0) {
-        reviewsSection.classList.remove("hidden");
-        place.reviews.slice(0, 5).forEach((r) => {
-          const div = document.createElement("div");
-          div.className = "review-card";
-          div.innerHTML = `
-            <p class="review-author">👤 ${r.authorAttribution?.displayName || "Користувач"}</p>
-            <p class="review-rating">⭐ ${r.rating || "-"}</p>
-            <p class="review-text">${r.text?.text || ""}</p>
-          `;
-          reviewsContainer.appendChild(div);
-        });
-      } else {
-        reviewsSection.classList.add("hidden");
-      }
+
+// 💬 Відгуки
+reviewsContainer.innerHTML = "";
+if (place.reviews && place.reviews.length > 0) {
+  reviewsSection.classList.remove("hidden");
+  place.reviews.slice(0, 3).forEach((r) => { 
+    let text = r.text?.text || "";
+    if (text.length > 50) text = text.slice(0, 80) + "..."; 
+    const div = document.createElement("div");
+    div.className = "review";
+    div.style.setProperty('--i', Math.floor(Math.random() * 5) - 2);
+    div.innerHTML = `
+      <span class="author">👤 ${r.authorAttribution?.displayName || "Користувач"}</span>
+      <span class="rating">⭐ ${r.rating || "-"}</span>
+      <p>${text}</p>
+    `;
+    reviewsContainer.appendChild(div);
+  });
+} else {
+  reviewsSection.classList.add("hidden");
+}
+
+
+if (place.location && place.location.latitude && place.location.longitude) {
+  const loc = place.location;
+
+  if (!map) {
+    map = new google.maps.Map(mapEl, {
+      center: { lat: loc.latitude, lng: loc.longitude },
+      zoom: 15,
+    });
+  } else {
+    map.setCenter({ lat: loc.latitude, lng: loc.longitude });
+  }
+
+  if (marker) marker.setMap(null);
+  marker = new google.maps.Marker({
+    position: { lat: loc.latitude, lng: loc.longitude },
+    map,
+    title: placeNameEl.textContent,
+  });
+
+mapEl.addEventListener("click", () => {
+  if (!place.location) return;
+  const lat = place.location.latitude;
+  const lng = place.location.longitude;
+  const query = encodeURIComponent(place.displayName?.text || place.formattedAddress || "");
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${place.id}&hl=uk`;
+  window.open(mapsUrl, "_blank");
+});
+
+
+}
+
+
 
       // 📍 Nearby місця
       nearbyList.innerHTML = "";

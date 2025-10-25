@@ -115,8 +115,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .logo_video {
-  margin-top: -20px;
-  max-height: 150px;
+margin-top: -50px;
+  max-height: 200px;
 }
 
 .logo_video_header {
@@ -708,136 +708,216 @@ font-weight: 700;
   }
 }
 /* ---------------- Footer ---------------- */
+/* ---- Footer ---- */
 .main-footer {
-  background: linear-gradient(135deg, #1f1c2c, #928dab);
-  color: white;
-  padding: 50px 5%;
-  font-size: 16px;
   position: relative;
+  background: rgb(18, 19, 28);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 40px 32px 24px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  font-family: "Inter", sans-serif;
+  color: #e8f0f2;
   overflow: hidden;
+  margin-top: 50px;
+  margin-bottom: -30px;
+  padding-right: 30px;
+  padding-left: 30px;
+
+  margin-left: -14px;
+
+}
+
+/* Анімована радуга зверху */
+.main-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 6px; /* товщина смуги */
+  background: linear-gradient(90deg, #00ffc3, #ae52ff, #ff3eec, #00ffc3);
+  background-size: 400%;
+  animation: rainbowMove 8s linear infinite;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+
+}
+ 
+@keyframes rainbowMove {
+  0% { background-position: 0%; }
+  100% { background-position: 400%; }
 }
 
 .footer-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 40px;
+  gap: 32px;
+}
+.footer-logo{  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px; }
+.footer-logo img {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  padding: 0;
+  border: 3px solid #ff004c;
+  box-sizing: border-box;
+  transition: border-color 1s linear, transform 0.4s ease;
 }
 
-.footer-logo {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  font-weight: 700;
-  font-size: 24px;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+.footer-logo img:hover {
+  transform: scale(1.05);
+}
+
+/* Анімація неонової рамки */
+@keyframes neonBorderColors {
+  0%   { border-color: #ff004c; }
+  25%  { border-color: #ff00e1; }
+  50%  { border-color: #00e1ff; }
+  75%  { border-color: #00ffc3; }
+  100% { border-color: #ff004c; }
 }
 
 .footer-logo img {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
-  animation: logoPulse 3s infinite ease-in-out;
+  animation: neonBorderColors 3s linear infinite;
 }
 
-@keyframes logoPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+.footer-logo span {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, #00ffc3, #ae52ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
 }
 
 .footer-links {
   display: flex;
+  flex: 2 1 600px;
+  justify-content: space-between;
+  gap: 32px;
   flex-wrap: wrap;
-  gap: 50px;
 }
 
 .footer-section h4 {
-  font-size: 18px;
-  margin-bottom: 15px;
-  position: relative;
-}
-
-.footer-section h4::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: -5px;
-  width: 50px;
-  height: 2px;
-  background: #ff9900;
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-.footer-section h4:hover::after {
-  width: 100%;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #00ffc3;
+  text-shadow: 0 0 6px rgba(0,255,195,0.5);
 }
 
 .footer-section ul {
   list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
-.footer-section a {
-  color: white;
+.footer-section ul li a {
+  color: #d9f5ee;
   text-decoration: none;
-  transition: color 0.3s ease, transform 0.3s ease;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
 }
 
-.footer-section a:hover {
-  color: #ff9900;
-  transform: translateX(5px);
+.footer-section ul li a:hover {
+  color: #00ffc3;
+  transform: translateX(4px);
 }
 
-.social-icons {
+.footer-section ul.social-icons li a {
   display: flex;
-  gap: 15px;
+  align-items: center;
+  gap: 6px;
 }
 
-.social-icons img {
-  width: 25px;
-  height: 25px;
-  filter: brightness(0) invert(1);
+.footer-section ul.social-icons li a img {
+  width: 18px;
+  height: 18px;
+  filter: brightness(1) drop-shadow(0 0 2px #00ffc3);
   transition: transform 0.3s ease, filter 0.3s ease;
-
-}
-.social-icons a{
-  font-weight: 700; font-size: 17px; padding-top: -20px;
 }
 
-.social-icons img:hover {
+.footer-section ul.social-icons li a:hover img {
   transform: scale(1.2);
-  filter: brightness(1) invert(0);
+  filter: brightness(1) drop-shadow(0 0 6px #00ffc3);
 }
 
 .footer-bottom {
-  margin-top: 40px;
-  border-top: 1px solid rgba(255,255,255,0.3);
-  padding-top: 20px;
+  margin-top: 32px;
   text-align: center;
-  font-size: 14px;
-  opacity: 0.8;
+  font-size: 0.85rem;
+  color: #9ca6b6;
+  border-top: 1px solid rgba(255, 255, 255, 0.626);
+  padding-top: 12px;
+  letter-spacing: 0.5px;
 }
 
-/* Адаптив */
+
+/* ---- Адаптив ---- */
 @media (max-width: 900px) {
   .footer-container {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+  }
+  .footer-links {
+    flex-direction: column;
+    gap: 24px;
+    align-items: center;
+  }
+  .footer-section {
+    text-align: center;
   }
 }
+/* === FIX: фото справа на всю висоту екрана === */
+.auth-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
 
-@media (max-width: 500px) {
-  .footer-logo {
-    font-size: 20px;
+.auth-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #fff;
+}
+
+.auth-right {
+  flex: 1;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.auth-right img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Адаптивність для телефонів */
+@media (max-width: 768px) {
+  .auth-container {
+    flex-direction: column;
+    height: auto;
   }
-  .footer-section h4 {
-    font-size: 16px;
+
+  .auth-right {
+    height: 250px;
   }
-  .footer-section ul {
-    gap: 8px;
+
+  .auth-right img {
+    height: 100%;
   }
 }
