@@ -7,7 +7,7 @@ const loginForm = document.getElementById('Login_form')
 loginForm.addEventListener('submit', async (event)=>{
     event.preventDefault()
     
-    if(!loginForm.checkValidity()){
+    if(!loginForm.checkValidity()){ 
         return console.log(`LogIn form is not valid`) 
     }
     

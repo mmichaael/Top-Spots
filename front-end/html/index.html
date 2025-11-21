@@ -18,6 +18,7 @@
             </video>
           </div>
         </div>
+s
 
         <ul class="header_list">
           <li class="header-ul_element"><a href="">Home</a></li>
@@ -32,9 +33,51 @@
 
       <!-- ---------------- Main Content ---------------- -->
       <div class="main__page">
-        <div class="main__page-text">
-          <h1>The whole world awaits.</h1>
+    <!-- ====== AI CHAT ASSISTANT ====== -->
+
+<section class="ai-chat-wrapper" aria-label="AI Assistant">
+  <div class="ai-chat-card" id="aiChatCard">
+    <div class="ai-chat-header">
+      <div class="ai-title">
+        <div class="assistant-avatar" aria-hidden="true">🤖</div>
+        <div>
+          <h3>Top-Spots AI</h3>
+          <small id="aiStatus">Онлайн</small>
         </div>
+      </div>
+
+      <div class="ai-controls">
+        <button id="themeToggle" class="btn small">🌙</button>
+        <button id="clearChatBtn" class="btn small">🗑️</button>
+        <button id="minimizeChat" class="btn small">—</button>
+      </div>
+    </div>
+
+    <div class="ai-body" id="aiBody">
+      <div class="ai-suggestions" id="aiSuggestions">
+        <button class="suggestion">Де залишитися сьогодні?</button>
+        <button class="suggestion">Безпечні міста</button>
+        <button class="suggestion">Романтичні місця</button>
+        <button class="suggestion">Найпопулярніше зараз</button>
+      </div>
+
+      <div class="chat-window" id="chatWindow" role="log" aria-live="polite"></div>
+
+      <div class="ai-input-row">
+        <textarea id="chatInput" placeholder="Поставьте питання (Напр.: де зараз найцікавіше в Україні?)" rows="1"></textarea>
+        <div class="input-actions">
+          <button id="sendBtn" class="btn primary">Відправити</button>
+        </div>
+      </div>
+
+      <div class="ai-footer">
+        <small>Підтримка фото — скоро • <span id="cacheInfo">локальний кеш увімкнено</span></small>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 
         <!-- Пошукова панель -->
         <div class="search-wrapper">
@@ -207,5 +250,6 @@
 
 
     <script type="module" src="../js/front_index.js"></script>
+    <script src="../js/chat_widget.js"></script>
   </body>
 </html>

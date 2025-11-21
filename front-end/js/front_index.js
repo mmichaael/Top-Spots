@@ -336,7 +336,55 @@ themeCards.forEach(card => {
   });
 });
 
+const chatBox = document.querySelector(".chat-box");
+const input = document.querySelector(".chat-input");
+const sendBtn = document.querySelector(".send-btn");
 
+// ====== ДОДАТКОВИЙ ФУНКЦІОНАЛ ======
+function appendMessage(text, type) {
+    const msg = document.createElement("div");
+    msg.className = `msg ${type}-msg`;
+    msg.innerText = text;
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function showTyping() {
+    const typing = document.createElement("div");
+    typing.className = "msg bot-msg typing";
+    typing.innerText = "Пишу відповідь…";
+    chatBox.appendChild(typing);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return typing;
+}
+
+async function sendMessage() {
+    const message = input.value.trim();
+    if (!message) return;
+
+    appendMessage(message, "user");
+    input.value = "";
+
+    const typingBubble = showTyping();
+
+    const res = await fetch("/api/chat-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+    });
+
+    const data = await res.json();
+
+    typingBubble.remove();
+
+    appendMessage(data.reply, "bot");
+}
+
+sendBtn.addEventListener("click", sendMessage);
+
+input.addEventListener("keydown", e => {
+    if (e.key === "Enter") sendMessage();
+});
 
 
 });

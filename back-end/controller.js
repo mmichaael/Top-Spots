@@ -7,8 +7,12 @@ const jwt = require('jsonwebtoken');
 const pool = require('./database');
 const passport = require('passport');
 const { default: axios } = require('axios');
+const NodeCache = require("node-cache");
+const OpenAI = require("openai");
  require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
-
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
 class Controller {
     pageBaseMain = path.join(__dirname, '../front-end/html/index.html');
     pageFullMain = path.join(__dirname, '../front-end/html/logged_index.html');
@@ -23,6 +27,65 @@ class Controller {
         __dirname,
         '../front-end/html/reset_password.html',
     );
+
+
+    constructor() {
+        this.chatCache = new NodeCache({ stdTTL: 60, checkperiod: 120 }); // 60 сек кеш
+    }
+
+
+
+chatAssistant = async (req, res) => {
+        try {
+            const { message } = req.body;
+
+            if (!message) {
+                console.log("Message not provided");
+                return res.status(400).json({
+                    error: "Введи повідомлення",
+                });
+            }
+
+            // --- CHECK CACHE ---
+            const cached = this.chatCache.get(message);
+            if (cached) {
+                console.log("Chat cache HIT");
+                return res.status(200).json({ reply: cached });
+            }
+
+            console.log("Chat cache MISS");
+
+            // --- OPENAI REQUEST ---
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content:
+                            "Ти — розумний чат-бот сайту Top-Spots. Відповідай корисно, стисло і українською."
+                    },
+                    { role: "user", content: message }
+                ],
+                temperature: 0.3,
+                max_tokens: 250
+            });
+
+            const reply = completion.choices[0].message.content;
+
+            // --- SAVE TO CACHE ---
+            this.chatCache.set(message, reply);
+
+            return res.status(200).json({ reply });
+
+        } catch (err) {
+            console.log("chatAssistant error:", err);
+            return res.status(500).json({
+                error: "Сталася помилка при зверненні до AI"
+            });
+        }
+    };
+
+
 
 autocompletePlaces = async (req, res) => {
   const { input, type } = req.body;

@@ -7,8 +7,12 @@ const controller = new Controller();
 // Main Page
 router.get('/', controller.openBaseMainPage);
 
-router.post("/places/autocomplete", controller.autocompletePlaces);
+    router.post("/places/autocomplete", controller.autocompletePlaces);
 router.post("/places/details", controller.placeDetails);
+
+
+router.post("/chat/assistant", controller.chatAssistant);
+
 
 
 // Authentification Page
