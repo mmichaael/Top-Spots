@@ -6,13 +6,11 @@
   <title>Top Places — Toplist</title>
   <link rel="stylesheet" href="../styles/toplist.css" />
 </head>
+
 <body>
   <header class="toplist-header">
     <button class="back-btn" onclick="history.back()">← Назад</button>
     <h1 id="pageTitle">Ідеї</h1>
-    <div class="header-actions">
-      <button id="refreshBtn">⟳ Оновити</button>
-    </div>
   </header>
 
   <main class="toplist-main">
@@ -20,18 +18,38 @@
       <p id="metaText">Завантажую місця…</p>
     </section>
 
-    <section class="places-grid" id="placesGrid">
-      <!-- сюди підвантажуються картки -->
+    <!-- 🔥 Фільтр радіусу -->
+    <section class="radius-filter">
+      <div class="radius-box">
+        <label>
+          Радіус пошуку: <span id="radiusValue">12</span> км
+        </label>
+
+        <input
+          type="range"
+          id="radiusRange"
+          min="2"
+          max="25"
+          step="1"
+          value="12"
+        />
+
+        <button id="applyFilterBtn" class="apply-btn">
+           Оновити результати
+        </button>
+      </div>
     </section>
 
+    <section class="places-grid" id="placesGrid"></section>
+
     <section class="places-empty hidden" id="emptyState">
-      <p>Нічого не знайдено за вашим запитом.</p>
+      <p>Нічого не знайдено...</p>
     </section>
   </main>
 
   <template id="placeCardTpl">
     <article class="place-card">
-      <img class="place-photo" src="" alt="photo" />
+      <img class="place-photo" alt="photo" />
       <div class="place-info">
         <h3 class="place-name"></h3>
         <p class="place-addr"></p>
@@ -42,7 +60,12 @@
       </div>
     </article>
   </template>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBaWd1yK7Y3sO-gNw6VWv9Gqsu6b8iB2zY&libraries=places&callback=initToplistPage" async defer></script>
+
+  <!-- Google Maps API (БЕЗ callback) -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBaWd1yK7Y3sO-gNw6VWv9Gqsu6b8iB2zY&libraries=places"
+    async defer>
+  </script>
 
   <script type="module" src="../js/toplist.js"></script>
 </body>

@@ -29,7 +29,8 @@ h1,h2,h3,h4,h5,h6{font-weight: 600;}
     top: 0;
     right: 0;
     width: 50%;
-    height: 100vh;
+  min-height: 90vh; /* ВАЖЛИВО */
+  height: auto;     /* Додаємо */
     display: flex;
     justify-content: center;
     align-items: center;

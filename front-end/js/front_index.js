@@ -149,38 +149,173 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ---------------- Картки міст ----------------
-  const cities = [
-    { name: "Київ", description: "Столиця України", rating: 4.8, image: "../img/киев ночной.jpg", mapsQuery: "Kyiv, Ukraine" },
-    { name: "Львів", description: "Культурна столиця", rating: 4.7, image: "../img/львов нічний.jpg", mapsQuery: "Lviv, Ukraine" },
-    { name: "Одеса", description: "Морська перлина", rating: 4.6, image: "../img/одеса.avif", mapsQuery: "Odesa, Ukraine" },
-    { name: "Харків", description: "Студентське місто", rating: 4.5, image: "../img/харьков.jpg", mapsQuery: "Kharkiv, Ukraine" },
-    { name: "Дніпро", description: "Промисловий центр", rating: 4.4, image: "../img/днепр.jpg", mapsQuery: "Dnipro, Ukraine" },
-  ];
+  // ---------------- Картки міст (CITY SLIDER) ----------------
 
-  const container = document.querySelector(".scroll-container");
-  const indicators = document.querySelector(".scroll-indicators");
 
-  cities.forEach((city, index) => {
-    const card = document.createElement("div");
-    card.classList.add("city-card");
-    card.innerHTML = `
-      <img src="${city.image}" alt="${city.name}" class="city-image">
-      <div class="city-content">
-        <h3 class="city-name">${city.name}</h3>
-        <p class="city-description">${city.description}</p>
-        <div class="city-rating">⭐ ${city.rating}</div>
-        <button class="map-button" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city.mapsQuery)}', '_blank')">
-          Показати на Google Maps
-        </button>
-      </div>
-    `;
-    container.appendChild(card);
+const cities = [
+  {
+    name: "Київ",
+    description: "Столиця України",
+    rating: 4.8,
+    image: "../img/cit/kiev.jpg",
 
-    const dot = document.createElement("div");
-    dot.classList.add("dot");
-    if (index === 0) dot.classList.add("active");
-    indicators.appendChild(dot);
-  });
+  },
+  {
+    name: "Львів",
+    description: "Культурна столиця",
+    rating: 4.7,
+    image: "../img/cit/lviv.jpg",
+
+  },
+  {
+    name: "Одеса",
+    description: "Морська перлина",
+    rating: 4.6,
+    image: "../img/cit/odesa.jpg",
+
+  },
+  {
+    name: "Харків",
+    description: "Студентське місто",
+    rating: 4.5,
+    image: "../img/cit/harkiv.jpg"},
+  {
+    name: "Дніпро",
+    description: "Промисловий центр",
+    rating: 4.4,
+    image: "../img/cit/dnepr.jpg",
+
+  },
+  {
+    name: "Запоріжжя",
+    description: "Місто козацької слави",
+    rating: 4.3,
+    image: "../img/cit/zaporoshe.jpg",
+  },
+  {
+    name: "Вінниця",
+    description: "Місто фонтанів",
+    rating: 4.2,
+    image: "../img/cit/vinica.jpg",},
+    {
+    name: "Чернівці",
+    description: "Місто університетів",
+    rating: 4.1,
+    image: "../img/cit/chernivci.jpg",
+  },
+    {
+    name: "Івано-Франківськ",
+    description: "Гірське місто",
+    rating: 4.0,
+    image: "../img/cit/ivanofrankovsk.jpg",
+  },
+    {
+    name: "Тернопіль",
+    description: "Місто замків",
+    rating: 3.9,
+    image: "../img/cit/ternopil.jpg",
+  },
+  { 
+    name: "Житомир",
+    description: "Місто космонавтики",
+    rating: 3.8,
+    image: "../img/cit/zhetom.jpg",
+  },
+  {
+    name: "Полтава",
+    description: "Місто галушок",
+    rating: 3.7,
+    image: "../img/cit/poltava.jpg",
+  },
+  {
+    name: "Черкаси",
+    description: "Місто на Дніпрі",
+    rating: 3.6,
+    image: "../img/cit/cherkasy.jpg",
+  },
+  {
+    name: "Суми",
+    description: "Місто вітрів",
+    rating: 3.5,
+    image: "../img/cit/sumy.jpg",
+  },
+  {
+    name: "Рівне",
+    description: "Місто парків",
+    rating: 3.4,
+    image: "../img/cit/rivne.jpg",
+  },
+  {
+    name: "Хмельницький",
+    description: "Місто садів",
+    rating: 3.3,
+    image: "../img/cit/hmelnycki.jpg",
+  }
+];
+
+
+
+
+const container = document.querySelector(".scroll-container");
+const indicators = document.querySelector(".scroll-indicators");
+async function getPlaceIdByCityName(cityName) {
+  try {
+    const response = await fetch("http://localhost:3500/api/places/autocomplete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        input: cityName,
+        type: "locality" // міста
+      })
+    });
+
+    if (!response.ok) throw new Error("Autocomplete error");
+
+    const data = await response.json();
+    return data.predictions?.[0]?.place_id || null;
+  } catch (err) {
+    console.error("❌ Помилка отримання placeId:", err);
+    return null;
+  }
+}
+
+cities.forEach((city, index) => {
+  const card = document.createElement("div");
+  card.className = "city-card";
+
+  card.innerHTML = `
+    <img src="${city.image}" alt="${city.name}" class="city-image">
+    <div class="city-content">
+      <h3 class="city-name">${city.name}</h3>
+      <p class="city-description">${city.description}</p>
+      <div class="city-rating">⭐ ${city.rating}</div>
+      <button class="map-button">Переглянути місто</button>
+    </div>
+  `;
+
+ card.querySelector(".map-button").addEventListener("click", async () => {
+  console.log("🔍 Шукаємо placeId для:", city.name);
+
+  const placeId = await getPlaceIdByCityName(city.name);
+
+  if (!placeId) {
+    alert("❌ Не вдалося знайти місто в Google Places");
+    return;
+  }
+
+  const url = `/html/city_page.html?placeId=${placeId}`;
+  console.log("➡️ Перехід на city_page:", url);
+  window.location.href = url;
+});
+
+
+  container.appendChild(card);
+
+  const dot = document.createElement("div");
+  dot.className = "dot";
+  if (index === 0) dot.classList.add("active");
+  indicators.appendChild(dot);
+});
 
   setTimeout(() => {
     document.querySelectorAll(".city-card").forEach(card => card.classList.add("show"));

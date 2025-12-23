@@ -2,156 +2,173 @@ const tpl = document.getElementById('placeCardTpl');
 const grid = document.getElementById('placesGrid');
 const metaText = document.getElementById('metaText');
 const emptyState = document.getElementById('emptyState');
-const refreshBtn = document.getElementById('refreshBtn');
 
-const GOOGLE_API_KEY = "AIzaSyBaWd1yK7Y3sO-gNw6VWv9Gqsu6b8Y";
+const radiusRange = document.getElementById('radiusRange');
+const radiusValue = document.getElementById('radiusValue');
+const applyFilterBtn = document.getElementById('applyFilterBtn');
 
-// категорії → Google Places type
+let searchRadiusKm = 12;
+
+// ---------- категорії ----------
+
 const CATEGORY_TYPES = {
   popular: ["tourist_attraction", "museum", "point_of_interest"],
-  romantic: ["park", "tourist_attraction", "scenic_viewpoint"],
-  active: ["hiking_trail", "park", "gym", "stadium"],
-  summer: ["beach", "lake", "pool"],
+  romantic: ["park", "tourist_attraction"],
+  active: ["park", "stadium", "gym"],
+  summer: ["beach", "lake"],
   family: ["zoo", "amusement_park", "aquarium"]
 };
 
+
+
 function getQueryParam(name) {
-  const url = new URL(window.location.href);
-  const val = url.searchParams.get(name);
-  console.log(`[LOG] Отримано параметр "${name}": ${val}`);
-  return val;
+  return new URL(window.location.href).searchParams.get(name);
 }
 
-async function getUserPosition(timeout = 10000) {
-  console.log("[LOG] Отримуємо геолокацію користувача...");
+function targetCountByRadius(radiusKm) {
+  if (radiusKm <= 3.5) return 9;
+  if (radiusKm <= 7.2) return 15;
+  if (radiusKm <= 12.8) return 22;
+  return 35;
+}
+
+async function getUserPosition() {
   return new Promise((res, rej) => {
-    if (!navigator.geolocation) {
-      console.warn("[WARN] Geolocation не підтримується браузером");
-      return rej(new Error("Geolocation not supported"));
-    }
     navigator.geolocation.getCurrentPosition(
-      pos => {
-        console.log(`[LOG] Геолокація отримана: ${pos.coords.latitude}, ${pos.coords.longitude}`);
-        res(pos.coords);
-      },
-      err => {
-        console.error("[ERROR] Не вдалося отримати геолокацію:", err);
-        rej(err);
-      },
-      { enableHighAccuracy: true, timeout, maximumAge: 0 }
+      pos => res(pos.coords),
+      err => rej(err),
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   });
 }
 
-// Отримуємо фото або placeholder
-function getPhotoUrl(place) {
-  if (place.photos && place.photos.length) {
-    return place.photos[0].getUrl({ maxWidth: 800 });
-  }
-  return '../img/placeholder.jpg';
-}
+// ---------- render ----------
 
 function renderPlaces(places) {
-  console.log(`[LOG] Рендеримо ${places.length} місць...`);
   grid.innerHTML = '';
-  if (!places || places.length === 0) {
+
+  if (!places.length) {
     emptyState.classList.remove('hidden');
-    metaText.textContent = 'Нічого не знайдено.';
-    console.log("[LOG] Показано порожній стан");
+    metaText.textContent = 'Нічого не знайдено';
     return;
   }
+
   emptyState.classList.add('hidden');
+
   places.forEach((p, i) => {
     const node = tpl.content.cloneNode(true);
     const card = node.querySelector('.place-card');
-    node.querySelector('.place-photo').src = getPhotoUrl(p);
-    node.querySelector('.place-name').textContent = p.name || '—';
-    node.querySelector('.place-addr').textContent = p.vicinity || p.address || '';
-    node.querySelector('.place-rating').textContent = p.rating ? `⭐ ${p.rating}` : '—';
 
-    const detailsBtn = node.querySelector('.details-btn');
-    detailsBtn.addEventListener('click', () => {
-      console.log(`[LOG] Клік на деталі: ${p.name} (${p.place_id})`);
-      window.location.href = `/html/city_page.html?placeId=${encodeURIComponent(p.place_id)}`;
-    });
+    node.querySelector('.place-photo').src =
+      p.photos[0].getUrl({ maxWidth: 800 });
+
+    node.querySelector('.place-name').textContent = p.name || '—';
+    node.querySelector('.place-addr').textContent = p.vicinity || '';
+    node.querySelector('.place-rating').textContent =
+      p.rating ? `⭐ ${p.rating}` : '—';
+
+    node.querySelector('.details-btn').onclick = () => {
+      location.href = `/html/city_page.html?placeId=${p.place_id}`;
+    };
 
     grid.appendChild(node);
-    setTimeout(() => card.classList.add('show'), i * 80);
+    setTimeout(() => card.classList.add('show'), i * 70);
   });
 }
 
-function fetchPlacesWithGoogleJS(lat, lng, category) {
-  return new Promise((resolve) => {
-    const mapDiv = document.createElement('div');
-    const map = new google.maps.Map(mapDiv);
-    const service = new google.maps.places.PlacesService(map);
+// ---------- Google Places (з авто-розширенням) ----------
 
-    const types = CATEGORY_TYPES[category] || CATEGORY_TYPES.popular;
-    let resultsAll = [];
-    let remaining = types.length;
+async function fetchPlaces(lat, lng, category) {
+  const mapDiv = document.createElement('div');
+  const map = new google.maps.Map(mapDiv);
+  const service = new google.maps.places.PlacesService(map);
 
-    types.forEach(type => {
-      const request = {
-        location: new google.maps.LatLng(lat, lng),
-        radius: 12000,
-        type: type
-      };
+  const types = CATEGORY_TYPES[category] || CATEGORY_TYPES.popular;
+  const maxRadius = 25;
 
-      service.nearbySearch(request, (results, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
-          resultsAll = resultsAll.concat(results);
-        } else {
-          console.warn(`[WARN] Type "${type}" не дав результатів`);
-        }
+  let collected = {};
+  let currentRadius = searchRadiusKm;
 
-        remaining--;
-        if (remaining === 0) {
-          const uniqueResults = Object.values(resultsAll.reduce((acc, p) => {
-            acc[p.place_id] = p;
-            return acc;
-          }, {}));
-          console.log(`[LOG] Загалом отримано ${uniqueResults.length} унікальних результатів`);
-          resolve(uniqueResults);
-        }
-      });
-    });
-  });
+  while (currentRadius <= maxRadius) {
+    const requests = types.map(type =>
+      new Promise(resolve => {
+        service.nearbySearch({
+          location: new google.maps.LatLng(lat, lng),
+          radius: currentRadius * 1000,
+          type
+        }, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK) {
+            results.forEach(p => {
+              if (p.photos && p.photos.length > 0) {
+                collected[p.place_id] = p;
+              }
+            });
+          }
+          resolve();
+        });
+      })
+    );
+
+    await Promise.all(requests);
+
+    const list = Object.values(collected);
+    const target = targetCountByRadius(searchRadiusKm);
+
+    if (list.length >= target || currentRadius === maxRadius) {
+      const MAX_RESULTS = Math.min(
+        Math.max(searchRadiusKm * 3, 8),
+        60
+      );
+      return list.slice(0, MAX_RESULTS);
+    }
+
+    currentRadius = currentRadius < 10
+      ? currentRadius + 2
+      : currentRadius + 5;
+  }
+
+  return Object.values(collected);
 }
+
+// ---------- init ----------
 
 async function init() {
-  console.log("[LOG] Ініціалізація сторінки...");
   const category = getQueryParam('category') || 'popular';
-  const titles = {
-    popular: 'Популярні напрямки',
-    romantic: 'Романтичні локації',
-    active: 'Активний відпочинок',
-    summer: 'Літні тури',
-    family: 'Сімейні напрямки'
-  };
-  document.getElementById('pageTitle').textContent = titles[category] || 'Ідеї для подорожей';
-  metaText.textContent = 'Отримую вашу геолокацію...';
+  metaText.textContent = 'Отримую геолокацію…';
 
   try {
-    const coords = await getUserPosition();
-    const { latitude: lat, longitude: lng } = coords;
-    metaText.textContent = 'Завантажую місця поблизу...';
-    const places = await fetchPlacesWithGoogleJS(lat, lng, category);
-    renderPlaces(places.slice(0, 10));
-    metaText.textContent = `Показано ${Math.min(places.length, 10)} місць у радіусі 12 км`;
-  } catch (err) {
-    console.warn("[WARN] Геолокація не доступна, показуємо fallback");
-    metaText.textContent = 'Не вдалося отримати геолокацію. Показую популярні місця України...';
+    const { latitude, longitude } = await getUserPosition();
+    metaText.textContent = 'Завантажую місця…';
 
-    const lat = 50.4501, lng = 30.5234;
-    const places = await fetchPlacesWithGoogleJS(lat, lng, category);
-    renderPlaces(places.slice(0, 10));
-    metaText.textContent = `Показано ${Math.min(places.length, 10)} популярних місць`;
+    const places = await fetchPlaces(latitude, longitude, category);
+    renderPlaces(places);
+
+    metaText.textContent =
+      `Знайдено ${places.length} місць у радіусі ${searchRadiusKm} км`;
+  } catch {
+    const places = await fetchPlaces(50.4501, 30.5234, category);
+    renderPlaces(places);
+
+    metaText.textContent =
+      `Знайдено ${places.length} популярних місць`;
   }
 }
 
-refreshBtn.addEventListener('click', () => {
-  console.log("[LOG] Натиснуто кнопку Refresh");
-  init();
+// ---------- events ----------
+
+radiusRange.addEventListener('input', () => {
+  searchRadiusKm = radiusRange.value;
+  radiusValue.textContent = searchRadiusKm;
 });
 
-window.initToplistPage = init;
+applyFilterBtn.addEventListener('click', init);
+
+// ---------- старт після завантаження API ----------
+
+window.addEventListener('load', () => {
+  if (window.google && google.maps) {
+    init();
+  } else {
+    console.error('Google Maps API не завантажився');
+  }
+});

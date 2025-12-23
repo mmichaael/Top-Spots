@@ -152,8 +152,10 @@ color:rgb(255, 255, 255);
   transform: translateY(-50%) scale(1.1);
   box-shadow: 0 0 20px rgba(0,255,195,0.5);
 }
-.prev { left: 12px; }
-.next { right: 12px; }
+.prev { left: 12px;
+z-index: 10; }
+.next { right: 12px; 
+z-index: 10;}
 
 .dot-wrap {
   display: flex;
