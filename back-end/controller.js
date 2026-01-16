@@ -116,7 +116,6 @@ autocompletePlaces = async (req, res) => {
   }
 };
 
-
 placeDetails = async (req, res) => {
     const { place_id } = req.body;
 

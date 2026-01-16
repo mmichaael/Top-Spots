@@ -124,7 +124,6 @@
       saveCache();
       setStatus("Онлайн", "");
       // авто-теги: додатковий запит (делегуємо бекенду /openai — коштує токенів)
-      generateTagsFor(reply);
     } catch (err) {
       typing.remove();
       appendMessageNode("Сталася помилка. Спробуйте пізніше.", "bot-msg");
@@ -132,29 +131,7 @@
     }
   }
 
-  // --- auto tags (split request, non-blocking) ---
-  async function generateTagsFor(text) {
-    try {
-      // економимо: перевірка кешу
-      const tagKey = "tags:" + text.slice(0,120);
-      if (localCache[tagKey]) {
-        console.log("Tags cache hit");
-        showTags(localCache[tagKey]);
-        return;
-      }
-      // зібрати коротке завдання — поверне CSV теги
-      const prompt = `${TAG_REQUEST_PREFIX} "${text}"`;
-      const { reply } = await postMessageToServer(prompt);
-      if (reply) {
-        // очікуємо що reply містить коми-розділені теги
-        localCache[tagKey] = reply;
-        saveCache();
-        showTags(reply);
-      }
-    } catch (e) {
-      console.log("Tags generation failed", e);
-    }
-  }
+
 
   function showTags(csv) {
     const wrap = document.createElement("div");
@@ -208,5 +185,5 @@
   cacheInfo && (cacheInfo.textContent = `локальний кеш: ${Object.keys(localCache).length} записів`);
 
   // friendly welcome
-  appendMessageNode("Привіт! Я AI-помічник Top-Spots. Питай про місця, безпеку, готелі та маршрути.", "bot-msg");
+  appendMessageNode("Привіт! Я AI-помічник Top-Spots..", "bot-msg");
 })();

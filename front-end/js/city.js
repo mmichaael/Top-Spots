@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
         reviewsSection.classList.remove("hidden");
 
         // slice(0,3) — бере лише перші 3 відгуки
-        place.reviews.slice(0, 3).forEach((r) => {
+        place.reviews.slice(0, 6).forEach((r) => {
           let text = r.text?.text || "";
           if (text.length > 50) text = text.slice(0, 80) + "...";
 

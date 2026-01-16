@@ -9,32 +9,98 @@
   <body>
     <div class="wrapper">
       <!-- ---------------- Header ---------------- -->
-      <div class="main__header">
-        <div class="header__topspot">
-          <div class="logo_video_header">
-            <video class="logo_video" height="200px" autoplay muted playsinline loop>
-              <source src="./img/output_video1.webm" type="video/webm" />
-              Logo don't opened
-            </video>
-          </div>
-        </div>
-s
+<div class="main__header">
+  <div class="header__topspot">
+    <div class="logo_video_header">
+      <video class="logo_video" height="200px" autoplay muted playsinline loop>
+        <source src="./img/output_video1.webm" type="video/webm" />
+        Logo don't opened
+      </video>
+    </div>
+  </div>
 
-        <ul class="header_list">
-          <li class="header-ul_element"><a href="">Home</a></li>
-          <li class="header-ul_element"><a href="">GeoMap</a></li>
-          <li class="header-ul_element"><a href="">Contact</a></li>
+  <!-- Бургер кнопка -->
+  <div class="burger" id="burger">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
 
-          <button class="button_header" id="SignUp" onclick="window.location.href='/checkUser'">
-            <span>Sign Up</span>
-          </button>
-        </ul>
-      </div>
+  <!-- Навігація -->
+  <ul class="header_list" id="navMenu">
+    <li class="header-ul_element"><a href="">Home</a></li>
+    <li class="header-ul_element"><a href="">GeoMap</a></li>
+    <li class="header-ul_element"><a href="">Contact</a></li>
+    <li class="header-ul_element"><a href="">Attractions</a></li>
+    <li class="header-ul_element"><a href="">Hotels</a></li>
+    <li class="header-ul_element"><a href="">Restaurants</a></li>
+
+    <button class="button_header" id="SignUp" onclick="window.location.href='/checkUser'">
+      <span>Sign Up</span>
+    </button>
+  </ul>
+</div>
+
 
       <!-- ---------------- Main Content ---------------- -->
       <div class="main__page">
-    <!-- ====== AI CHAT ASSISTANT ====== -->
 
+                <!-- Пошукова панель -->
+        <div class="search-wrapper">
+          <div class="search-bar">
+            <div class="search-section">
+                                <ul id="suggestionsList"></ul>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                <path
+                  d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40
+                  C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"
+                />
+              </svg>
+              <input type="text" id="searchInput" placeholder="Search Place" />
+
+            </div>
+            <!-- Список підказок -->
+        
+            <button class="search-button">Search</button>
+
+       <div class="search-categories">
+  <h3>Categories:</h3>
+  <div class="search-category-list-own">
+
+    <span class="search-category" data-type="restaurant">🍽️ Ресторани</span>
+    <span class="search-category" data-type="cafe">☕ Кафе</span>
+    <span class="search-category" data-type="lodging">🏨 Готелі</span>
+    <span class="search-category" data-type="museum">🏛️ Музеї</span>
+    <span class="search-category" data-type="shopping_mall">🛍️ ТЦ</span>
+    <span class="search-category" data-type="park">🌳 Парки</span>
+        <span class="search-category" data-type="beach">🏖️ Пляжі</span>
+    <span class="search-category" data-type="resort">⛷️ Курорти</span>
+
+  </div>
+    <button class="category more-btn">Ще ▼</button>
+
+    <div class="search-category-list-so_own hidden  ">
+    <span class="search-category" data-type="tourist_attraction">🏞️ Атракціони</span> 
+    <span class="search-category" data-type="event">🎉 Івенти</span>
+     <span class="search-category" data-type="hospital">🏥 Лікарні</span>
+    <span class="search-category" data-type="police">👮‍♂️ Участки</span>
+    <span class="search-category" data-type="castle">🏰 Замки</span>
+    <span class="search-category" data-type="transport">🚆 Транспорт</span>
+  </div>
+</div>
+
+          </div>
+        </div>
+        <div class="scroll-container-wrapper">
+          <button class="scroll-button left">&#10094;</button>
+          <div class="scroll-container"></div>
+          <button class="scroll-button right">&#10095;</button>
+          <div class="scroll-indicators"></div>
+        </div>
+
+
+
+    <!-- ====== AI CHAT ASSISTANT ====== -->
 <section class="ai-chat-wrapper" aria-label="AI Assistant">
   <div class="ai-chat-card" id="aiChatCard">
     <div class="ai-chat-header">
@@ -56,75 +122,27 @@ s
     <div class="ai-body" id="aiBody">
       <div class="ai-suggestions" id="aiSuggestions">
         <button class="suggestion">Де залишитися сьогодні?</button>
-        <button class="suggestion">Безпечні міста</button>
-        <button class="suggestion">Романтичні місця</button>
+
         <button class="suggestion">Найпопулярніше зараз</button>
       </div>
 
       <div class="chat-window" id="chatWindow" role="log" aria-live="polite"></div>
 
       <div class="ai-input-row">
-        <textarea id="chatInput" placeholder="Поставьте питання (Напр.: де зараз найцікавіше в Україні?)" rows="1"></textarea>
+        <textarea id="chatInput" placeholder="Запитайте щось" rows="1"></textarea>
         <div class="input-actions">
           <button id="sendBtn" class="btn primary">Відправити</button>
         </div>
       </div>
 
-      <div class="ai-footer">
-        <small>Підтримка фото — скоро • <span id="cacheInfo">локальний кеш увімкнено</span></small>
-      </div>
+ 
     </div>
   </div>
 </section>
 
 
 
-        <!-- Пошукова панель -->
-        <div class="search-wrapper">
-          <div class="search-bar">
-            <div class="search-section">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                <path
-                  d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40
-                  C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"
-                />
-              </svg>
-              <input type="text" id="searchInput" placeholder="Search City, District, Street" />
-            </div>
-            <!-- Список підказок -->
-            <ul id="suggestionsList"></ul>
-            <button class="search-button">Search</button>
 
-       <div class="search-categories">
-  <h3>Categories:</h3>
-  <div class="search-category-list">
-    <span class="search-category" data-type="tourist_attraction">🏞️ Атракціони</span>
-    <span class="search-category" data-type="restaurant">🍽️ Ресторани</span>
-    <span class="search-category" data-type="cafe">☕ Кафе</span>
-    <span class="search-category" data-type="lodging">🏨 Готелі</span>
-    <span class="search-category" data-type="event">🎉 Івенти</span>
-     <span class="search-category" data-type="hospital">🏥 Лікарні</span>
-    <span class="search-category" data-type="police">👮‍♂️ Участки</span>
-    <span class="search-category" data-type="museum">🏛️ Музеї</span>
-    <span class="search-category" data-type="shopping_mall">🛍️ ТЦ</span>
-    <span class="search-category" data-type="park">🌳 Парки</span>
-        <span class="search-category" data-type="beach">🏖️ Пляжі</span>
-    <span class="search-category" data-type="castle">🏰 Замки</span>
-    <span class="search-category" data-type="resort">⛷️ Курорти</span>
-    <span class="search-category" data-type="transport">🚆 Транспорт</span>
-  </div>
-</div>
-
-          </div>
-        </div>
-
-
-        <div class="scroll-container-wrapper">
-          <button class="scroll-button left">&#10094;</button>
-          <div class="scroll-container"></div>
-          <button class="scroll-button right">&#10095;</button>
-          <div class="scroll-indicators"></div>
-        </div>
 
 
 
@@ -186,55 +204,79 @@ s
 <footer class="main-footer">
   <div class="footer-container">
     <div class="footer-logo">
-      <img src="../img/Top Spots (3).png" class="img" width="160px"  height="160px" alt="Logo" />
-      <span>Top Spots</span>
+      <img src="../img/Top Spots (3).png" class="img" width="160px" height="160px" alt="Logo" />
     </div>
 
-  <div class="footer-links">
+    <div class="footer-links">
 
-  <div class="footer-section">
-    <h4>Контакти</h4>
-    <ul>
-      <li>📧 <a href="mailto:spraizen47@gmail.com">spraizen47@gmail.com</a></li>
-      <li>📞 <a href="tel:+380974901774">+380 97 490 17 74</a></li>
-      <li>📞 <a href="tel:+491606591848">+49 160 659 18 48</a></li>
-      <li>📍 Київ, Україна</li>
-      <li>📍 Bremen, Deutschland</li>
-    </ul>
-  </div>
+      <!-- Контакти -->
+      <div class="footer-section">
+        <h4>Контакти</h4>
+        <ul>
+          <li>📧 <a href="mailto:spraizen47@gmail.com">spraizen47@gmail.com</a></li>
+          <li>📞 <a href="tel:+380974901774">+380 97 490 17 74</a></li>
+          <li>📞 <a href="tel:+491606591848">+49 160 659 18 48</a></li>
+          <li>📍 Київ, Україна</li>
+          <li>📍 Bremen, Deutschland</li>
+        </ul>
+      </div>
 
-  <div class="footer-section">
-    <h4>Навігація</h4>
-    <ul>
-      <li>🏠 <a href="#">Home</a></li>
-      <li>🗺️ <a href="#">GeoMap</a></li>
-      <li>📩 <a href="#">Contact</a></li>
-    </ul>
-  </div>
+      <!-- Навігація -->
+      <div class="footer-section">
+        <h4>Навігація</h4>
+        <ul>
+          <li>🏠 <a href="#">Home</a></li>
+          <li>🗺️ <a href="#">GeoMap</a></li>
+          <li>📩 <a href="#">Contact</a></li>
+        </ul>
+      </div>
 
-  <div class="footer-section">
-    <h4>Категорії</h4>
-    <ul>
-      <li>🎡 <a href="#">Атракціони</a></li>
-      <li>🍽️ <a href="#">Ресторани</a></li>
-      <li>☕ <a href="#">Кафе</a></li>
-      <li>🏨 <a href="#">Готелі</a></li>
-      <li>🌳 <a href="#">Парки</a></li>
-      <li>🏰 <a href="#">Замки</a></li>
-    </ul>
-  </div>
+      <!-- Популярні напрямки -->
+      <div class="footer-section">
+        <h4>Популярні напрямки</h4>
+        <ul>
+          <li>🇺🇦 <a href="#">Київ</a></li>
+          <li>🇺🇦 <a href="#">Львів</a></li>
+          <li>🇺🇦 <a href="#">Одеса</a></li>
+          <li>🇩🇪 <a href="#">Берлін</a></li>
+          <li>🇵🇱 <a href="#">Варшава</a></li>
+        </ul>
+      </div>
 
-  <div class="footer-section">
-    <h4>Соцмережі</h4>
-    <ul class="social-icons">
-      <li> <a href="#"><img src="../img/facebook-brands-solid-full.svg" alt="Facebook" /> Facebook</a></li>
-      <li> <a href="#"><img src="../img/instagram-brands-solid-full.svg" alt="Instagram"/> Instagram</a></li>
-      <li> <a href="#"><img src="../img/tiktok-brands-solid-full.svg" alt="TikTok" /> TikTok</a></li>
-    </ul>
-  </div>
+      <!-- Допомога / FAQ -->
+      <div class="footer-section">
+        <h4>Допомога</h4>
+        <ul>
+          <li>❓ <a href="#">Як користуватись</a></li>
+          <li>📌 <a href="#">Додати місце</a></li>
+          <li>📞 <a href="#">Підтримка</a></li>
+        </ul>
+      </div>
 
-</div>
+      <!-- Категорії -->
+      <div class="footer-section">
+        <h4>Категорії</h4>
+        <ul>
+          <li>🎡 <a href="#">Атракціони</a></li>
+          <li>🍽️ <a href="#">Ресторани</a></li>
+          <li>☕ <a href="#">Кафе</a></li>
+          <li>🏨 <a href="#">Готелі</a></li>
+          <li>🌳 <a href="#">Парки</a></li>
+          <li>🏰 <a href="#">Замки</a></li>
+        </ul>
+      </div>
 
+      <!-- Соцмережі -->
+      <div class="footer-section">
+        <h4>Соцмережі</h4>
+        <ul class="social-icons">
+          <li><a href="#"><img src="../img/facebook-brands-solid-full.svg" alt="Facebook" /> Facebook</a></li>
+          <li><a href="#"><img src="../img/instagram-brands-solid-full.svg" alt="Instagram"/> Instagram</a></li>
+          <li><a href="#"><img src="../img/tiktok-brands-solid-full.svg" alt="TikTok" /> TikTok</a></li>
+        </ul>
+      </div>
+
+    </div>
   </div>
 
   <div class="footer-bottom">
