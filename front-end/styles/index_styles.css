@@ -114,7 +114,7 @@ h1, h2, h3, h4, h5, h6 {
   top: 0;
   width: 100%;
   padding: 10px 20px;
- background: linear-gradient(180deg,  rgba(174, 170, 47, 0.349),rgba(38, 38, 104, 0.468));
+ background: linear-gradient(180deg,  rgba(65, 76, 78, 0.349),rgba(16, 16, 28, 0.468));
   color: white;
   z-index: 2;
   display: flex;
@@ -238,7 +238,7 @@ svg {
   max-width: 80%;
   margin-top: 20px;
   z-index: 2;
-   background: linear-gradient(180deg, rgba(43, 43, 113, 0.9), rgba(195, 174, 38, 0.6));
+ background: linear-gradient(180deg,  rgba(65, 76, 78, 0.349),rgba(16, 16, 28, 0.468));
 }
 
 .search-section {
@@ -473,7 +473,10 @@ svg {
 .map-button {
   margin-top: auto;
   padding: 10px 20px;
-  background-color: #ccc208;
+  background: linear-gradient(135deg, #e1be10, #e3941e);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+
   color: white;
   font-weight: 600;
   border: none;
@@ -483,14 +486,17 @@ svg {
 }
 
 .map-button:hover {
-  background-color: #374205;
+   background: linear-gradient(135deg, #FF9900, #FF6600);
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(255,153,0,0.5);
+
 }
 
 .scroll-button {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.5);
+
   color: #fff;
   border: none;
   font-size: 40px;
@@ -568,7 +574,7 @@ margin-bottom: 5px;
 .search-bar {
   flex-direction: column;
   align-items: stretch;
- background: linear-gradient(180deg, rgba(43, 43, 113, 0.9), rgba(85, 84, 25, 0.6));
+ background: linear-gradient(180deg,  rgba(65, 76, 78, 0.349),rgba(16, 16, 28, 0.468));
   padding: 25px 20px;
   border-radius: 25px;
   backdrop-filter: blur(15px);
@@ -604,7 +610,7 @@ margin-bottom: 5px;
 .search-section input {
   border: none;
   outline: none;
-  background: transparent;
+
   width: 100%;
   font-size: 18px;
   padding-left: 10px;
@@ -859,7 +865,7 @@ margin-top: 40px;
 /* ---- Footer ---- */
 .main-footer {
   position: relative;
-  background: linear-gradient(180deg, rgba(13, 13, 81, 0.9), rgba(70, 73, 8, 0.6));
+ background: linear-gradient(180deg,  rgba(65, 76, 78, 0.349),rgba(16, 16, 28, 0.468));
   border-top: 1px solid rgba(255,255,255,0.05);
   padding: 40px 32px 24px;
   border-radius: 16px;
@@ -1036,7 +1042,7 @@ margin: 0;
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 12px 40px rgba(3,10,25,0.6);
-  background: linear-gradient(180deg, rgba(106, 113, 43, 0.9), rgba(21, 30, 133, 0.6));
+  background: linear-gradient(180deg,  rgba(65, 76, 78, 0.349),rgba(16, 16, 28, 0.468));
   border: 1px solid rgba(255,255,255,0.04);
   backdrop-filter: blur(8px);
   transition: transform .28s ease, box-shadow .28s ease;
