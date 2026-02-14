@@ -1,98 +1,566 @@
-:root{
-  --bg: #0f1724;
-  --card: rgba(255,255,255,0.06);
-  --accent: #ff9f1c;
-  --glass: rgba(255,255,255,0.04);
-  --text: #e6eef6;
+
+
+
+
+:root {
+    --bg-dark: #0f172a;      /* Глибокий темно-синій */
+    --card-bg: #1e293b;     /* Колір карток */
+    --neon-purple: #c026d3;
+    --neon-blue: #38bdf8;
+    --text-main: #f1f5f9;
+}body {
+    background-color: #0f172a !important; /* Глибокий Dark */
+    color: #f1f5f9;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family: 'Montserrat', sans-serif;background: linear-gradient(180deg,#071028 0%, #0e1630 100%);color:var(--text);-webkit-font-smoothing:antialiased}
-.toplist-header{
-  height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter:blur(6px);position:sticky;top:0;z-index:30;
-}
-.back-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 14px;border-radius:10px;color:var(--text);cursor:pointer}
-.header-actions button{background:var(--glass);border:none;padding:8px 12px;border-radius:10px;cursor:pointer}
-.toplist-main{padding:28px;max-width:1100px;margin:0 auto}
-.toplist-meta{margin-bottom:18px}
-.places-grid{
-  display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap:18px;
-}
-.place-card{
-  background:var(--card);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:220px;box-shadow:0 8px 30px rgba(2,6,23,0.6);transform:translateY(12px);opacity:0;
-  transition:transform 420ms cubic-bezier(.2,.9,.2,1), opacity 420ms;
-}
-.place-card.show{transform:none;opacity:1}
-.place-photo{width:100%;height:150px;object-fit:cover;background:#111}
-.place-info{padding:14px;display:flex;flex-direction:column;gap:10px}
-.place-name{font-size:18px;margin:0}
-.place-addr{font-size:13px;color:rgba(255,255,255,0.7);margin:0}
-.place-meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
-.place-rating{background:linear-gradient(90deg,var(--accent),#ffd37a);padding:6px 10px;border-radius:10px;font-weight:700;color:#111}
-.details-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:10px;color:var(--text);cursor:pointer}
-.places-empty{padding:40px;text-align:center;color:rgba(255,255,255,0.6)}
-.places-empty.hidden{display:none}
-
-/* Responsive */
-@media (max-width:640px){
-  .toplist-main{padding:16px}
-  .place-photo{height:140px}
+/* Анімація появи */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
 }
 
-/* Idea cards (from main page preview) */
-.ideas-section{padding:30px 28px}
-.ideas-title{color:var(--text);margin:0 0 14px 6px;font-size:22px}
-.ideas-grid{display:flex;gap:14px;flex-wrap:wrap}
-.idea-card{width:220px;background:var(--glass);padding:12px;border-radius:12px;display:flex;gap:10px;align-items:center;cursor:pointer;transform:translateY(12px);opacity:0}
-.idea-card.visible{transform:none;opacity:1}
-.idea-emoji{font-size:28px}
-.idea-title{margin:0;font-size:16px}
-.idea-sub{margin:0;font-size:12px;color:rgba(255,255,255,0.7)}
-.radius-filter {
-  display: flex;
-  justify-content: center;
-  margin: 30px 0;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.radius-box {
-  background: var(--glass);
-  padding: 20px 26px;
-  border-radius: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: 100%;
-  max-width: 420px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-  text-align: center;
+
+
+
+/* Основний контейнер */
+.nearby-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
-.radius-box label {
-  font-weight: 600;
-  font-size: 15px;
+/* Широка панель фільтрації */
+.filter-glass-card.wide-layout {
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-.radius-box input[type="range"] {
-  width: 100%;
-  cursor: pointer;
+/* Верхній рядок фільтра (Радіус + Кнопка) */
+.filter-main-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
 }
 
-.apply-btn {
-  margin-top: 6px;
-  background: linear-gradient(90deg, var(--accent), #ffd37a);
-  border: none;
-  color: #111;
-  padding: 12px;
-  font-size: 15px;
-  font-weight: 700;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: transform .2s, box-shadow .2s;
+.radius-control {
+    flex-grow: 1; /* Слайдер розтягується на все вільне місце */
+    display: flex;
+    align-items: center;
+    gap: 20px;
 }
 
-.apply-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(255,159,28,0.35);
+.range-labels {
+    min-width: 140px;
+}
+
+.range-labels span { display: block; font-size: 0.8rem; color: #94a3b8; }
+.range-labels b { font-size: 1.2rem; color: #fff; }
+
+/* Кнопка "Сканувати" */
+.glow-btn {
+    min-width: 180px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #c026d3, #7c3aed);
+    border-radius: 16px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+/* Нижні чіпси */
+.filter-chips-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 15px;
+}
+
+.nearby-chips {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+}
+
+/* Сітка карток (4 в ряд на великих екранах) */
+.places-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+}
+
+
+/* Кнопка зі свіченням */
+.glow-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: 15px;
+    border: none;
+    background: linear-gradient(135deg, #c026d3, #7c3aed);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(192, 38, 211, 0.3);
+    transition: 0.3s;
+}
+
+.glow-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(192, 38, 211, 0.5);
+}
+
+/* Адаптивність */
+@media (max-width: 900px) {
+    .nearby-container { grid-template-columns: 1fr; }
+    .nearby-sidebar { order: 1; }
+}
+
+
+
+
+
+.nearby-chips-wrapper {
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.nearby-chips {
+    display: flex;
+    gap: 10px;
+    padding: 6px 2px;
+}
+
+.nearby-chips::-webkit-scrollbar {
+    height: 6px;
+}
+.nearby-chips::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 6px;
+}
+
+.chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #e5e7eb;
+    border: 1px solid #1e293b;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    transition: all 0.25s ease;
+}
+
+.chip:hover {
+    background: #1e293b;
+}
+
+.chip.active {
+    background: linear-gradient(135deg, #38bdf8, #2563eb);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(56,189,248,0.35);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.radius-control-panel {
+    margin-bottom: 40px;
+}
+span,b,p{
+    color: #fff;
+
+    font-size: 1.2rem;}
+
+.radius-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 25px;
+    border-radius: 24px;
+    max-width: 500px;
+}
+
+.radius-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    color: #fff;
+    font-weight: 600;
+}
+
+.radius-badge {
+    background: rgba(192, 38, 211, 0.2);
+    color: var(--neon-purple);
+    padding: 2px 12px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+/* Кастомний Range Input */
+.modern-range {
+    width: 100%;
+    accent-color: #c026d3;
+    margin: 20px 0;
+    cursor: pointer;
+}
+
+.refresh-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(90deg, #c026d3, #7c3aed);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.refresh-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(192, 38, 211, 0.3);
+}
+
+/* --- АДАПТИВНА СІТКА КАРТОК (ТРИ В РЯД) --- */
+.places-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Автоматично 3-4 в ряд */
+    gap: 20px;
+}
+
+/* --- ТОПОВА СТИЛІЗАЦІЯ КАРТКИ --- */
+.place-card-v2 {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.place-card-v2:hover {
+    transform: translateY(-8px);
+    border-color: var(--neon-purple);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3), 0 0 15px rgba(192, 38, 211, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Обгортка фото */
+.card-img-wrapper {
+    position: relative;
+    height: 180px;
+    overflow: hidden;
+}
+
+.card-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+}
+
+.place-card-v2:hover .card-img-wrapper img {
+    transform: scale(1.1);
+}
+
+/* Бейдж рейтингу */
+.card-rating-badge {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(5px);
+    padding: 4px 10px;
+    border-radius: 8px;
+    color: #ffca28;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Контент картки */
+.card-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.card-content h4 {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-content p {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Кнопка в картці */
+.details-link {
+    margin-top: auto;
+    background: rgba(192, 38, 211, 0.15);
+    border: 1px solid rgba(192, 38, 211, 0.3);
+    color: #e879f9;
+    padding: 10px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.details-link:hover {
+    background: var(--neon-purple);
+    color: #fff;
+}
+
+.settings-hero {
+    position: relative;
+    padding: 60px 0 40px;
+    overflow: hidden;
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Градієнтний текст */
+.settings-hero h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin: 10px 0;
+    background: linear-gradient(135deg, #fff 30%, #c026d3 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+    filter: drop-shadow(0 5px 15px rgba(192, 38, 211, 0.2));
+}/* Підзаголовок */
+.settings-hero p {
+    color: #94a3b8;
+    font-size: 1.1rem;
+    max-width: 500px;
+    line-height: 1.6;
+}
+
+.settings-hero p span {
+    color: #cbd5e1;
+    display: block;
+    font-weight: 300;
+}
+
+/* Декоративна лінія */
+.hero-separator {
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(90deg, #c026d3, transparent);
+    border-radius: 2px;
+    margin: 15px 0;
+}
+
+/* Бейдж над заголовком */
+.badge-premium {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(192, 38, 211, 0.1);
+    border: 1px solid rgba(192, 38, 211, 0.3);
+    color: #e879f9;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Фонове свічення за текстом */
+.hero-bg-glow {
+    position: absolute;
+    top: -20%;
+    left: -10%;
+    width: 75%;
+    height: 400px;
+    background: radial-gradient(circle, rgba(192, 38, 211, 0.15) 0%, transparent 70%);
+    z-index: -1;
+    filter: blur(40px);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@media (max-width: 900px) {
+    .nearby-container {
+        display: flex;
+        flex-direction: column; /* Стекаємо елементи вертикально */
+        gap: 20px;
+    }
+
+    .nearby-sidebar {
+        order: -1; /* Переміщує фільтр у самий верх */
+        position: relative;
+        top: 0;
+        width: 100%;
+    }
+
+    .filter-glass-card {
+        padding: 20px;
+        border-radius: 20px;
+        /* Робимо картку трохи компактнішою на мобілці */
+    }
+
+    .category-chips {
+        justify-content: center; /* Центруємо категорії на малих екранах */
+    }
+
+    .nearby-results {
+        width: 100%;
+    }
+}
+
+/* Додатково для зовсім маленьких екранів */
+@media (max-width: 480px) {
+    .settings-hero h1 {
+        font-size: 2.2rem;
+        text-align: center;
+    }
+    
+    .settings-hero p {
+        text-align: center;
+        font-size: 0.9rem;
+    }
+
+    .range-info {
+        font-size: 0.9rem;
+    }
+}@media (max-width: 600px) {
+    .category-chips {
+        display: flex;
+        flex-wrap: nowrap; /* Забороняємо перенос */
+        overflow-x: auto; /* Додаємо горизонтальний скрол */
+        padding-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start;
+    }
+
+    .chip {
+        flex: 0 0 auto; /* Чіпси не стискаються */
+        white-space: nowrap;
+    }
+    
+    /* Приховуємо скроллбар для естетики */
+    .category-chips::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@media (min-width: 901px) {
+    .nearby-container {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        align-items: start;
+    }
+}
+
+/* --- МОБІЛЬНЕ ПОЗИЦІОНУВАННЯ (Фільтр зверху) --- */
+@media (max-width: 900px) {
+    .nearby-sidebar {
+        order: -1; /* Магічна властивість: ставить фільтр ПЕРШИМ */
+        position: static;
+        width: 100%;
+    }
+
+    .filter-glass-card {
+        position: relative;
+        top: 0;
+        margin-bottom: 10px;
+    }
+
+    /* Робимо чіпси скроллом на мобілці, щоб не займали пів екрану */
+    .nearby-chips {
+        overflow-x: auto;
+        display: flex;
+        flex-wrap: nowrap;
+        padding-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .chip {
+        flex: 0 0 auto;
+    }
+}
+
+/* --- СІТКА КАРТОК (ТРИ В РЯД) --- */
+.places-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+    width: 100%;
+}
+
+
+
+/* Мобільна адаптація */
+@media (max-width: 768px) {
+    .filter-main-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 20px;
+    }
+    .radius-control {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

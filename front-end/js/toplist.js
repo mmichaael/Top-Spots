@@ -1,174 +1,199 @@
-const tpl = document.getElementById('placeCardTpl');
-const grid = document.getElementById('placesGrid');
-const metaText = document.getElementById('metaText');
-const emptyState = document.getElementById('emptyState');
+// ================== INIT ==================
 
-const radiusRange = document.getElementById('radiusRange');
-const radiusValue = document.getElementById('radiusValue');
-const applyFilterBtn = document.getElementById('applyFilterBtn');
+function initNearbyPage() {
+    const radiusInput = document.getElementById('nearbyRadius');
+    const radiusLabel = document.getElementById('radiusVal');
+    const chips = document.querySelectorAll('.chip');
+    const statusText = document.getElementById('nearbyStatus');
 
-let searchRadiusKm = 12;
+    let selectedCategory = 'tourist attraction';
+    let debounceTimer = null;
 
-// ---------- категорії ----------
+    // ---------------- ПОШУК ----------------
+    const performSearch = async () => {
+        statusText.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Оновлюємо локації...`;
 
-const CATEGORY_TYPES = {
-  popular: ["tourist_attraction", "museum", "point_of_interest"],
-  romantic: ["park", "tourist_attraction"],
-  active: ["park", "stadium", "gym"],
-  summer: ["beach", "lake"],
-  family: ["zoo", "amusement_park", "aquarium"]
-};
+        console.log('🔍 SEARCH START:', selectedCategory, radiusInput.value);
 
+        try {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                    resolve,
+                    reject,
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            });
 
+            const { latitude, longitude } = pos.coords;
+            const radius = Number(radiusInput.value);
 
-function getQueryParam(name) {
-  return new URL(window.location.href).searchParams.get(name);
-}
+            console.log('📍 GEO:', latitude, longitude);
 
-function targetCountByRadius(radiusKm) {
-  if (radiusKm <= 3.5) return 9;
-  if (radiusKm <= 7.2) return 15;
-  if (radiusKm <= 12.8) return 22;
-  return 35;
-}
+            const places = await fetchNearbyFromGoogle(
+                latitude,
+                longitude,
+                radius,
+                selectedCategory
+            );
 
-async function getUserPosition() {
-  return new Promise((res, rej) => {
-    navigator.geolocation.getCurrentPosition(
-      pos => res(pos.coords),
-      err => rej(err),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  });
-}
+            console.log('📦 PLACES:', places);
 
-// ---------- render ----------
+            renderNearbyCards(places);
 
-function renderPlaces(places) {
-  grid.innerHTML = '';
+            statusText.innerText = places.length
+                ? `Знайдено ${places.length} локацій поруч`
+                : `Поруч нічого не знайдено`;
 
-  if (!places.length) {
-    emptyState.classList.remove('hidden');
-    metaText.textContent = 'Нічого не знайдено';
-    return;
-  }
-
-  emptyState.classList.add('hidden');
-
-  places.forEach((p, i) => {
-    const node = tpl.content.cloneNode(true);
-    const card = node.querySelector('.place-card');
-
-    node.querySelector('.place-photo').src =
-      p.photos[0].getUrl({ maxWidth: 800 });
-
-    node.querySelector('.place-name').textContent = p.name || '—';
-    node.querySelector('.place-addr').textContent = p.vicinity || '';
-    node.querySelector('.place-rating').textContent =
-      p.rating ? `⭐ ${p.rating}` : '—';
-
-    node.querySelector('.details-btn').onclick = () => {
-      location.href = `/html/city_page.html?placeId=${p.place_id}`;
+        } catch (err) {
+            console.error('❌ GEO ERROR:', err);
+            statusText.innerText = 'Увімкніть доступ до геолокації';
+        }
     };
 
-    grid.appendChild(node);
-    setTimeout(() => card.classList.add('show'), i * 70);
-  });
+    // --------- КАТЕГОРІЇ ---------
+    chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            if (chip.classList.contains('active')) return;
+
+            chips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+
+            // keyword стабільніший ніж type
+            selectedCategory = chip.dataset.type || chip.innerText;
+
+            performSearch();
+        });
+    });
+
+    // --------- РАДІУС (DEBOUNCE) ---------
+    radiusInput.addEventListener('input', e => {
+        const val = e.target.value;
+        radiusLabel.innerText = `${val} км`;
+
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(performSearch, 500);
+    });
+
+    // --------- ПЕРШИЙ ЗАПУСК ---------
+    performSearch();
 }
 
-// ---------- Google Places (з авто-розширенням) ----------
+// ================== GOOGLE PLACES ==================
 
-async function fetchPlaces(lat, lng, category) {
-  const mapDiv = document.createElement('div');
-  const map = new google.maps.Map(mapDiv);
-  const service = new google.maps.places.PlacesService(map);
+function fetchNearbyFromGoogle(lat, lng, radiusKm, keyword) {
+    return new Promise(resolve => {
+        if (!google?.maps?.places) return resolve([]);
 
-  const types = CATEGORY_TYPES[category] || CATEGORY_TYPES.popular;
-  const maxRadius = 25;
-
-  let collected = {};
-  let currentRadius = searchRadiusKm;
-
-  while (currentRadius <= maxRadius) {
-    const requests = types.map(type =>
-      new Promise(resolve => {
+        const service = new google.maps.places.PlacesService(document.createElement('div'));
         service.nearbySearch({
-          location: new google.maps.LatLng(lat, lng),
-          radius: currentRadius * 1000,
-          type
+            location: new google.maps.LatLng(lat, lng),
+            radius: radiusKm * 1000,
+            keyword: keyword
         }, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK) {
-            results.forEach(p => {
-              if (p.photos && p.photos.length > 0) {
-                collected[p.place_id] = p;
-              }
-            });
-          }
-          resolve();
+            if (status !== google.maps.places.PlacesServiceStatus.OK) return resolve([]);
+            
+            // Повертаємо всі результати, розберемося з фото вже в рендері
+            resolve(results); 
         });
-      })
-    );
+    });
+}
 
-    await Promise.all(requests);
 
-    const list = Object.values(collected);
-    const target = targetCountByRadius(searchRadiusKm);
+// ================== RENDER ==================
+function getValidPhoto(place) {
+    if (!place.photos || !place.photos.length) return null;
 
-    if (list.length >= target || currentRadius === maxRadius) {
-      const MAX_RESULTS = Math.min(
-        Math.max(searchRadiusKm * 3, 8),
-        60
-      );
-      return list.slice(0, MAX_RESULTS);
+    for (const photo of place.photos) {
+        try {
+            const url = photo.getUrl({ maxWidth: 800 });
+            if (url && url.startsWith('http')) return url;
+        } catch {}
+    }
+    return null;
+}
+// 1. Константа (SVG вшито прямо в код)
+const NO_PHOTO_SVG = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect width='100%25' height='100%25' fill='%231e293b'/%3E%3Ctext x='50%25' y='50%25' fill='%23475569' font-family='sans-serif' font-size='24' text-anchor='middle'%3ENo Photo%3C/text%3E%3C/svg%3E";
+
+function renderNearbyCards(places) {
+    const grid = document.getElementById('nearbyGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    if (!places || places.length === 0) {
+        grid.innerHTML = `<div class="nearby-placeholder" style="grid-column:1/-1;text-align:center;padding:50px;color:#94a3b8;">
+            <i class="fas fa-search-location" style="font-size:3rem;margin-bottom:15px;display:block;"></i>
+            Поруч нічого не знайдено 😕
+        </div>`;
+        return;
     }
 
-    currentRadius = currentRadius < 10
-      ? currentRadius + 2
-      : currentRadius + 5;
-  }
+    places.forEach((p, i) => {
+places.forEach((p, i) => {
+    let photoUrl = '';
 
-  return Object.values(collected);
-}
-
-// ---------- init ----------
-
-async function init() {
-  const category = getQueryParam('category') || 'popular';
-  metaText.textContent = 'Отримую геолокацію…';
-
-  try {
-    const { latitude, longitude } = await getUserPosition();
-    metaText.textContent = 'Завантажую місця…';
-
-    const places = await fetchPlaces(latitude, longitude, category);
-    renderPlaces(places);
-
-    metaText.textContent =
-      `Знайдено ${places.length} місць у радіусі ${searchRadiusKm} км`;
-  } catch {
-    const places = await fetchPlaces(50.4501, 30.5234, category);
-    renderPlaces(places);
-
-    metaText.textContent =
-      `Знайдено ${places.length} популярних місць`;
-  }
-}
-
-// ---------- events ----------
-
-radiusRange.addEventListener('input', () => {
-  searchRadiusKm = radiusRange.value;
-  radiusValue.textContent = searchRadiusKm;
+    if (p.photos && p.photos.length > 0) {
+        photoUrl = p.photos[0].getUrl({ maxWidth: 800 });
+    } else {
+        // Підбираємо тематичну заглушку замість порожнього тексту
+        const type = p.types ? p.types[0] : '';
+        if (type.includes('restaurant') || type.includes('food')) {
+            photoUrl = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400';
+        } else if (type.includes('park')) {
+            photoUrl = 'https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=400';
+        } else {
+            photoUrl = NO_PHOTO_SVG; // Наш дефолтний SVG
+        }
+    }
+    // ... рендер картки
 });
+        if (p.photos && p.photos.length > 0) {
+            try {
+                photoUrl = p.photos[0].getUrl({ maxWidth: 600, maxHeight: 400 });
+            } catch (e) {
+                photoUrl = NO_PHOTO_SVG;
+            }
+        }
 
-applyFilterBtn.addEventListener('click', init);
+        const card = document.createElement('div');
+        card.className = 'place-card-v2';
+        // Початковий стан для анімації (якщо в CSS є transition)
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.4s ease';
 
-// ---------- старт після завантаження API ----------
+card.innerHTML = `
+    <div class="card-img-wrapper">
+        <img src="${photoUrl}" 
+             alt="${p.name}" 
+             class="card-main-img"
+             onerror="this.onerror=null; this.src='${NO_PHOTO_SVG}';">
+        <div class="card-rating-badge">
+            ⭐ ${p.rating || '0.0'}
+        </div>
+    </div>
+    <div class="card-content">
+        <h4 class="card-title">${p.name || 'Назва невідома'}</h4>
+        <p class="card-location">
+            <i class="fas fa-map-marker-alt"></i> ${p.vicinity || 'Адреса невідома'}
+        </p>
+        <button class="details-link" onclick="location.href='/html/city_page.html?placeId=${p.place_id}'">
+            Деталі <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+`;
+
+        grid.appendChild(card);
+
+        // Плавна поява кожної картки по черзі
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, i * 60);
+    });
+}
+
+// ================== START ==================
 
 window.addEventListener('load', () => {
-  if (window.google && google.maps) {
-    init();
-  } else {
-    console.error('Google Maps API не завантажився');
-  }
+    initNearbyPage();
 });

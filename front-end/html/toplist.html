@@ -8,65 +8,74 @@
 </head>
 
 <body>
-  <header class="toplist-header">
-    <button class="back-btn" onclick="history.back()">← Назад</button>
-    <h1 id="pageTitle">Ідеї</h1>
-  </header>
+  
+    <div class="dashboard-wrapper fade-in">
+        <header class="settings-hero">
+            <div class="hero-bg-glow"></div>
+            <div class="hero-content">
+                <div class="badge-premium"><i class="fas fa-satellite-dish"></i> Live Radar</div>
+                <h1 class="glitch-text">Локації поруч</h1>
+                <div class="hero-separator"></div>
+                <p id="nearbyStatus">Дозвольте доступ до геолокації, щоб побачити цікаві місця навколо</p>
+            </div>
+        </header>
 
-  <main class="toplist-main">
-    <section class="toplist-meta">
-      <p id="metaText">Завантажую місця…</p>
-    </section>
+       <div class="nearby-container">
+    <header class="nearby-top-filter">
+        <div class="filter-glass-card wide-layout">
+            
+            <div class="filter-row">
+                <div class="filter-section range-area">
+                    <div class="range-info">
+                        <span>Радіус:</span>
+                        <b id="radiusVal">12 км</b>
+                    </div>
+                    <input type="range" id="nearbyRadius" min="1" max="50" value="12" class="modern-slider">
+                </div>
 
-    <!-- 🔥 Фільтр радіусу -->
-    <section class="radius-filter">
-      <div class="radius-box">
-        <label>
-          Радіус пошуку: <span id="radiusValue">12</span> км
-        </label>
+                <div class="filter-section action-area">
+                    <button id="startNearbySearch" class="glow-btn">
+                        <i class="fas fa-crosshairs"></i> Сканувати
+                    </button>
+                </div>
+            </div>
 
-        <input
-          type="range"
-          id="radiusRange"
-          min="2"
-          max="25"
-          step="1"
-          value="12"
-        />
+            <div class="filter-row chips-area">
+                <div class="nearby-chips">
+                    <button class="chip active" data-type="tourist attraction">🏛️ Памʼятки</button>
+                    <button class="chip" data-type="restaurant">🍽️ Ресторани</button>
+                    <button class="chip" data-type="cafe">☕ Кафе</button>
+                    <button class="chip" data-type="museum">🖼️ Музеї</button>
+                    <button class="chip" data-type="park">🌳 Парки</button>
+                    <button class="chip" data-type="art gallery">🎨 Галереї</button>
+                    <button class="chip" data-type="zoo">🦁 Зоопарки</button>
+                    <button class="chip" data-type="shopping mall">🛍️ ТЦ</button>
+                </div>
+            </div>
 
-        <button id="applyFilterBtn" class="apply-btn">
-           Оновити результати
-        </button>
-      </div>
-    </section>
-
-    <section class="places-grid" id="placesGrid"></section>
-
-    <section class="places-empty hidden" id="emptyState">
-      <p>Нічого не знайдено...</p>
-    </section>
-  </main>
-
-  <template id="placeCardTpl">
-    <article class="place-card">
-      <img class="place-photo" alt="photo" />
-      <div class="place-info">
-        <h3 class="place-name"></h3>
-        <p class="place-addr"></p>
-        <div class="place-meta">
-          <span class="place-rating"></span>
-          <button class="details-btn">Деталі</button>
         </div>
-      </div>
-    </article>
-  </template>
+    </header>
 
-  <!-- Google Maps API (БЕЗ callback) -->
-  <script
+    <main class="nearby-results">
+        <div id="nearbyGrid" class="places-grid-v2">
+            </div>
+    </main>
+</div>
+            </aside>
+
+            <main class="nearby-results">
+                <div id="nearbyGrid" class="places-grid-v2">
+                    <div class="nearby-placeholder">
+                       
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+      <script
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBaWd1yK7Y3sO-gNw6VWv9Gqsu6b8iB2zY&libraries=places"
     async defer>
   </script>
-
-  <script type="module" src="../js/toplist.js"></script>
+    <script src="../js/toplist.js"></script>
 </body>
 </html>

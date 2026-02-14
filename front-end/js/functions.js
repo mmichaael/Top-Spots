@@ -306,6 +306,23 @@
 
 //----------------Class with functions for front_mainpage.js --> mainpage.html------------------------------------------------------
 class mainPageFunctionsHandler {
+    constructor() {
+        this.container = document.getElementById('main-page-content');
+    }
+
+
+loadPageContent = (content) => {
+  
+    const container = document.getElementById('main-page-content');
+    
+    if (container) {
+        container.innerHTML = content;
+        window.scrollTo(0, 0);
+        console.log("✅ Контент успішно вставлено в #main-page-content");
+    } else {
+        console.error("❌ КРИТИЧНА ПОМИЛКА: Елемент <main id='main-page-content'> не знайдено в HTML!");
+    }
+}
     //------------------------ Sending Cookie for Log Out ----------------------------------
     logOut = async () => {
         try {

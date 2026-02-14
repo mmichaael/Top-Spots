@@ -9,10 +9,15 @@ const passport = require('passport');
 const { default: axios } = require('axios');
 const NodeCache = require("node-cache");
 const OpenAI = require("openai");
+const https = require('https');
+const fs = require('fs');
+
  require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
+
+
 class Controller {
     pageBaseMain = path.join(__dirname, '../front-end/html/index.html');
     pageFullMain = path.join(__dirname, '../front-end/html/logged_index.html');
@@ -87,61 +92,72 @@ chatAssistant = async (req, res) => {
 
 
 
+
 autocompletePlaces = async (req, res) => {
-  const { input, type } = req.body;
-
-  if (!input) {
-    console.log("No input provided for autocomplete");
-    return res.status(403).json();
-  }
-
-  try {
-    let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-      input
-    )}&components=country:ua&language=uk&key=${process.env.GOOGLE_API_KEY}`;
-
-    // якщо передали категорію
-    if (type) {
-      url += `&types=${encodeURIComponent(type)}`;
-    }
-
-    const response = await fetch(url);
-    const data = await response.json();
-    console.log("Google response:", JSON.stringify(data, null, 2));
-
-    return res.status(200).json(data);
-  } catch (err) {
-    console.log(`Google Places Autocomplete error: ${err.message}`);
-    return res.status(500).json();
-  }
-};
-
-placeDetails = async (req, res) => {
-    const { place_id } = req.body;
-
-    if (!place_id) {
-        console.log("No place_id provided for place details");
-        return res.status(403).json();
-    }
+    const { input } = req.body;
+    if (!input) return res.status(403).json();
 
     try {
-        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&language=uk&key=${process.env.GOOGLE_API_KEY}`;
-
+        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&types=(cities)&language=uk&components=country:ua&key=${process.env.GOOGLE_API_KEY}`;
+        
         const response = await fetch(url);
         const data = await response.json();
 
-        console.log(`Place details fetched for ${place_id}`);
-        return res.status(200).json(data);
+        const formatted = {
+            predictions: data.predictions.map(p => ({
+                description: p.description,
+                pure_name: p.structured_formatting.main_text,
+                place_id: p.place_id
+            }))
+        };
+
+        return res.status(200).json(formatted);
     } catch (err) {
-        console.log(`Google Place Details error: ${err.message}`);
+        console.log(`Autocomplete error: ${err.message}`);
         return res.status(500).json();
     }
 };
 
+// Твій початковий placeDetails
+placeDetails = async (req, res) => {
+    const { place_id, name } = req.body;
+    if (!place_id) return res.status(403).json();
 
+    try {
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=name,geometry,photos,rating&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        const gPlace = data.result;
 
+        const timestamp = Date.now();
+        const fileName = `city_${timestamp}.jpg`;
+        const absolutePath = path.resolve(process.cwd(), 'front-end', 'img', 'cities', fileName);
+        let finalPhotoUrl = null;
 
+        if (gPlace.photos) {
+            const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photoreference=${gPlace.photos[0].photo_reference}&key=${process.env.GOOGLE_API_KEY}`;
+            const imgRes = await fetch(photoUrl);
+            const buffer = Buffer.from(await imgRes.arrayBuffer());
+            fs.writeFileSync(absolutePath, buffer);
+            finalPhotoUrl = `/img/cities/${fileName}`;
+        }
 
+        const result = {
+            result: {
+                query_name: name,
+                full_name: gPlace.name,
+                photo_url: finalPhotoUrl,
+                rating: gPlace.rating || 4.5
+            }
+        };
+
+        return res.status(200).json(result);
+    } catch (err) {
+        console.log(`Details error: ${err.message}`);
+        return res.status(500).json();
+    }
+};
     
     //Open Main page
     openBaseMainPage = (req, res) => {

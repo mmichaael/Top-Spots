@@ -1,368 +1,108 @@
-<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Top Spots</title>
-        <link rel="stylesheet" href="../styles/logged_index_styles.css" />
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TopSpots | Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../styles/logged_index_styles.css">
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
 
-    </head>
-    <body>
-        <div class="wrapper">
-            <!-- - - - - - ---- - --- - - - -    Header    - - - - - - -- - - -->
-         
-            <div class="main__header">
-                    <div class="header__topspot">
-                        <div class="logo_video_header">
-                            <video
-                            class="logo_video"
-                            height="auto"
-                            autoplay
-                            muted
-                            playsinline
-                            noloop
-                        >
-                            <source
-                                src="../img/output_video1.webm"
-                                type="video/webm"
-                            />
-                            Logo don't opened
-                        </video>
-                        </div>
-                    </div>
-                    <ul class="header_list">
-                        <li class="header-ul_element"><a href="">GeoMap</a></li>
-                        <li class="header-ul_element">
-                            <a href="">Contact</a>
-                        </li>
-                        <nav class="navbar">
-                            <div class="menu-icon" id="menuBtn">☰
-                                
-                            </div>
-                            <div class="menu" id="menu">
-                                <div class="close-container" id="closeBtn">
-                                    <div class="close-icon"></div>
-                                </div>
-                                <ul>
-                                    <li><a href="profile.html">👤 Profile</a></li>
-                                    <li><a href="setting.html">⚙️ Settings</a></li>
-                                    <li><a href="change_profile.html">🖊 Change Profile</a></li>
-                                    <li><a href="my_clients.html">📋 My Clients</a></li>
-                                    <li><a href="my_hotels.html">🏨 My Hotels</a></li>
-                                    <li><a href="my_city.html">🌆 My City</a></li>
-                                    <li><a href="minimap.html">🗺 Minimap</a></li>
-                                    <li><a href="photo_album.html">📷 Photo Album</a></li>
-                                    <li><a href="profile.html">👤 Профіль</a></li>
-                                    <li><a href="setting.html">⚙️ Налаштування</a></li>
-                                    <li><button class="logout_btn" id="LogOut"><span>Log Out</span></li>
-                                </ul>
-                            </div>
-                        </nav>
-                        
-                        
-                    </ul>
+    <header class="header">
+        <div class="header-container">
+            <div class="brand" >
+    <video class="logo_box" height="200px" autoplay muted playsinline loop>
+        <source src="./img/output_video1.webm" type="video/webm" />
+        Logo don't opened
+      </video>
             </div>
-            
-            <!-- - - - - - ---- - --- - - - -    Main Content  - - - - - - -- - - -->
-            <div class="main__page">
-
-            <div class="main__page-text">
-                    <h1>The whole world awaits.</h1>
-            </div>
-                <!--     ----- -- - - - -  - Пошукова система         --- --- - --- --    -->
-            <div class="search-bar">
-                    <div class="search-section">
-                        <ul id="suggestionsList" class="suggestionsList"></ul>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                            <path
-                                d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40
-                C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"
-                            />
-                        </svg>
-                        <input type="text" id="searchInput" placeholder="City" />
-                    </div>
-                    <button class="search-button">Search</button>
-            </div>
-
-             <!-------------------------    City Cards    ------------------------------>
-             <div class="city_cards_block">
-                <div class="block_for_cards" id="blockForCards">
-                    <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/paris.jpg" alt="" class="img_card">
-                        </div>
-                        <div class="block_for_card_inf">
-                            <h3 class="city_name">Paris</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Київ — енергія столиці, історія тисячоліть і дух сучасної України</p>
-                        </div>
-                    </div>
-                    <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/rome.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Rome</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Одеса — море, гумор і колорит, що закохують з першого погляду</p>
-                        </div>
-                    </div>
-                    <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/The 16 Best Things to Do in Barcelona.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Barcelona</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Харків — місто молодості, ідей і простору для відкриттів</p>
-                        </div>
-                    </div>
-                    <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/photo_2025-07-27_20-06-36.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">London</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Львів — аромат кави, магія старовини й атмосфера Європи</p>
-                        </div>
-                    </div>
-                    <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/'Amsterdam Canal At Dusk' Poster, picture, metal print, paint by Socratubik _ Displate.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Amsterdam</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                           <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Find Your Bliss in Prague, the Czech Republic Capital Rich in History.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Prague</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Львів — аромат кави, магія старовини й атмосфера Європи</p>
-                        </div>
-                    </div>
-                    <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Two Days in Vienna Perfect 2-Day Itinerary - The Vienna BLOG.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Vienna</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/25 Cities You Need To See At Least Once In Life!.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Budapest</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Milan.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Milan</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/photo_2025-07-29_21-30-48.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Bruges</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Rick Steves Says One Of Europe's Most Walkable Cities Is A 'Living Fairytale' You Shouldn't Miss - Islands.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Dubrovnik</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Torre de Belém!.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Lisbon</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Без названия (6).jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Athens</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Wawel Royal Castle, Kraków.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Kraków</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/DSCF9599-e1521556251628-1140x545.jpg.pagespeed.ce.2KvcjY4oFK.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Santorini</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/photo_2025-07-30_21-05-15.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Lucerne</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/stockholm.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Stockholm</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Без названия (7).jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Oslo</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Без названия (8).jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Rovaniemi</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/Copenhagen, Denmark.jpeg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Copenhagen</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/DSCF9599-e1521556251628-1140x545.jpg.pagespeed.ce.2KvcjY4oFK.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Dublin</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/DSCF9599-e1521556251628-1140x545.jpg.pagespeed.ce.2KvcjY4oFK.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">Lviv</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    <!-- </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/DSCF9599-e1521556251628-1140x545.jpg.pagespeed.ce.2KvcjY4oFK.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">London</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/DSCF9599-e1521556251628-1140x545.jpg.pagespeed.ce.2KvcjY4oFK.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">London</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/DSCF9599-e1521556251628-1140x545.jpg.pagespeed.ce.2KvcjY4oFK.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">London</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div>
-                         <div class="block_for_card">
-                        <div class="block_for_card_img">
-                            <img src="../img/cards_city/DSCF9599-e1521556251628-1140x545.jpg.pagespeed.ce.2KvcjY4oFK.jpg" alt="" class="img_card">
-                        </div>
-                         <div class="block_for_card_inf">
-                            <h3 class="city_name">London</h3>
-                            <h3 class="city_rate">10</h3>
-                            <p class="city_description">Карпати — гори, що надихають, ліси, що заспокоюють, і повітря, яке дарує свободу.</p>
-                        </div>
-                    </div> -->
-
-                    
-                </div>
-                
-             </div>
-                
-                <!--    ------------------      Background Video       --------------------------->
-            <video class="video-background" autoplay muted loop>
-            <source src="img/4895-181257833_medium.mp4" type="video/mp4" />
-            </video>
-            
-            <!--end main page-->
+            <nav class="nav-menu">
+                <button class="nav-item" data-page="profile"><i class="far fa-user"></i> Профіль</button>
+                <button class="nav-item active" data-page="dashboard" ><i class="fas fa-th-large"></i> Головна</button>
+                <button class="nav-item" data-page="nearby"><i class="fas fa-heart"></i> Місця поруч</button>
+                <button class="nav-item" data-page="photos" ><i class="fas fa-camera"></i> Фото</button>
+                <button class="nav-item" data-page="settings" ><i class="fas fa-cog"></i> Налаштування</button>
+            </nav>
+            <button class="logout-icon"><i class="fas fa-sign-out-alt"></i></button>
         </div>
+    </header>
 
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"/>
-         <script type="module" src="/js/front_logged_index.js"></script>
+    <main id="main-page-content" class="container">
+        </main>
 
-    </body>
+<footer class="main-footer modern-style">
+  <div class="footer-container">
+    <div class="footer-brand">
+      <div class="footer-logo">
+        <img src="../img/Top Spots (3).png" alt="Logo" />
+        <span>Top Spots</span>
+      </div>
+      <p class="brand-description">Твій особистий гід по найкращим місцям міста. Відкривай, зберігай, ділися!</p>
+      <div class="social-links-modern">
+        <a href="#"><i class="fab fa-facebook-f"></i></a>
+        <a href="#"><i class="fab fa-instagram"></i></a>
+        <a href="#"><i class="fab fa-tiktok"></i></a>
+        <a href="#"><i class="fab fa-youtube"></i></a>
+      </div>
+    </div>
+
+    <div class="footer-links-grid">
+      <div class="footer-column">
+        <h4>Корисні посилання</h4>
+        <ul>
+          <li><a href="#">Про нас</a></li>
+          <li><a href="#">Блог</a></li>
+          <li><a href="#">Партнери</a></li>
+          <li><a href="#">Кар'єра</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <h4>Підтримка</h4>
+        <ul>
+          <li><a href="#">Допомога</a></li>
+          <li><a href="#">Конфіденційність</a></li>
+          <li><a href="#">Умови використання</a></li>
+          <li><a href="#">FAQ</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <h4>Контакти</h4>
+        <ul class="contact-info">
+          <li><i class="far fa-envelope"></i> <a href="mailto:spraizen47@gmail.com">spraizen47@gmail.com</a></li>
+          <li><i class="fas fa-phone-alt"></i> <a href="tel:+380974901774">+38 (097) 490-17-74</a></li>
+          <li><i class="fas fa-map-marker-alt"></i> Київ / Bremen</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom-modern">
+    <div class="bottom-controls">
+      <div class="language-selector">
+        <i class="fas fa-globe"></i>
+        <select>
+          <option>Українська</option>
+          <option>English</option>
+          <option>Deutsch</option>
+        </select>
+      </div>
+      <button class="theme-toggle">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+    <p class="copyright">© 2026 Top Spots. Всі права захищені.</p>
+  </div>
+</footer>
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBaWd1yK7Y3sO-gNw6VWv9Gqsu6b8iB2zY&libraries=places"
+    async defer>
+  </script>
+    <script type="module" src="../js/front_logged_index.js"></script>
+</body>
 </html>
