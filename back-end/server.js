@@ -20,7 +20,7 @@ app.use(cors({
 // --- JSON ---
 app.use(express.json());
 app.use(cookieParser());
-// --- Passport (Google OAuth) ---
+
 app.use(passport.initialize());
 passport.use(new GoogleStrategy(
   {
@@ -32,8 +32,17 @@ passport.use(new GoogleStrategy(
     return done(null, profile);
   }
 ));
+// В server.js ПІСЛЯ app.use(express.json());
+
 
 app.use(express.static(path.join(__dirname, "../front-end")));
+
+app.get('/api/google-maps-key', (req, res) => {
+  if (!process.env.GOOGLE_API_KEY) {
+    return res.status(500).json({ error: 'Google API key not configured' });
+  }
+  res.json({ key: process.env.GOOGLE_API_KEY });
+});
 
 
 // --- API роутер ---
@@ -49,7 +58,7 @@ app.get("/city_page.html", (req, res) => {
   res.sendFile(path.join(__dirname, "../front-end/html/city_page.html"));
 });
 
-// --- Сервер ---
+// --- Сервер    ---
 const PORT = process.env.PORT || 3500;
 const HOST = process.env.HOST || "localhost";
 

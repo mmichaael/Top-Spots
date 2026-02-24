@@ -39,7 +39,6 @@ class Controller {
     }
 
 
-
 chatAssistant = async (req, res) => {
         try {
             const { message } = req.body;
@@ -90,18 +89,69 @@ chatAssistant = async (req, res) => {
         }
     };
 
+getNearbyPlaces = async (req, res) => {
+    const { latitude, longitude, radius } = req.body;
 
-
-
-autocompletePlaces = async (req, res) => {
-    const { input } = req.body;
-    if (!input) return res.status(403).json();
+    if (!latitude || !longitude || !radius) {
+        return res.status(400).json({ error: "Missing parameters" });
+    }
 
     try {
-        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&types=(cities)&language=uk&components=country:ua&key=${process.env.GOOGLE_API_KEY}`;
+        // Шукаємо в базі місця, які мають валідне фото
+        const cacheQuery = `
+            SELECT * FROM places
+            WHERE (
+                6371 * acos(
+                    cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2)) + 
+                    sin(radians($1)) * sin(radians(latitude))
+                )
+            ) <= $3
+            AND photo_url IS NOT NULL 
+            AND photo_url NOT LIKE '%default_city.jpg%'
+            ORDER BY rating DESC NULLS LAST
+            LIMIT 20
+        `;
+
+        const { rows: cached } = await pool.query(cacheQuery, [latitude, longitude, radius]);
+
+        // ПОВЕРТАЄМО КЕШ, АЛЕ НЕ БЛОКУЄМО ПОДАЛЬШИЙ ПОШУК НА ФРОНТІ
+        console.log(`\x1b[32m[DB CHECK]\x1b[0m Знайдено в базі: ${cached.length} місць поруч`);
+        
+        return res.status(200).json({ 
+            results: cached, 
+            source: cached.length > 0 ? 'cache' : 'empty' 
+        });
+
+    } catch (err) {
+        console.error("\x1b[31m[DB ERROR]\x1b[0m", err.message);
+        return res.status(500).json({ error: "Server error" });
+    }
+};
+
+autocompletePlaces = async (req, res) => {
+    const { input, category } = req.body;
+    console.log(`\n\x1b[36m[AUTOCOMPLETE START]\x1b[0m 🔍 Пошук: "${input}", Категорія: ${category || '(cities)'}`);
+
+    if (!input) {
+        console.log("\x1b[31m[AUTOCOMPLETE ERROR]\x1b[0m Порожній ввід");
+        return res.status(403).json({ error: "Input is required" });
+    }
+
+    try {
+        // Якщо category це тип закладу (restaurant, cafe...) — використовуємо його
+        // Якщо це (cities) — залишаємо як є
+        const types = category && category !== '(cities)' 
+            ? `types=${category}` 
+            : 'types=(cities)';
+        
+        console.log(`\x1b[36m[AUTOCOMPLETE]\x1b[0m Використовую types: ${types}`);
+        
+        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&${types}&language=uk&components=country:ua&key=${process.env.GOOGLE_API_KEY}`;
         
         const response = await fetch(url);
         const data = await response.json();
+        
+        console.log(`\x1b[32m[AUTOCOMPLETE GOOGLE]\x1b[0m Статус: ${data.status}, Знайдено: ${data.predictions?.length || 0}`);
 
         const formatted = {
             predictions: data.predictions.map(p => ({
@@ -113,52 +163,126 @@ autocompletePlaces = async (req, res) => {
 
         return res.status(200).json(formatted);
     } catch (err) {
-        console.log(`Autocomplete error: ${err.message}`);
-        return res.status(500).json();
+        console.log(`\x1b[31m[AUTOCOMPLETE CRASH]\x1b[0m 🔥 Помилка: ${err.message}`);
+        return res.status(500).json({ error: "Server Error" });
     }
 };
 
-// Твій початковий placeDetails
-placeDetails = async (req, res) => {
-    const { place_id, name } = req.body;
-    if (!place_id) return res.status(403).json();
+saveNearbyPlaces = async (req, res) => {
+    const { places } = req.body;
+    
+    if (!places || !Array.isArray(places)) {
+        return res.status(400).json({ error: "No places provided" });
+    }
 
     try {
-        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=name,geometry,photos,rating&language=uk&key=${process.env.GOOGLE_API_KEY}`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        const gPlace = data.result;
+        const saved = [];
+        for (const place of places) {
+            const insertQuery = `
+                INSERT INTO places (
+                    place_id, query_name, full_name, photo_url, rating, latitude, longitude
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (place_id) DO UPDATE SET 
+                    rating = EXCLUDED.rating,
+                    photo_url = EXCLUDED.photo_url,
+                    latitude = EXCLUDED.latitude,
+                    longitude = EXCLUDED.longitude
+                RETURNING *`;
 
-        const timestamp = Date.now();
-        const fileName = `city_${timestamp}.jpg`;
-        const absolutePath = path.resolve(process.cwd(), 'front-end', 'img', 'cities', fileName);
-        let finalPhotoUrl = null;
-
-        if (gPlace.photos) {
-            const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photoreference=${gPlace.photos[0].photo_reference}&key=${process.env.GOOGLE_API_KEY}`;
-            const imgRes = await fetch(photoUrl);
-            const buffer = Buffer.from(await imgRes.arrayBuffer());
-            fs.writeFileSync(absolutePath, buffer);
-            finalPhotoUrl = `/img/cities/${fileName}`;
+            const result = await pool.query(insertQuery, [
+                place.place_id,
+                place.name,
+                place.vicinity,
+                place.photo_url, // Отримуємо вже готовий URL від фронта
+                place.rating,
+                place.latitude,
+                place.longitude
+            ]);
+            saved.push(result.rows[0]);
         }
 
-        const result = {
-            result: {
-                query_name: name,
-                full_name: gPlace.name,
-                photo_url: finalPhotoUrl,
-                rating: gPlace.rating || 4.5
-            }
-        };
-
-        return res.status(200).json(result);
+        return res.status(200).json({ success: true, count: saved.length });
     } catch (err) {
-        console.log(`Details error: ${err.message}`);
-        return res.status(500).json();
+        console.error("DB Save Error:", err.message);
+        return res.status(500).json({ error: "Server error" });
     }
 };
+
+
+getBestPhotoData = async (place_id, name, location) => {
+    try {
+        // А) Шукаємо через Text Search (найкраща якість)
+        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name)}&key=${process.env.GOOGLE_API_KEY}&language=uk`;
+        const searchRes = await fetch(searchUrl);
+        const searchData = await searchRes.json();
+
+        if (searchData.results && searchData.results[0]?.photos) {
+            return {
+                url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photoreference=${searchData.results[0].photos[0].photo_reference}&key=${process.env.GOOGLE_API_KEY}`,
+                rating: searchData.results[0].rating || 4.5,
+                isDefault: false
+            };
+        }
+
+        // Б) Якщо немає фото, пробуємо Street View
+        if (location?.lat && location?.lng) {
+            return {
+                url: `https://maps.googleapis.com/maps/api/streetview?size=1200x800&location=${location.lat},${location.lng}&fov=90&heading=0&pitch=10&key=${process.env.GOOGLE_API_KEY}`,
+                rating: 4.0,
+                isDefault: false
+            };
+        }
+
+        return { url: '/img/default_city.jpg', rating: 0, isDefault: true };
+    } catch (err) {
+        return { url: '/img/default_city.jpg', rating: 0, isDefault: true };
+    }
+};
+
+
+placeDetails = async (req, res) => {
+
+    const { place_id, name, description, photo_url, rating, latitude, longitude } = req.body;
     
+    try {
+        const query = `
+            INSERT INTO places (place_id, query_name, full_name, photo_url, rating, latitude, longitude)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (place_id) DO UPDATE SET 
+                photo_url = COALESCE(EXCLUDED.photo_url, places.photo_url),
+                rating = COALESCE(EXCLUDED.rating, places.rating),
+                latitude = COALESCE(EXCLUDED.latitude, places.latitude),
+                longitude = COALESCE(EXCLUDED.longitude, places.longitude)
+            RETURNING *`;
+            
+        const result = await pool.query(query, [
+            place_id, 
+            name, 
+            description, 
+            photo_url || null, 
+            rating || 4.5, 
+            latitude || null, 
+            longitude || null
+        ]);
+        
+        console.log(`✅ Місце ${name} синхронізовано з БД`);
+        res.status(200).json({ result: result.rows[0] });
+    } catch (err) {
+        console.error("🔴 Помилка БД:", err.message);
+        res.status(500).json({ error: "Server error" });
+    }
+}
+
+// Допоміжна функція для витягування регіону
+extractRegion = (description) => {
+    if (!description) return null;
+    const parts = description.split(',');
+    if (parts.length >= 2) {
+        return parts[parts.length - 2].trim();
+    }
+    return null;
+};
+
     //Open Main page
     openBaseMainPage = (req, res) => {
         try {
@@ -1230,84 +1354,6 @@ placeDetails = async (req, res) => {
 };
 
 
-
-    //  async function getCityInfo(req, res) {
-    //   try {
-    //     const city = req.query.city;
-    //     if (!city) return res.status(400).json({ error: 'City is required' });
-
-    //     // Основна інформація про місто
-    //     const cityQuery = `
-    //       SELECT name, description, rating, population
-    //       FROM cities
-    //       WHERE LOWER(name) = LOWER($1)
-    //       LIMIT 1
-    //     `;
-    //     const cityResult = await pool.query(cityQuery, [city]);
-    //     if (cityResult.rows.length === 0) {
-    //       return res.status(404).json({ error: 'City not found' });
-    //     }
-    //     const cityInfo = cityResult.rows[0];
-
-    //     // Круті місця поряд
-    //     const placesQuery = `
-    //       SELECT id, name, category, address, lat, lon
-    //       FROM places
-    //       WHERE city_id = (SELECT id FROM cities WHERE LOWER(name) = LOWER($1))
-    //         AND category IN ('кафе', 'готель', 'торговий центр', 'історичне місце')
-    //       LIMIT 5
-    //     `;
-    //     const placesResult = await pool.query(placesQuery, [city]);
-
-    //     // Відгуки про місто
-    //     let reviews = [];
-    //     if (placesResult.rows.length > 0) {
-    //       const reviewsQuery = `
-    //         SELECT id, user_name, rating, comment, created_at
-    //         FROM reviews
-    //         WHERE city_id = (SELECT id FROM cities WHERE LOWER(name) = LOWER($1))
-    //         ORDER BY created_at DESC
-    //         LIMIT 10
-    //       `;
-    //       const reviewsResult = await pool.query(reviewsQuery, [city]);
-    //       reviews = reviewsResult.rows;
-    //     }
-
-    //     res.json({
-    //       city: cityInfo,
-    //       places: placesResult.rows,
-    //       reviews,
-    //     });
-    //   } catch (error) {
-    //     console.error(error);
-    //     res.status(500).json({ error: 'Server error' });
-    //   }
-    // }
-
-    //  addReview(req, res) {
-    //   try {
-    //     const { city, user_name, rating, comment } = req.body;
-    //     if (!city || !user_name || !rating || !comment) {
-    //       return res.status(400).json({ error: 'Missing required fields' });
-    //     }
-
-    //     const cityCheck = await pool.query('SELECT id FROM cities WHERE LOWER(name) = LOWER($1)', [city]);
-    //     if (cityCheck.rows.length === 0) return res.status(404).json({ error: 'City not found' });
-    //     const cityId = cityCheck.rows[0].id;
-
-    //     // Додати відгук
-    //     const insertQuery = `
-    //       INSERT INTO reviews(city_id, user_name, rating, comment, created_at)
-    //       VALUES ($1, $2, $3, $4, NOW())
-    //       RETURNING id
-    //     `;
-    //     const insertResult = await pool.query(insertQuery, [cityId, user_name, rating, comment]);
-    //     res.json({ success: true, reviewId: insertResult.rows[0].id });
-    //   } catch (error) {
-    //     console.error(error);
-    //     res.status(500).json({ error: 'Server error' });
-    //   }
-    // }
 }
 
 module.exports = Controller;

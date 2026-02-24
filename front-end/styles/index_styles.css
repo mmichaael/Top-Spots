@@ -663,7 +663,14 @@ margin-bottom: 5px;
   max-height: 0;
   opacity: 0;
 }
+.city-image {
+    transition: opacity 0.5s ease, transform 0.3s ease;
+    object-fit: cover;
+}
 
+.city-card {
+    transition: opacity 0.3s ease;
+}
 .search-category-list-own,
 .search-category-list-so_own {
   display: flex;

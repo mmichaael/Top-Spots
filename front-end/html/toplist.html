@@ -20,62 +20,46 @@
             </div>
         </header>
 
-       <div class="nearby-container">
-    <header class="nearby-top-filter">
-        <div class="filter-glass-card wide-layout">
-            
-            <div class="filter-row">
-                <div class="filter-section range-area">
-                    <div class="range-info">
-                        <span>Радіус:</span>
-                        <b id="radiusVal">12 км</b>
+        <div class="nearby-container">
+            <div class="nearby-top-panel">
+                <div class="filter-glass-card wide-layout">
+                    <div class="filter-main-row">
+                        <div class="radius-control">
+                            <div class="range-labels">
+                                <span>Радіус пошуку:</span>
+                                <b id="radiusVal">12 км</b>
+                            </div>
+                            <input type="range" id="nearbyRadius" min="1" max="50" value="12" class="modern-slider">
+                        </div>
+                        
+                        <button id="startNearbySearch" class="glow-btn">
+                            <i class="fas fa-crosshairs"></i> Сканувати
+                        </button>
                     </div>
-                    <input type="range" id="nearbyRadius" min="1" max="50" value="12" class="modern-slider">
-                </div>
 
-                <div class="filter-section action-area">
-                    <button id="startNearbySearch" class="glow-btn">
-                        <i class="fas fa-crosshairs"></i> Сканувати
-                    </button>
-                </div>
-            </div>
-
-            <div class="filter-row chips-area">
-                <div class="nearby-chips">
-                    <button class="chip active" data-type="tourist attraction">🏛️ Памʼятки</button>
-                    <button class="chip" data-type="restaurant">🍽️ Ресторани</button>
-                    <button class="chip" data-type="cafe">☕ Кафе</button>
-                    <button class="chip" data-type="museum">🖼️ Музеї</button>
-                    <button class="chip" data-type="park">🌳 Парки</button>
-                    <button class="chip" data-type="art gallery">🎨 Галереї</button>
-                    <button class="chip" data-type="zoo">🦁 Зоопарки</button>
-                    <button class="chip" data-type="shopping mall">🛍️ ТЦ</button>
+                    <div class="filter-chips-row">
+                        <div class="nearby-chips">
+                            <button class="chip active" data-type="tourist attraction">🏛️ Пам'ятки</button>
+                            <button class="chip" data-type="restaurant">🍽️ Ресторани</button>
+                            <button class="chip" data-type="cafe">☕ Кафе</button>
+                            <button class="chip" data-type="museum">🖼️ Музеї</button>
+                            <button class="chip" data-type="park">🌳 Парки</button>
+                            <button class="chip" data-type="art gallery">🎨 Галереї</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-        </div>
-    </header>
-
-    <main class="nearby-results">
-        <div id="nearbyGrid" class="places-grid-v2">
-            </div>
-    </main>
-</div>
-            </aside>
 
             <main class="nearby-results">
                 <div id="nearbyGrid" class="places-grid-v2">
                     <div class="nearby-placeholder">
-                       
+                        <i class="fas fa-spinner fa-spin" style="font-size:3rem;color:#64748b;"></i>
                     </div>
                 </div>
             </main>
         </div>
     </div>
-      <script
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBaWd1yK7Y3sO-gNw6VWv9Gqsu6b8iB2zY&libraries=places"
-    async defer>
-  </script>
+
     <script src="../js/toplist.js"></script>
 </body>
 </html>
