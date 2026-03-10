@@ -368,12 +368,6 @@ async function updateSliderCards(cityList, isInitial = false) {
     }
 
     // ============ БУРГЕР МЕНЮ ============
-    if (burger && navMenu) {
-        burger.addEventListener("click", () => {
-            burger.classList.toggle("active");
-            navMenu.classList.toggle("active");
-        });
-    }
 
     // ============ ГОЛОСОВИЙ ПОШУК ============
     if (micBtn) {
@@ -387,6 +381,13 @@ async function updateSliderCards(cityList, isInitial = false) {
                 searchInput.value = e.results[0][0].transcript;
                 searchInput.dispatchEvent(new Event("input"));
             };
+        });
+    }
+
+        if (burger && navMenu) {
+        burger.addEventListener("click", () => {
+            burger.classList.toggle("active");
+            navMenu.classList.toggle("active");
         });
     }
 

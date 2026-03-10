@@ -1,11 +1,15 @@
+
 const express = require("express");
 const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "./privateInf.env") });
+
+
 const router = require("./router.js");
 const cors = require("cors");
 const passport = require("passport");
 const cookieParser = require("cookie-parser");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-require("dotenv").config({ path: path.resolve(__dirname, "./privateInf.env") });
+
 
 const app = express();
   
@@ -32,10 +36,9 @@ passport.use(new GoogleStrategy(
     return done(null, profile);
   }
 ));
-// В server.js ПІСЛЯ app.use(express.json());
 
 
-app.use(express.static(path.join(__dirname, "../front-end")));
+
 
 app.get('/api/google-maps-key', (req, res) => {
   if (!process.env.GOOGLE_API_KEY) {
@@ -44,10 +47,15 @@ app.get('/api/google-maps-key', (req, res) => {
   res.json({ key: process.env.GOOGLE_API_KEY });
 });
 
+app.use("/", router); 
 
-// --- API роутер ---
-app.use("/api", router);
-app.use("/", router);
+
+
+
+
+
+
+app.use(express.static(path.join(__dirname, "../front-end")));
 
 // --- HTML-файли окремо ---
 app.get("/", (req, res) => {

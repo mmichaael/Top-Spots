@@ -1,124 +1,89 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Деталі місцевості</title>
-  <link rel="stylesheet" href="../styles/city_page.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">Місце</title>
+    <link rel="stylesheet" href="../styles/city_page.css">
 </head>
 <body>
-  <main class="wrap">
-    <section class="hero">
-      <div class="title-block">
-        <h1 id="place-name">Завантаження...</h1>
-        <div id="rating" class="rating hidden"></div>
-      </div>
 
-      <div id="meta" class="meta">
-        <p id="address" class="address"></p>
-        <p id="description" class="description hidden"></p>
-      </div>
+    <!-- Фонові сфери -->
+    <div class="orb orb-1" aria-hidden="true"></div>
+    <div class="orb orb-2" aria-hidden="true"></div>
+    <div class="orb orb-3" aria-hidden="true"></div>
+
+    <!-- ══ ФОТО-СЛАЙДЕР ══════════════════════════════════════════ -->
+    <section id="photo-slider" class="hidden" aria-label="Фотографії місця">
+        <div id="slides"></div>
+        <button class="slide-btn slide-prev" aria-label="Попереднє фото">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+        </button>
+        <button class="slide-btn slide-next" aria-label="Наступне фото">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M9 18l6-6-6-6"/>
+            </svg>
+        </button>
+        <div id="dot-wrap" role="tablist" aria-label="Навігація по фото"></div>
     </section>
 
-    <section class="media-row">
-      <div class="photo-column">
-        <div id="photo-slider" class="photo-slider hidden">
-          <button id="prevBtn" class="slide-btn prev">‹</button>
-          <div class="slides-wrap">
-            <div id="slides" class="slides"></div>
-          </div>
-          <button id="nextBtn" class="slide-btn next">›</button>
-          <div id="dot-wrap" class="dot-wrap"></div>
+    <!-- ══ HERO — НАЗВА ══════════════════════════════════════════ -->
+    <header class="place-hero">
+        <h1 id="place-name" class="fade-up-1">Завантаження…</h1>
+        <p  id="address"    class="fade-up-2"></p>
+        <div id="rating" class="hidden fade-up-3" role="img" aria-label="Рейтинг"></div>
+    </header>
+
+    <!-- ══ КАРТА ════════════════════════════════════════════════ -->
+    <section class="map-section reveal" aria-label="Карта">
+        <div id="map"></div>
+    </section>
+
+    <!-- ══ ВІДГУКИ ══════════════════════════════════════════════ -->
+    <section id="reviews-section" class="page-section hidden" aria-label="Відгуки">
+        <div class="section-head">
+            <div>
+                <p class="section-eyebrow">Думки мандрівників</p>
+                <h2 class="section-title">Відгуки</h2>
+            </div>
+            <div class="arrow-btns">
+                <button class="arrow-btn arrow-prev" aria-label="Прокрутити ліворуч">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <button class="arrow-btn arrow-next" aria-label="Прокрутити праворуч">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </div>
         </div>
-        <div id="no-photo" class="no-photo hidden">Фото відсутні — показано панораму</div>
-      </div>
+        <div id="reviews" class="scroll-track" role="list"></div>
+    </section>
 
-      <div class="map-column">
-        <div id="map" class="map"></div>
-        <div id="nearby-section" class="nearby-section hidden">
-          <h3>Популярні місця поруч</h3>
-          <ul id="nearby-list" class="nearby-list"></ul>
+    <!-- ══ NEARBY ════════════════════════════════════════════════ -->
+    <section id="nearby-section" class="page-section hidden" aria-label="Поряд">
+        <div class="section-head">
+            <div>
+                <p class="section-eyebrow">Досліджуй поряд</p>
+                <h2 class="section-title">Поряд з вами</h2>
+            </div>
+            <div class="arrow-btns">
+                <button class="arrow-btn arrow-prev" aria-label="Прокрутити ліворуч">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <button class="arrow-btn arrow-next" aria-label="Прокрутити праворуч">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </div>
         </div>
-      </div>
+        <div id="nearby-list" class="scroll-track" role="list"></div>
     </section>
 
-    <section id="reviews-section" class="reviews-section hidden">
-      <h3>Відгуки</h3>
-      <div id="reviews" class="reviews">
-        <!-- Example review -->
-        <!-- <div class="review" style="--i:0;">
-          <span class="author">Ім'я автора</span>
-          <span class="rating">★★★★☆</span>
-          <p>Текст відгуку...</p>
-        </div> -->
-      </div>
-    </section>
+    <!-- ══ ФУТЕР (не чіпаємо) ════════════════════════════════════ -->
+    <footer id="site-footer">
+        <!-- твій футер -->
+    </footer>
 
-<footer class="main-footer">
-  <div class="footer-container">
-    <div class="footer-logo">
-      <img src="../img/Top Spots (3).png" class="img" width="160px"  height="160px" alt="Logo" />
-
-    </div>
-
-  <div class="footer-links">
-
-  <div class="footer-section">
-    <h4>Контакти</h4>
-    <ul>
-      <li>📧 <a href="mailto:spraizen47@gmail.com">spraizen47@gmail.com</a></li>
-      <li>📞 <a href="tel:+380974901774">+380 97 490 17 74</a></li>
-      <li>📞 <a href="tel:+491606591848">+49 160 659 18 48</a></li>
-      <li>📍 Київ, Україна</li>
-      <li>📍 Bremen, Deutschland</li>
-    </ul>
-  </div>
-
-  <div class="footer-section">
-    <h4>Навігація</h4>
-    <ul>
-      <li>🏠 <a href="#">Home</a></li>
-      <li>🗺️ <a href="#">GeoMap</a></li>
-      <li>📩 <a href="#">Contact</a></li>
-    </ul>
-  </div>
-
-  <div class="footer-section">
-    <h4>Категорії</h4>
-    <ul>
-      <li>🎡 <a href="#">Атракціони</a></li>
-      <li>🍽️ <a href="#">Ресторани</a></li>
-      <li>☕ <a href="#">Кафе</a></li>
-      <li>🏨 <a href="#">Готелі</a></li>
-      <li>🌳 <a href="#">Парки</a></li>
-      <li>🏰 <a href="#">Замки</a></li>
-    </ul>
-  </div>
-
-  <div class="footer-section">
-    <h4>Соцмережі</h4>
-    <ul class="social-icons">
-      <li> <a href="#"><img src="../img/facebook-brands-solid-full.svg" alt="Facebook" /> Facebook</a></li>
-      <li> <a href="#"><img src="../img/instagram-brands-solid-full.svg" alt="Instagram"/> Instagram</a></li>
-      <li> <a href="#"><img src="../img/tiktok-brands-solid-full.svg" alt="TikTok" /> TikTok</a></li>
-    </ul>
-  </div>
-
-</div>
-
-  </div>
-
-  <div class="footer-bottom">
-    <p>© 2025 Top Spots. Всі права захищені.</p>
-  </div>
-</footer>
-
-  </main>
-
-  <!-- Google Maps JS (ключ вставлено) -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBaWd1yK7Y3sO-gNw6VWv9Gqsu6b8iB2zY&libraries=places&language=uk" defer></script>
-
-  <!-- Сценарій сторінки -->
-  <script src="../js/city.js" defer></script>
+    <script src="../js/city.js"></script>
 </body>
 </html>

@@ -7,10 +7,24 @@ const controller = new Controller();
 // Main Page
 router.get('/', controller.openBaseMainPage);
 
+
+
+// ── Profile & Settings (захищені токеном) ──────────────────
+router.get   ('/api/user/profile',         controller.checkValidityAccessToken, controller.getProfile);
+router.patch ('/api/user/profile',         controller.checkValidityAccessToken, controller.updateProfile);
+router.post  ('/api/user/avatar',          controller.checkValidityAccessToken, (req, res, next) => controller.avatarUpload.single('avatar')(req, res, next), controller.uploadAvatar);
+router.post  ('/api/user/change-password', controller.checkValidityAccessToken, controller.changeUserPassword);
+router.get   ('/api/user/settings',        controller.checkValidityAccessToken, controller.getUserSettings);
+router.patch ('/api/user/settings',        controller.checkValidityAccessToken, controller.updateUserSettings);
+router.delete('/api/user/account',         controller.checkValidityAccessToken, controller.deleteUserAccount);
+ router.get('/api/user/password-status', controller.checkValidityAccessToken, controller.getPasswordStatus);
+
+
 // Places API
 router.post("/places/autocomplete", controller.autocompletePlaces);
 router.post("/places/details", controller.placeDetails);
-
+//placeDetails 
+router.get('/places/:id', controller.getPlaceDetails);
 // Nearby places
 router.post("/nearby/get", controller.getNearbyPlaces);
 router.post("/nearby/save", controller.saveNearbyPlaces);
@@ -54,8 +68,12 @@ router.post('/api/resetPassword/OpenEnterPage/deleteResetCode', controller.delet
 router.get('/api/suggestions', controller.searchingSugges);
 router.get('/api/suggestions/placeInf', controller.placeInfFromSugg);
 
-// Error Page for All Error Routes (ЗАВЖДИ ОСТАННІЙ!)
-router.use('*', controller.openErrorPage);
 
+// Перевірка всіх зареєстрованих маршрутів
+router.stack.forEach((r) => {
+    if (r.route && r.route.path) {
+        console.log(`Маршрут зареєстровано: ${r.route.stack[0].method.toUpperCase()} ${r.route.path}`);
+    }
+});
 // ОДИН module.exports В КІНЦІ
 module.exports = router;

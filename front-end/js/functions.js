@@ -399,6 +399,91 @@ loadPageContent = (content) => {
     }
 }
 
+class profileFunctionsHandler {
+
+   getProfile = async () => {
+        try {
+            const res = await fetch('/api/user/profile', { method: 'GET', credentials: 'include' });
+            if (!res.ok) { console.log(`getProfile failed: ${res.status}`); return null; }
+            return await res.json();
+        } catch (err) { console.log(`getProfile error: ${err.message}`); return null; }
+    };
+
+    updateProfile = async (data) => {
+        try {
+            const res = await fetch('/api/user/profile', {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            return { status: res.status, data: await res.json() };
+        } catch (err) { console.log(`updateProfile error: ${err.message}`); return { status: 500, data: null }; }
+    };
+
+    uploadAvatar = async (file) => {
+        try {
+            const formData = new FormData();
+            formData.append('avatar', file);
+            const res = await fetch('/api/user/avatar', { method: 'POST', credentials: 'include', body: formData });
+            return { status: res.status, data: await res.json() };
+        } catch (err) { console.log(`uploadAvatar error: ${err.message}`); return { status: 500, data: null }; }
+    };
+
+    changePassword = async (currentPassword, newPassword) => {
+        try {
+            const res = await fetch('/api/user/change-password', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword, newPassword }),
+            });
+            return { status: res.status, data: await res.json() };
+        } catch (err) { console.log(`changePassword error: ${err.message}`); return { status: 500, data: null }; }
+    };
+
+getPasswordStatus = async () => {
+        try {
+            const res = await fetch('/api/user/password-status', { method: 'GET', credentials: 'include' });
+if (!res.ok) {
+     console.log(`getPasswordStatus failed: ${res.status}`); return null;
+     }
+            return await res.json();
+        } 
+        catch (err) {
+             console.log(`getPasswordStatus error: ${err.message}`); return null;
+             }
+    };
+    getSettings = async () => {
+        try {
+            const res = await fetch('/api/user/settings', { method: 'GET', credentials: 'include' });
+            if (!res.ok) return null;
+            return await res.json();
+        } catch (err) { console.log(`getSettings error: ${err.message}`); return null; }
+    };
+
+    updateSetting = async (key, value) => {
+        try {
+            const res = await fetch('/api/user/settings', {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ [key]: value }),
+            });
+            return res.status === 200;
+        } catch (err) { console.log(`updateSetting error: ${err.message}`); return false; }
+    };
+
+    deleteAccount = async () => {
+        try {
+            const res = await fetch('/api/user/account', { method: 'DELETE', credentials: 'include' });
+            if (res.status === 200) {
+                const data = await res.json();
+                window.location.href = data.redirectTo;
+            }
+        } catch (err) { console.log(`deleteAccount error: ${err.message}`); }
+    };
+}
 //----------------Class with functions for front_index.js --> index.html------------------------------------------------------
 class indexFunctionsHandler {
 
@@ -520,4 +605,4 @@ class resetPasswordFunctionsHandler {
 
 }
 //--------------Export classes in another files-----------------------------------
-export { authFunctionsHandler, mainPageFunctionsHandler, indexFunctionsHandler, resetPasswordFunctionsHandler };
+export { authFunctionsHandler,profileFunctionsHandler, mainPageFunctionsHandler, indexFunctionsHandler, resetPasswordFunctionsHandler };

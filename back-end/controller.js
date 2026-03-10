@@ -89,121 +89,128 @@ chatAssistant = async (req, res) => {
         }
     };
 
-getNearbyPlaces = async (req, res) => {
-    const { latitude, longitude, radius } = req.body;
 
-    if (!latitude || !longitude || !radius) {
-        return res.status(400).json({ error: "Missing parameters" });
-    }
 
-    try {
-        // Шукаємо в базі місця, які мають валідне фото
-        const cacheQuery = `
-            SELECT * FROM places
-            WHERE (
-                6371 * acos(
-                    cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2)) + 
-                    sin(radians($1)) * sin(radians(latitude))
-                )
-            ) <= $3
-            AND photo_url IS NOT NULL 
-            AND photo_url NOT LIKE '%default_city.jpg%'
-            ORDER BY rating DESC NULLS LAST
-            LIMIT 20
-        `;
-
-        const { rows: cached } = await pool.query(cacheQuery, [latitude, longitude, radius]);
-
-        // ПОВЕРТАЄМО КЕШ, АЛЕ НЕ БЛОКУЄМО ПОДАЛЬШИЙ ПОШУК НА ФРОНТІ
-        console.log(`\x1b[32m[DB CHECK]\x1b[0m Знайдено в базі: ${cached.length} місць поруч`);
-        
-        return res.status(200).json({ 
-            results: cached, 
-            source: cached.length > 0 ? 'cache' : 'empty' 
-        });
-
-    } catch (err) {
-        console.error("\x1b[31m[DB ERROR]\x1b[0m", err.message);
-        return res.status(500).json({ error: "Server error" });
-    }
-};
-
-autocompletePlaces = async (req, res) => {
+ autocompletePlaces = async (req, res) => {
     const { input, category } = req.body;
-    console.log(`\n\x1b[36m[AUTOCOMPLETE START]\x1b[0m 🔍 Пошук: "${input}", Категорія: ${category || '(cities)'}`);
-
-    if (!input) {
-        console.log("\x1b[31m[AUTOCOMPLETE ERROR]\x1b[0m Порожній ввід");
-        return res.status(403).json({ error: "Input is required" });
-    }
+    console.log(`\x1b[36m[API CALL]\x1b[0m Input: "${input}", Cat: "${category}"`);
 
     try {
-        // Якщо category це тип закладу (restaurant, cafe...) — використовуємо його
-        // Якщо це (cities) — залишаємо як є
-        const types = category && category !== '(cities)' 
-            ? `types=${category}` 
-            : 'types=(cities)';
+        // 1. Пошук у базі даних з фільтрацією по типах
+        let dbQuery = `
+            SELECT place_id, query_name AS name, full_name AS description, photo_url, rating, types 
+            FROM places 
+            WHERE (query_name ILIKE $1 OR full_name ILIKE $1)`;
         
-        console.log(`\x1b[36m[AUTOCOMPLETE]\x1b[0m Використовую types: ${types}`);
+        const params = [`%${input}%`];
+        if (category && category !== "(cities)") {
+            dbQuery += ` AND $2 = ANY(types)`;
+            params.push(category);
+        }
+        dbQuery += ` LIMIT 5`;
+
+        const dbSearch = await pool.query(dbQuery, params);
+
+        if (dbSearch.rows.length > 0) {
+            console.log(`\x1b[32m[DB HIT]\x1b[0m Знайдено ${dbSearch.rows.length} записів.`);
+            return res.status(200).json({ predictions: dbSearch.rows });
+        }
+
+        // 2. Якщо в БД порожньо — запит до Google
+        console.log(`\x1b[33m[DB MISS]\x1b[0m Запит до Google API...`);
         
-        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&${types}&language=uk&components=country:ua&key=${process.env.GOOGLE_API_KEY}`;
+        const categoryHints = {
+            'restaurant': 'ресторан', 'cafe': 'кафе', 'lodging': 'готель',
+            'museum': 'музей', 'park': 'парк', 'shopping_mall': 'торговий центр'
+        };
+        const hint = (category && category !== "(cities)") ? categoryHints[category] : "";
+        const googleInput = `${input} ${hint}`.trim();
+
+        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(googleInput)}&language=uk&components=country:ua&key=${process.env.GOOGLE_API_KEY}`;
         
         const response = await fetch(url);
         const data = await response.json();
-        
-        console.log(`\x1b[32m[AUTOCOMPLETE GOOGLE]\x1b[0m Статус: ${data.status}, Знайдено: ${data.predictions?.length || 0}`);
 
-        const formatted = {
-            predictions: data.predictions.map(p => ({
-                description: p.description,
-                pure_name: p.structured_formatting.main_text,
-                place_id: p.place_id
-            }))
-        };
+        const formatted = (data.predictions || []).map(p => ({
+            place_id: p.place_id,
+            name: p.structured_formatting ? p.structured_formatting.main_text : p.description,
+            description: p.description,
+            photo_url: null, // Google Autocomplete не повертає фото відразу
+            rating: 4.5
+        }));
 
-        return res.status(200).json(formatted);
+        return res.status(200).json({ predictions: formatted });
     } catch (err) {
-        console.log(`\x1b[31m[AUTOCOMPLETE CRASH]\x1b[0m 🔥 Помилка: ${err.message}`);
-        return res.status(500).json({ error: "Server Error" });
+        console.error("❌ Помилка сервера:", err);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 };
 
 saveNearbyPlaces = async (req, res) => {
     const { places } = req.body;
-    
     if (!places || !Array.isArray(places)) {
         return res.status(400).json({ error: "No places provided" });
     }
-
     try {
         const saved = [];
         for (const place of places) {
             const insertQuery = `
                 INSERT INTO places (
-                    place_id, query_name, full_name, photo_url, rating, latitude, longitude
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                ON CONFLICT (place_id) DO UPDATE SET 
+                    place_id, query_name, full_name, photo_url, rating, latitude, longitude, types
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ON CONFLICT (place_id) DO UPDATE SET
                     rating = EXCLUDED.rating,
                     photo_url = EXCLUDED.photo_url,
                     latitude = EXCLUDED.latitude,
-                    longitude = EXCLUDED.longitude
+                    longitude = EXCLUDED.longitude,
+                    types = EXCLUDED.types
                 RETURNING *`;
 
             const result = await pool.query(insertQuery, [
                 place.place_id,
                 place.name,
                 place.vicinity,
-                place.photo_url, // Отримуємо вже готовий URL від фронта
+                place.photo_url,
                 place.rating,
                 place.latitude,
-                place.longitude
+                place.longitude,
+                place.types || []
             ]);
             saved.push(result.rows[0]);
         }
-
         return res.status(200).json({ success: true, count: saved.length });
     } catch (err) {
         console.error("DB Save Error:", err.message);
+        return res.status(500).json({ error: "Server error" });
+    }
+};
+
+getNearbyPlaces = async (req, res) => {
+    const { latitude, longitude, radius = 5000, category } = req.body;
+    try {
+        let cacheQuery = `
+            SELECT * FROM places
+            WHERE (6371 * acos(cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2)) + sin(radians($1)) * sin(radians(latitude)))) <= $3
+            AND photo_url IS NOT NULL
+        `;
+        const params = [latitude, longitude, radius / 1000];
+
+        if (category) {
+            cacheQuery += ` AND $4 = ANY(types)`;
+            params.push(category);
+        }
+
+        cacheQuery += ` ORDER BY rating DESC NULLS LAST LIMIT 20`;
+
+        const { rows: cached } = await pool.query(cacheQuery, params);
+
+        if (cached.length > 0) {
+            console.log(`\x1b[32m[DB SUCCESS]\x1b[0m Віддаємо ${cached.length} місць з бази`);
+            return res.status(200).json({ results: cached, source: 'database' });
+        }
+
+        return res.status(200).json({ results: [], source: 'empty' });
+    } catch (err) {
         return res.status(500).json({ error: "Server error" });
     }
 };
@@ -241,37 +248,37 @@ getBestPhotoData = async (place_id, name, location) => {
 
 
 placeDetails = async (req, res) => {
-
-    const { place_id, name, description, photo_url, rating, latitude, longitude } = req.body;
+    const { place_id, name, photo_url } = req.body;
     
+    console.log(`\x1b[35m[SYNC]\x1b[0m Спроба синхронізації: ${name}`);
+    console.log(`       Photo URL прийшов: ${photo_url ? photo_url.substring(0, 50) + '...' : 'ПУСТО'}`);
+
     try {
-        const query = `
-            INSERT INTO places (place_id, query_name, full_name, photo_url, rating, latitude, longitude)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (place_id) DO UPDATE SET 
-                photo_url = COALESCE(EXCLUDED.photo_url, places.photo_url),
-                rating = COALESCE(EXCLUDED.rating, places.rating),
-                latitude = COALESCE(EXCLUDED.latitude, places.latitude),
-                longitude = COALESCE(EXCLUDED.longitude, places.longitude)
-            RETURNING *`;
-            
-        const result = await pool.query(query, [
-            place_id, 
-            name, 
-            description, 
-            photo_url || null, 
-            rating || 4.5, 
-            latitude || null, 
-            longitude || null
-        ]);
+        const query = `...`; // твій INSERT query
+        const result = await pool.query(query, [/* параметри */]);
         
-        console.log(`✅ Місце ${name} синхронізовано з БД`);
+        console.log(`✅ Успішно збережено в БД: ${name}`);
         res.status(200).json({ result: result.rows[0] });
     } catch (err) {
-        console.error("🔴 Помилка БД:", err.message);
+        console.log(`🔴 Помилка при збереженні ${name}:`, err.message);
         res.status(500).json({ error: "Server error" });
     }
 }
+getPlaceDetails = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query("SELECT * FROM places WHERE place_id = $1", [id]);
+        
+        if (result.rows.length > 0) {
+            console.log(`\x1b[32m[CITY DB]\x1b[0m Дані для ${id} взяті з бази`);
+            return res.status(200).json(result.rows[0]);
+        }
+        
+        return res.status(404).json({ error: "Not found in DB" });
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+};
 
 // Допоміжна функція для витягування регіону
 extractRegion = (description) => {
@@ -1354,6 +1361,314 @@ extractRegion = (description) => {
 };
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+    // ══════════════════════════════════════════════════════════
+    // PROFILE
+    // ══════════════════════════════════════════════════════════
+
+    getProfile = async (req, res) => {
+        try {
+            const email = req.email;
+            if (!email) return res.status(401).json({ message: 'Unauthorized' });
+
+            const userInf = await pool.query(
+                `SELECT user_id, username, email, avatar_url, bio, location, created_at, places_visited, provider, google_id
+                 FROM "Users" WHERE email = $1`,
+                [email],
+            );
+            if (userInf.rowCount === 0) return res.status(404).json({ message: 'User not found' });
+
+            const user = userInf.rows[0];
+            const memberSince = user.created_at
+                ? new Date(user.created_at).getFullYear()
+                : new Date().getFullYear();
+
+            console.log(`getProfile: success for ${email}`);
+            return res.status(200).json({
+                user_id:        user.user_id,
+                username:       user.username,
+                email:          user.email,
+                avatar_url:     user.avatar_url || null,
+                bio:            user.bio || '',
+                location:       user.location || '',
+                member_since:   memberSince,
+                places_visited: user.places_visited || 0,
+                provider:       user.provider,
+                has_google:     !!user.google_id,
+            });
+        } catch (err) {
+            console.log(`getProfile error: ${err.message}`);
+            return res.status(500).json({ message: 'Server error' });
+        }
+    };
+
+    updateProfile = async (req, res) => {
+        try {
+            const email = req.email;
+            if (!email) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { username, bio, location } = req.body;
+            if (!username?.trim()) return res.status(400).json({ message: 'Username is required' });
+            if (username.trim().length > 50) return res.status(400).json({ message: 'Username too long' });
+            if (bio && bio.length > 300) return res.status(400).json({ message: 'Bio too long' });
+
+            const checkUsername = await pool.query(
+                `SELECT user_id FROM "Users" WHERE username = $1 AND email != $2`,
+                [username.trim(), email],
+            );
+            if (checkUsername.rowCount > 0) return res.status(409).json({ message: 'Username already taken' });
+
+            const updated = await pool.query(
+                `UPDATE "Users" SET username = $1, bio = $2, location = $3
+                 WHERE email = $4 RETURNING username, bio, location`,
+                [username.trim(), bio?.trim() || null, location?.trim() || null, email],
+            );
+            if (updated.rowCount === 0) return res.status(404).json({ message: 'User not found' });
+
+            console.log(`updateProfile: success for ${email}`);
+            return res.status(200).json({
+                message:  'Profile updated',
+                username: updated.rows[0].username,
+                bio:      updated.rows[0].bio,
+                location: updated.rows[0].location,
+            });
+        } catch (err) {
+            console.log(`updateProfile error: ${err.message}`);
+            return res.status(500).json({ message: 'Server error' });
+        }
+    };
+
+    uploadAvatar = async (req, res) => {
+        try {
+            const email = req.email;
+            if (!email) return res.status(401).json({ message: 'Unauthorized' });
+            if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+            const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+            const oldRow = await pool.query(`SELECT avatar_url FROM "Users" WHERE email = $1`, [email]);
+            if (oldRow.rows[0]?.avatar_url) {
+                const oldPath = path.join(this.publicDir, oldRow.rows[0].avatar_url);
+                if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            }
+
+            await pool.query(`UPDATE "Users" SET avatar_url = $1 WHERE email = $2`, [avatarUrl, email]);
+
+            console.log(`uploadAvatar: ${email} → ${avatarUrl}`);
+            return res.status(200).json({ message: 'Avatar uploaded', avatar_url: avatarUrl });
+        } catch (err) {
+            console.log(`uploadAvatar error: ${err.message}`);
+            return res.status(500).json({ message: 'Server error' });
+        }
+    };
+
+ 
+changeUserPassword = async (req, res) => {
+    try {
+        const email = req.email;
+        if (!email) return res.status(401).json({ message: 'Unauthorized' });
+
+        const { currentPassword, newPassword } = req.body;
+        if (!newPassword) return res.status(400).json({ message: 'New password required' });
+        if (newPassword.length < 8) return res.status(400).json({ message: 'Min 8 characters' });
+
+        const userInf = await pool.query(
+            `SELECT password, provider FROM "Users" WHERE email = $1`, [email]
+        );
+        if (userInf.rowCount === 0) return res.status(404).json({ message: 'User not found' });
+
+        const { password: hashedPwd, provider } = userInf.rows[0];
+        const isGoogleOnly = provider === 'google' && !hashedPwd;
+
+        // Google-юзер без пароля — просто встановлюємо новий без перевірки поточного
+        if (!isGoogleOnly) {
+            if (!currentPassword) return res.status(400).json({ message: 'Current password required' });
+            const isMatch = await bcrypt.compare(currentPassword, hashedPwd);
+            if (!isMatch) return res.status(401).json({ message: 'Current password is incorrect' });
+        }
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await pool.query(`UPDATE "Users" SET password = $1 WHERE email = $2`, [hashed, email]);
+
+        console.log(`changeUserPassword: success for ${email} (provider: ${provider})`);
+        return res.status(200).json({ message: 'Password changed' });
+    } catch (err) {
+        console.log(`changeUserPassword error: ${err.message}`);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+getPasswordStatus = async (req, res) => {
+    try {
+        const email = req.email;
+        if (!email) return res.status(401).json({ message: 'Unauthorized' });
+
+        const userInf = await pool.query(
+            `SELECT password, provider FROM "Users" WHERE email = $1`, [email]
+        );
+        if (userInf.rowCount === 0) return res.status(404).json({ message: 'User not found' });
+
+        const { password, provider } = userInf.rows[0];
+        return res.status(200).json({
+            has_password:  !!password,
+            provider:      provider,
+            is_google_only: provider === 'google' && !password
+        });
+    } catch (err) {
+        console.log(`getPasswordStatus error: ${err.message}`);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+
+    getUserSettings = async (req, res) => {
+        try {
+            const email = req.email;
+            if (!email) return res.status(401).json({ message: 'Unauthorized' });
+
+            const userInf = await pool.query(`SELECT user_id FROM "Users" WHERE email = $1`, [email]);
+            if (userInf.rowCount === 0) return res.status(404).json({ message: 'User not found' });
+
+            const userId = userInf.rows[0].user_id;
+            const settings = await pool.query(`SELECT * FROM "UserSettings" WHERE user_id = $1`, [userId]);
+
+            if (settings.rowCount === 0) {
+                return res.status(200).json({
+                    notifications_email:  true,
+                    notifications_push:   false,
+                    notifications_nearby: true,
+                    privacy_public:       true,
+                    privacy_location:     false,
+                });
+            }
+
+            const s = settings.rows[0];
+            return res.status(200).json({
+                notifications_email:  s.notifications_email,
+                notifications_push:   s.notifications_push,
+                notifications_nearby: s.notifications_nearby,
+                privacy_public:       s.privacy_public,
+                privacy_location:     s.privacy_location,
+            });
+        } catch (err) {
+            console.log(`getUserSettings error: ${err.message}`);
+            return res.status(500).json({ message: 'Server error' });
+        }
+    };
+
+    updateUserSettings = async (req, res) => {
+        try {
+            const email = req.email;
+            if (!email) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { notifications_email, notifications_push, notifications_nearby, privacy_public, privacy_location } = req.body;
+
+            const userInf = await pool.query(`SELECT user_id FROM "Users" WHERE email = $1`, [email]);
+            if (userInf.rowCount === 0) return res.status(404).json({ message: 'User not found' });
+
+            const userId = userInf.rows[0].user_id;
+
+            await pool.query(
+                `INSERT INTO "UserSettings" (user_id, notifications_email, notifications_push, notifications_nearby, privacy_public, privacy_location)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (user_id) DO UPDATE SET
+                    notifications_email  = COALESCE(EXCLUDED.notifications_email,  "UserSettings".notifications_email),
+                    notifications_push   = COALESCE(EXCLUDED.notifications_push,   "UserSettings".notifications_push),
+                    notifications_nearby = COALESCE(EXCLUDED.notifications_nearby, "UserSettings".notifications_nearby),
+                    privacy_public       = COALESCE(EXCLUDED.privacy_public,       "UserSettings".privacy_public),
+                    privacy_location     = COALESCE(EXCLUDED.privacy_location,     "UserSettings".privacy_location)`,
+                [userId, notifications_email ?? null, notifications_push ?? null, notifications_nearby ?? null, privacy_public ?? null, privacy_location ?? null],
+            );
+
+            console.log(`updateUserSettings: saved for user_id ${userId}`);
+            return res.status(200).json({ message: 'Settings saved' });
+        } catch (err) {
+            console.log(`updateUserSettings error: ${err.message}`);
+            return res.status(500).json({ message: 'Server error' });
+        }
+    };
+
+   
+deleteUserAccount = async (req, res) => {
+    try {
+        const email = req.email;
+        if (!email) return res.status(401).json({ message: 'Unauthorized' });
+
+        console.log(`[deleteUserAccount] Спроба видалення: ${email}`);
+
+        const userInf = await pool.query(
+            `SELECT user_id, avatar_url, reftoken_id, evtoken_id FROM "Users" WHERE email = $1`,
+            [email]
+        );
+        if (userInf.rowCount === 0) {
+            console.log(`[deleteUserAccount] Юзер не знайдений: ${email}`);
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const { user_id, avatar_url, reftoken_id, evtoken_id } = userInf.rows[0];
+        console.log(`[deleteUserAccount] user_id=${user_id}, reftoken_id=${reftoken_id}, evtoken_id=${evtoken_id}`);
+
+        // 1. Видаляємо аватар з диску якщо є
+        if (avatar_url) {
+            try {
+                const avatarPath = path.join(this.publicDir, avatar_url);
+                if (fs.existsSync(avatarPath)) {
+                    fs.unlinkSync(avatarPath);
+                    console.log(`[deleteUserAccount] Аватар видалено: ${avatarPath}`);
+                }
+            } catch (fileErr) {
+                console.log(`[deleteUserAccount] Помилка видалення файлу (не критично): ${fileErr.message}`);
+                // Не зупиняємось — продовжуємо видалення акаунту
+            }
+        }
+
+        // 2. Обнуляємо FK перед видаленням щоб не було конфліктів
+        await pool.query(
+            `UPDATE "Users" SET reftoken_id = NULL, evtoken_id = NULL, reset_password_id = NULL WHERE user_id = $1`,
+            [user_id]
+        );
+        console.log(`[deleteUserAccount] FK обнулено`);
+
+        // 3. Видаляємо пов'язані записи вручну (якщо немає ON DELETE CASCADE)
+        if (reftoken_id) {
+            await pool.query(`DELETE FROM "JWTRefreshToken" WHERE reftoken_id = $1`, [reftoken_id]);
+            console.log(`[deleteUserAccount] RefreshToken видалено`);
+        }
+        if (evtoken_id) {
+            await pool.query(`DELETE FROM "EVToken" WHERE evtoken_id = $1`, [evtoken_id]);
+            console.log(`[deleteUserAccount] EVToken видалено`);
+        }
+
+        // 4. Видаляємо налаштування
+        await pool.query(`DELETE FROM "UserSettings" WHERE user_id = $1`, [user_id]);
+        console.log(`[deleteUserAccount] UserSettings видалено`);
+
+        // 5. Видаляємо самого юзера
+        await pool.query(`DELETE FROM "Users" WHERE user_id = $1`, [user_id]);
+        console.log(`[deleteUserAccount] Юзер видалений з БД: ${email}`);
+
+        // 6. Чистимо куки
+        this.clearCookies(res);
+
+        return res.status(200).json({ redirectTo: '/checkUser' });
+
+    } catch (err) {
+        console.log(`[deleteUserAccount] КРИТИЧНА ПОМИЛКА: ${err.message}`);
+        console.log(err.stack);
+        return res.status(500).json({ message: 'Server error', detail: err.message });
+    }
+};
 }
 
 module.exports = Controller;
