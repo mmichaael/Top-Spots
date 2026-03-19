@@ -5,14 +5,14 @@
 ═══════════════════════════════════════════════════ */
 :root {
   --bg:           #05070f;
-  --surface:      #0c1020;
+  --surface:      rgba(255,255,255,0.028);
   --surface2:     #111827;
-  --surface3:     #1a2235;
+  --surface3:    rgba(255,255,255,0.028);
   --border:       rgba(255,255,255,0.06);
-  --border-glow:  rgba(139,92,246,0.45);
-  --purple:       #8b5cf6;
-  --purple-light: #a78bfa;
-  --pink:         #ec4899;
+  --border-glow: #e8c97a;
+  --purple:       #c9a84c;
+  --purple-light:  rgba(201,168,76,0.18);
+  --pink:        #ff6b4a;
   --cyan:         #22d3ee;
   --gold:         #f59e0b;
   --green:        #10b981;
@@ -82,13 +82,11 @@ body::after {
   background: var(--surface);
 }
 
+/* Тінь тільки знизу — не обрізає фото збоку */
 #photo-slider::after {
   content: '';
   position: absolute; inset: 0;
-  background:
-    linear-gradient(to bottom, rgba(5,7,15,0) 45%, rgba(5,7,15,1) 100%),
-    linear-gradient(to right,  rgba(5,7,15,0.5) 0%, transparent 20%),
-    linear-gradient(to left,   rgba(5,7,15,0.5) 0%, transparent 20%);
+  background: linear-gradient(to bottom, rgba(5,7,15,0) 50%, rgba(5,7,15,0.95) 100%);
   z-index: 3; pointer-events: none;
 }
 
@@ -101,7 +99,11 @@ body::after {
 }
 .slide.active { opacity: 1; transform: scale(1); }
 .slide img {
-  width: 100%; height: 100%; object-fit: cover; display: block;
+  width: 100%; height: 100%;
+  object-fit: contain;   /* ← contain замість cover — фото не обрізається */
+  object-position: center;
+  display: block;
+  background: #0a0c18;   /* підкладка за прозорими краями */
 }
 
 /* Кнопки слайдера */
@@ -124,9 +126,31 @@ body::after {
   background: var(--purple);
   border-color: var(--purple);
   transform: translateY(-50%) scale(1.1);
-  box-shadow: 0 0 24px rgba(139,92,246,0.55);
+  box-shadow: 0 0 24px rgba(201,168,76,0.55);
 }
 .slide-btn:active { transform: translateY(-50%) scale(0.95); }
+
+/* ── КНОПКА FULLSCREEN ── */
+.slide-fullscreen {
+  position: absolute; top: 18px; right: 18px; z-index: 10;
+  width: 44px; height: 44px;
+  background: rgba(12,16,32,0.65);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  color: rgba(255,255,255,0.85); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .3s var(--spring);
+}
+.slide-fullscreen svg { width: 18px; height: 18px; pointer-events: none; }
+.slide-fullscreen:hover {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: #fff;
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(201,168,76,0.5);
+}
+.slide-fullscreen:active { transform: scale(0.95); }
 
 /* Dots */
 #dot-wrap {
@@ -145,6 +169,114 @@ body::after {
   box-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
 .dot:hover:not(.active) { background: rgba(255,255,255,0.5); }
+
+/* ═══════════════════════════════════════════════════
+   LIGHTBOX (fullscreen overlay)
+═══════════════════════════════════════════════════ */
+#lightbox {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(3, 4, 10, 0.97);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .35s var(--ease);
+  backdrop-filter: blur(18px);
+}
+#lightbox.open {
+  opacity: 1; pointer-events: all;
+}
+
+/* Контейнер фото */
+#lightbox-inner {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px 80px;
+}
+
+#lightbox-img {
+  max-width: 100%; max-height: 100%;
+  width: auto; height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.8);
+  transition: transform .4s var(--spring), opacity .3s var(--ease);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Лічильник */
+#lightbox-counter {
+  position: absolute; top: 20px; left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-h); font-size: 0.8rem; font-weight: 600;
+  color: rgba(255,255,255,0.45); letter-spacing: 2px;
+  pointer-events: none;
+}
+
+/* Кнопка закрити */
+#lightbox-close {
+  position: absolute; top: 18px; right: 18px;
+  width: 48px; height: 48px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%;
+  color: rgba(255,255,255,0.75); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .3s var(--spring); z-index: 2;
+}
+#lightbox-close svg { width: 20px; height: 20px; pointer-events: none; }
+#lightbox-close:hover {
+  background: rgba(255, 107, 74, 0.2);
+  border-color: var(--pink);
+  color: #fff;
+  transform: scale(1.1) rotate(90deg);
+}
+
+/* Стрілки лайтбоксу */
+.lb-nav {
+  position: absolute; top: 50%; z-index: 2;
+  transform: translateY(-50%);
+  width: 56px; height: 56px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50%;
+  color: rgba(255,255,255,0.7); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .3s var(--spring);
+}
+.lb-nav svg { width: 22px; height: 22px; pointer-events: none; }
+#lb-prev { left: 18px; }
+#lb-next { right: 18px; }
+.lb-nav:hover {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: #fff;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 0 28px rgba(201,168,76,0.5);
+}
+
+/* Dots лайтбоксу */
+#lb-dot-wrap {
+  position: absolute; bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 7px; align-items: center;
+}
+.lb-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.22); border: none; cursor: pointer;
+  transition: all .35s var(--ease);
+}
+.lb-dot.active {
+  background: #fff; transform: scale(1.35);
+  box-shadow: 0 0 8px rgba(255,255,255,0.5);
+}
+
+/* Анімація зміни фото */
+@keyframes lbFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.lb-anim { animation: lbFadeIn .28s var(--ease) both; }
 
 /* ═══════════════════════════════════════════════════
    HERO — НАЗВА МІСЦЯ
@@ -205,7 +337,7 @@ body::after {
   overflow: hidden;
   border: 1px solid var(--border);
   position: relative;
-  box-shadow: 0 0 60px rgba(139,92,246,0.12), 0 30px 80px rgba(0,0,0,0.5);
+  box-shadow: 0 0 60px rgba(147, 138, 12, 0.12), 0 30px 80px rgba(0,0,0,0.5);
 }
 #map iframe { display: block; }
 #map::before {
@@ -273,7 +405,7 @@ body::after {
 .arrow-btn:hover {
   background: var(--purple); border-color: var(--purple);
   color: #fff; transform: scale(1.08);
-  box-shadow: 0 0 20px rgba(139,92,246,0.45);
+  box-shadow: 0 0 20px rgba(188, 158, 11, 0.45);
 }
 .arrow-btn.dim { opacity: 0.3; pointer-events: none; }
 
@@ -305,22 +437,20 @@ body::after {
   animation: fadeUp .5s var(--ease) both;
 }
 
-/* Glow corner */
 .review-card::before {
   content: '';
   position: absolute; top: 0; left: 0;
   width: 180px; height: 180px;
-  background: radial-gradient(circle at 0 0, rgba(139,92,246,0.12), transparent 70%);
+  background: radial-gradient(circle at 0 0, rgba(236, 246, 92, 0.12), transparent 70%);
   pointer-events: none;
 }
 
 .review-card:hover {
-  border-color: rgba(139,92,246,0.4);
+  border-color: rgba(246, 195, 92, 0.4);
   transform: translateY(-6px);
-  box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 30px rgba(139,92,246,0.14);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 30px rgba(0, 1, 0, 0.14);
 }
 
-/* Аватар */
 .review-avatar {
   width: 48px; height: 48px; border-radius: 50%;
   background: linear-gradient(135deg, var(--purple), var(--pink));
@@ -348,7 +478,7 @@ body::after {
   display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
   overflow: hidden;
   padding-left: 14px;
-  border-left: 2px solid rgba(139,92,246,0.3);
+  border-left: 2px solid rgba(246, 205, 92, 0.3);
   margin-bottom: 20px;
   position: relative;
 }
@@ -362,8 +492,8 @@ body::after {
   cursor: pointer; transition: all .3s var(--ease);
 }
 .rv-like svg { width: 13px; height: 13px; }
-.rv-like:hover { border-color: rgba(139,92,246,0.4); color: var(--purple-light); background: rgba(139,92,246,0.08); }
-.rv-like.on { border-color: var(--purple); color: var(--purple); background: rgba(139,92,246,0.12); }
+.rv-like:hover { border-color: rgba(246, 146, 92, 0.4); color: var(--purple-light); background: rgba(139,92,246,0.08); }
+.rv-like.on { border-color: var(--purple); color: var(--purple); background: rgba(205, 246, 92, 0.12); }
 
 /* ═══════════════════════════════════════════════════
    КАРТКИ NEARBY
@@ -397,7 +527,6 @@ body::after {
   box-shadow: 0 28px 70px rgba(0,0,0,0.5), 0 0 35px rgba(139,92,246,0.16);
 }
 
-/* Фото */
 .nc-img-wrap {
   position: relative; height: 185px; overflow: hidden;
 }
@@ -430,7 +559,6 @@ body::after {
   box-shadow: 0 0 14px rgba(245,158,11,0.18);
 }
 
-/* Тіло картки */
 .nc-body { padding: 18px 20px 20px; }
 .nc-title {
   font-family: var(--font-h); font-size: 1rem; font-weight: 700;
@@ -472,7 +600,6 @@ body::after {
 .fade-up-2 { animation: fadeUp .6s .2s var(--ease) both; }
 .fade-up-3 { animation: fadeUp .6s .3s var(--ease) both; }
 
-/* Intersection Observer клас */
 .reveal {
   opacity: 0; transform: translateY(28px);
   transition: opacity .7s var(--ease), transform .7s var(--ease);
@@ -483,7 +610,6 @@ body::after {
    УТИЛІТИ
 ═══════════════════════════════════════════════════ */
 .hidden { display: none !important; }
-
 .container { max-width: 1440px; margin: 0 auto; }
 
 /* ═══════════════════════════════════════════════════
@@ -510,4 +636,17 @@ body::after {
   .nearby-card { flex: 0 0 75vw; }
   .section-title { font-size: 1.4rem; }
   #map { height: 280px; }
+
+  /* Лайтбокс на мобільному */
+  #lightbox-inner { padding: 60px 10px 70px; }
+  .lb-nav { width: 44px; height: 44px; }
+  #lb-prev { left: 8px; }
+  #lb-next { right: 8px; }
+  .slide-fullscreen { top: 12px; right: 12px; width: 38px; height: 38px; }
+  .slide-fullscreen svg { width: 15px; height: 15px; }
+  #lightbox-close { top: 12px; right: 12px; width: 40px; height: 40px; }
+  #lightbox-counter { top: 14px; font-size: 0.72rem; }
 }
+
+/* Блокування скролу тіла при відкритому лайтбоксі */
+body.lb-open { overflow: hidden; }

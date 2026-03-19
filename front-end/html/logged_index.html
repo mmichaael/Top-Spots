@@ -14,92 +14,134 @@
 
     <header class="header">
         <div class="header-container">
-            <div class="brand" >
-    <video class="logo_box" height="200px" autoplay muted playsinline loop>
-        <source src="./img/output_video1.webm" type="video/webm" />
-        Logo don't opened
-      </video>
+
+            <!-- ЛОГОТИП -->
+            <div class="brand">
+                <video class="logo_box" height="200px" autoplay muted playsinline loop>
+                    <source src="./img/output_video1.webm" type="video/webm" />
+                    Logo don't opened
+                </video>
             </div>
-            <nav class="nav-menu">
+
+            <!-- ДЕСКТОП НАВІГАЦІЯ (> 972px) -->
+            <nav class="nav-menu" id="navMenu">
                 <button class="nav-item" data-page="profile"><i class="far fa-user"></i> Профіль</button>
-                <button class="nav-item active" data-page="dashboard" ><i class="fas fa-th-large"></i> Головна</button>
+                <button class="nav-item active" data-page="dashboard"><i class="fas fa-th-large"></i> Головна</button>
                 <button class="nav-item" data-page="nearby"><i class="fas fa-heart"></i> Місця поруч</button>
-                <button class="nav-item" data-page="photos" ><i class="fas fa-camera"></i> Фото</button>
-                <button class="nav-item" data-page="settings" ><i class="fas fa-cog"></i> Налаштування</button>
+                <button class="nav-item" data-page="photos"><i class="fas fa-camera"></i> Фото</button>
+                <button class="nav-item" data-page="settings"><i class="fas fa-cog"></i> Налаштування</button>
             </nav>
-            <button class="logout-icon"><i class="fas fa-sign-out-alt"></i></button>
+
+            <!-- ПРАВА ЧАСТИНА: logout + бургер -->
+            <div class="header-right">
+                <button class="logout-icon" id="logoutBtn" title="Вийти">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+                <!-- БУРГЕР (з'являється < 972px) -->
+                <button class="burger-btn" id="burgerBtn" aria-label="Меню" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+
         </div>
+
+        <!-- МОБІЛЬНЕ МЕНЮ (< 972px) -->
+        <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+            <nav class="mobile-nav">
+                <button class="mobile-nav-item" data-page="profile">
+                    <i class="far fa-user"></i>
+                    <span>Профіль</span>
+                </button>
+                <button class="mobile-nav-item active" data-page="dashboard">
+                    <i class="fas fa-th-large"></i>
+                    <span>Головна</span>
+                </button>
+                <button class="mobile-nav-item" data-page="nearby">
+                    <i class="fas fa-heart"></i>
+                    <span>Місця поруч</span>
+                </button>
+                <button class="mobile-nav-item" data-page="photos">
+                    <i class="fas fa-camera"></i>
+                    <span>Фото</span>
+                </button>
+                <button class="mobile-nav-item" data-page="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Налаштування</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- OVERLAY для закриття меню кліком поза ним -->
+        <div class="mobile-overlay" id="mobileOverlay"></div>
     </header>
 
-    <main id="main-page-content" class="container">
-        </main>
+    <main id="main-page-content" class="container"></main>
 
-<footer class="main-footer modern-style">
-  <div class="footer-container">
-    <div class="footer-brand">
-      <div class="footer-logo">
-        <img src="../img/Top Spots (3).png" alt="Logo" />
-        <span>Top Spots</span>
-      </div>
-      <p class="brand-description">Твій особистий гід по найкращим місцям міста. Відкривай, зберігай, ділися!</p>
-      <div class="social-links-modern">
-        <a href="#"><i class="fab fa-facebook-f"></i></a>
-        <a href="#"><i class="fab fa-instagram"></i></a>
-        <a href="#"><i class="fab fa-tiktok"></i></a>
-        <a href="#"><i class="fab fa-youtube"></i></a>
-      </div>
-    </div>
+    <footer class="main-footer modern-style">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <img src="../img/Top Spots (3).png" alt="Logo" />
+                    <span>Top Spots</span>
+                </div>
+                <p class="brand-description">Твій особистий гід по найкращим місцям міста. Відкривай, зберігай, ділися!</p>
+                <div class="social-links-modern">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-tiktok"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
 
-    <div class="footer-links-grid">
-      <div class="footer-column">
-        <h4>Корисні посилання</h4>
-        <ul>
-          <li><a href="#">Про нас</a></li>
-          <li><a href="#">Блог</a></li>
-          <li><a href="#">Партнери</a></li>
-          <li><a href="#">Кар'єра</a></li>
-        </ul>
-      </div>
+            <div class="footer-links-grid">
+                <div class="footer-column">
+                    <h4>Корисні посилання</h4>
+                    <ul>
+                        <li><a href="#">Про нас</a></li>
+                        <li><a href="#">Блог</a></li>
+                        <li><a href="#">Партнери</a></li>
+                        <li><a href="#">Кар'єра</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Підтримка</h4>
+                    <ul>
+                        <li><a href="#">Допомога</a></li>
+                        <li><a href="#">Конфіденційність</a></li>
+                        <li><a href="#">Умови використання</a></li>
+                        <li><a href="#">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Контакти</h4>
+                    <ul class="contact-info">
+                        <li><i class="far fa-envelope"></i> <a href="mailto:spraizen47@gmail.com">spraizen47@gmail.com</a></li>
+                        <li><i class="fas fa-phone-alt"></i> <a href="tel:+380974901774">+38 (097) 490-17-74</a></li>
+                        <li><i class="fas fa-map-marker-alt"></i> Київ / Bremen</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-      <div class="footer-column">
-        <h4>Підтримка</h4>
-        <ul>
-          <li><a href="#">Допомога</a></li>
-          <li><a href="#">Конфіденційність</a></li>
-          <li><a href="#">Умови використання</a></li>
-          <li><a href="#">FAQ</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-column">
-        <h4>Контакти</h4>
-        <ul class="contact-info">
-          <li><i class="far fa-envelope"></i> <a href="mailto:spraizen47@gmail.com">spraizen47@gmail.com</a></li>
-          <li><i class="fas fa-phone-alt"></i> <a href="tel:+380974901774">+38 (097) 490-17-74</a></li>
-          <li><i class="fas fa-map-marker-alt"></i> Київ / Bremen</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="footer-bottom-modern">
-    <div class="bottom-controls">
-      <div class="language-selector">
-        <i class="fas fa-globe"></i>
-        <select>
-          <option>Українська</option>
-          <option>English</option>
-          <option>Deutsch</option>
-        </select>
-      </div>
-      <button class="theme-toggle">
-        <i class="fas fa-moon"></i>
-      </button>
-    </div>
-    <p class="copyright">© 2026 Top Spots. Всі права захищені.</p>
-  </div>
-</footer>
+        <div class="footer-bottom-modern">
+            <div class="bottom-controls">
+                <div class="language-selector">
+                    <i class="fas fa-globe"></i>
+                    <select>
+                        <option>Українська</option>
+                        <option>English</option>
+                        <option>Deutsch</option>
+                    </select>
+                </div>
+                <button class="theme-toggle"><i class="fas fa-moon"></i></button>
+            </div>
+            <p class="copyright">© 2026 Top Spots. Всі права захищені.</p>
+        </div>
+    </footer>
 
     <script type="module" src="../js/front_logged_index.js"></script>
+
 </body>
 </html>

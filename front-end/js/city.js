@@ -21,8 +21,102 @@ document.addEventListener("DOMContentLoaded", () => {
     const placeId = params.get("placeId");
 
     let slides = [], dots = [], slideIdx = 0, autoTimer = null;
+    let photoUrls = [];  // для лайтбоксу
 
     if (!placeId) { placeNameEl.textContent = "Місце не вказано 😢"; return; }
+
+    /* ═══════════════════════════════════════════════════════════
+       LIGHTBOX
+    ═══════════════════════════════════════════════════════════ */
+    let lbIndex = 0;
+    let lbDots  = [];
+
+    // Створюємо DOM лайтбоксу один раз
+    const lightbox = document.createElement("div");
+    lightbox.id = "lightbox";
+    lightbox.innerHTML = `
+        <div id="lightbox-inner">
+            <span id="lightbox-counter"></span>
+            <img id="lightbox-img" src="" alt="Повне фото">
+            <button id="lb-prev" class="lb-nav" aria-label="Попереднє">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <button id="lb-next" class="lb-nav" aria-label="Наступне">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <div id="lb-dot-wrap"></div>
+        </div>
+        <button id="lightbox-close" aria-label="Закрити">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+        </button>
+    `;
+    document.body.appendChild(lightbox);
+
+    const lbImg     = document.getElementById("lightbox-img");
+    const lbCounter = document.getElementById("lightbox-counter");
+    const lbDotWrap = document.getElementById("lb-dot-wrap");
+
+    function openLightbox(index) {
+        lbIndex = index;
+        lbDotWrap.innerHTML = "";
+        lbDots = [];
+
+        photoUrls.forEach((_, i) => {
+            const d = document.createElement("button");
+            d.className = "lb-dot" + (i === lbIndex ? " active" : "");
+            d.setAttribute("aria-label", `Фото ${i + 1}`);
+            d.onclick = () => lbGoTo(i);
+            lbDotWrap.appendChild(d);
+            lbDots.push(d);
+        });
+
+        lbShowPhoto(lbIndex, false);
+        lightbox.classList.add("open");
+        document.body.classList.add("lb-open");
+    }
+
+    function closeLightbox() {
+        lightbox.classList.remove("open");
+        document.body.classList.remove("lb-open");
+    }
+
+    function lbGoTo(i) {
+        lbDots[lbIndex]?.classList.remove("active");
+        lbIndex = (i + photoUrls.length) % photoUrls.length;
+        lbDots[lbIndex]?.classList.add("active");
+        lbShowPhoto(lbIndex, true);
+    }
+
+    function lbShowPhoto(i, animate) {
+        lbImg.classList.remove("lb-anim");
+        void lbImg.offsetWidth; // reflow
+        if (animate) lbImg.classList.add("lb-anim");
+        lbImg.src = photoUrls[i];
+        lbCounter.textContent = `${i + 1} / ${photoUrls.length}`;
+    }
+
+    // Закрити: кнопка + фон + Esc
+    document.getElementById("lightbox-close").addEventListener("click", closeLightbox);
+    lightbox.addEventListener("click", e => { if (e.target === lightbox || e.target.id === "lightbox-inner") closeLightbox(); });
+    document.getElementById("lb-prev").addEventListener("click", e => { e.stopPropagation(); lbGoTo(lbIndex - 1); });
+    document.getElementById("lb-next").addEventListener("click", e => { e.stopPropagation(); lbGoTo(lbIndex + 1); });
+
+    document.addEventListener("keydown", e => {
+        if (!lightbox.classList.contains("open")) return;
+        if (e.key === "Escape")       closeLightbox();
+        if (e.key === "ArrowLeft")    lbGoTo(lbIndex - 1);
+        if (e.key === "ArrowRight")   lbGoTo(lbIndex + 1);
+    });
+
+    // Свайп у лайтбоксі
+    let lbSx = 0;
+    lbImg.addEventListener("touchstart", e => lbSx = e.touches[0].clientX, { passive: true });
+    lbImg.addEventListener("touchend",   e => {
+        const d = lbSx - e.changedTouches[0].clientX;
+        if (Math.abs(d) > 40) lbGoTo(lbIndex + (d > 0 ? 1 : -1));
+    });
 
     /* ═══════════════════════════════════════════════════════════
        INIT
@@ -86,14 +180,21 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderPhotos(photos) {
         slidesWrap.innerHTML = ""; dotWrap.innerHTML = "";
         slides = []; dots = []; slideIdx = 0;
+        photoUrls = [];
         photoSlider.classList.remove("hidden");
 
         photos.slice(0, 10).forEach((ph, i) => {
+            const url = `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=900&key=${apiKey}`;
+            photoUrls.push(url);
+
             const slide = document.createElement("div");
             slide.className = "slide" + (i === 0 ? " active" : "");
             const img = document.createElement("img");
-            img.src = `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=900&key=${apiKey}`;
+            img.src = url;
             img.alt = `Фото ${i+1}`; img.loading = i === 0 ? "eager" : "lazy";
+            // Клік по фото відкриває лайтбокс
+            img.style.cursor = "zoom-in";
+            img.addEventListener("click", () => openLightbox(i));
             slide.appendChild(img); slidesWrap.appendChild(slide); slides.push(slide);
 
             const dot = document.createElement("button");
@@ -102,6 +203,16 @@ document.addEventListener("DOMContentLoaded", () => {
             dot.onclick = () => goSlide(i);
             dotWrap.appendChild(dot); dots.push(dot);
         });
+
+        // Кнопка fullscreen
+        const fsBtn = document.createElement("button");
+        fsBtn.className = "slide-fullscreen";
+        fsBtn.setAttribute("aria-label", "Відкрити на весь екран");
+        fsBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+        </svg>`;
+        fsBtn.addEventListener("click", () => openLightbox(slideIdx));
+        photoSlider.appendChild(fsBtn);
 
         // Кнопки
         photoSlider.querySelector(".slide-prev")?.addEventListener("click", () => goSlide(slideIdx - 1));

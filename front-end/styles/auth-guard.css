@@ -1,0 +1,375 @@
+/* ═══════════════════════════════════════════════════════════
+   AUTH GUARD MODAL  —  auth-guard.css
+   Підключити в HTML: <link rel="stylesheet" href="/styles/auth-guard.css">
+   Або імпортувати в основний CSS: @import 'auth-guard.css';
+═══════════════════════════════════════════════════════════ */
+
+/* ── Body lock ────────────────────────────────────────────── */
+.ag-body-lock {
+  overflow: hidden !important;
+}
+
+/* ── Backdrop ─────────────────────────────────────────────── */
+#ag-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 5, 12, 0.85);
+  backdrop-filter: blur(20px) saturate(1.5);
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#ag-backdrop.ag-open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ── Modal card ───────────────────────────────────────────── */
+#ag-modal {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: rgba(9, 13, 24, 0.98);
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  border-radius: 32px;
+  overflow: hidden;
+  padding: 48px 36px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+  box-shadow:
+    0 40px 100px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+
+  opacity: 0;
+  transform: translateY(28px) scale(0.93);
+  transition:
+    opacity 0.45s cubic-bezier(0.34, 1.3, 0.64, 1),
+    transform 0.45s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+#ag-backdrop.ag-open #ag-modal {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Shimmer top border */
+#ag-modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #c9a84c 25%,
+    #1fd4c8 55%,
+    #ff6b4a 80%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  animation: ag-shimmer 4s ease-in-out infinite;
+}
+@keyframes ag-shimmer {
+  0%, 100% { background-position: 0% 0%;   opacity: 0.6; }
+  50%       { background-position: 100% 0%; opacity: 1;   }
+}
+
+/* Ambient glow top */
+#ag-modal::after {
+  content: '';
+  position: absolute;
+  top: -80px; left: 50%;
+  transform: translateX(-50%);
+  width: 300px; height: 200px;
+  background: radial-gradient(ellipse, rgba(201, 168, 76, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  animation: ag-glow 3.5s ease-in-out infinite alternate;
+}
+@keyframes ag-glow {
+  from { opacity: 0.5; transform: translateX(-50%) scale(1); }
+  to   { opacity: 1;   transform: translateX(-50%) scale(1.2); }
+}
+
+/* ── Floating particles ───────────────────────────────────── */
+.ag-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 32px;
+}
+.ag-particles span {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: rgba(201, 168, 76, 0.4);
+  animation: ag-float linear infinite;
+}
+.ag-particles span:nth-child(1) { left: 15%; animation-duration: 8s;  animation-delay: 0s;    top: 100%; }
+.ag-particles span:nth-child(2) { left: 35%; animation-duration: 10s; animation-delay: 1.5s;  top: 100%; background: rgba(31,212,200,0.3); }
+.ag-particles span:nth-child(3) { left: 55%; animation-duration: 7s;  animation-delay: 0.8s;  top: 100%; }
+.ag-particles span:nth-child(4) { left: 70%; animation-duration: 11s; animation-delay: 2.2s;  top: 100%; background: rgba(255,107,74,0.25); }
+.ag-particles span:nth-child(5) { left: 82%; animation-duration: 9s;  animation-delay: 0.4s;  top: 100%; }
+.ag-particles span:nth-child(6) { left: 25%; animation-duration: 12s; animation-delay: 3s;    top: 100%; background: rgba(31,212,200,0.2); }
+
+@keyframes ag-float {
+  0%   { transform: translateY(0)   scale(1);   opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-420px) scale(0); opacity: 0; }
+}
+
+/* ── Close button ─────────────────────────────────────────── */
+.ag-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  z-index: 10;
+  width: 36px; height: 36px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.ag-close svg { width: 15px; height: 15px; pointer-events: none; }
+.ag-close:hover {
+  background: rgba(255, 107, 74, 0.15);
+  border-color: rgba(255, 107, 74, 0.45);
+  color: #ff6b4a;
+  transform: scale(1.15) rotate(90deg);
+}
+
+/* ── Icon ─────────────────────────────────────────────────── */
+.ag-icon-wrap {
+  position: relative;
+  width: 84px; height: 84px;
+  margin-bottom: 24px;
+  flex-shrink: 0;
+}
+.ag-icon-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    #c9a84c 0deg,
+    #1fd4c8 120deg,
+    #ff6b4a 240deg,
+    #c9a84c 360deg
+  );
+  opacity: 0.35;
+  animation: ag-spin 6s linear infinite;
+}
+@keyframes ag-spin {
+  to { transform: rotate(360deg); }
+}
+.ag-icon-inner {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(31,212,200,0.08));
+  border: 1px solid rgba(201, 168, 76, 0.22);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px;
+}
+
+/* ── Eyebrow ──────────────────────────────────────────────── */
+.ag-eyebrow {
+  font-family: 'Outfit', 'Syne', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 3.5px;
+  color: rgba(201, 168, 76, 0.55);
+  margin-bottom: 10px;
+}
+
+/* ── Title ────────────────────────────────────────────────── */
+.ag-title {
+  font-family: 'Outfit', 'Syne', sans-serif;
+  font-size: clamp(1.5rem, 4vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+  color: #f0ece4;
+  margin-bottom: 12px;
+}
+
+/* ── Description ──────────────────────────────────────────── */
+.ag-desc {
+  font-size: 0.9rem;
+  color: rgba(168, 161, 153, 0.75);
+  line-height: 1.65;
+  max-width: 320px;
+  margin-bottom: 28px;
+}
+.ag-desc strong {
+  color: #e8c97a;
+  font-weight: 600;
+}
+
+/* ── Perks grid ───────────────────────────────────────────── */
+.ag-perks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 28px;
+}
+.ag-perk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-family: 'Outfit', sans-serif;
+  color: rgba(168, 161, 153, 0.85);
+  text-align: left;
+  transition: border-color 0.25s, background 0.25s;
+}
+.ag-perk:hover {
+  background: rgba(201, 168, 76, 0.07);
+  border-color: rgba(201, 168, 76, 0.25);
+  color: #e8c97a;
+}
+.ag-perk svg {
+  width: 14px; height: 14px;
+  flex-shrink: 0;
+  color: #c9a84c;
+  stroke: #c9a84c;
+}
+
+/* ── Action buttons ───────────────────────────────────────── */
+.ag-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+/* Primary — Register */
+.ag-btn-reg {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: 15px 24px;
+  background: linear-gradient(135deg, #c9a84c 0%, #e8c97a 55%, #1fd4c8 130%);
+  border: none;
+  border-radius: 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.97rem;
+  font-weight: 700;
+  color: #05080f;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 8px 30px rgba(201, 168, 76, 0.35);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s;
+}
+.ag-btn-reg svg {
+  width: 17px; height: 17px;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.ag-btn-reg::after {
+  content: '';
+  position: absolute;
+  top: -50%; left: -65%;
+  width: 50%; height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.5s ease;
+}
+.ag-btn-reg:hover::after { left: 120%; }
+.ag-btn-reg:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 44px rgba(201, 168, 76, 0.55);
+}
+.ag-btn-reg:hover svg { transform: translateX(4px); }
+.ag-btn-reg:active { transform: scale(0.97); }
+
+/* Secondary — Login */
+.ag-btn-login {
+  width: 100%;
+  padding: 13px 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(168, 161, 153, 0.8);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.ag-btn-login:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(201, 168, 76, 0.3);
+  color: #e8c97a;
+}
+
+/* ── Dismiss ──────────────────────────────────────────────── */
+.ag-dismiss {
+  background: none;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  color: rgba(107, 101, 96, 0.7);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.2s;
+  letter-spacing: 0.2px;
+}
+.ag-dismiss:hover { color: rgba(168, 161, 153, 0.8); }
+
+/* ── Shake animation ──────────────────────────────────────── */
+@keyframes ag-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-9px); }
+  40%       { transform: translateX(9px); }
+  60%       { transform: translateX(-5px); }
+  80%       { transform: translateX(5px); }
+}
+.ag-shake {
+  animation: ag-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  #ag-modal {
+    padding: 40px 22px 32px;
+    border-radius: 26px;
+  }
+  .ag-perks {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .ag-perk {
+    font-size: 0.74rem;
+    padding: 8px 10px;
+  }
+  .ag-title { font-size: 1.4rem; }
+  .ag-btn-reg { padding: 13px 20px; font-size: 0.92rem; }
+}
+
+@media (max-width: 360px) {
+  .ag-perks { grid-template-columns: 1fr; }
+  #ag-modal { padding: 36px 18px 28px; }
+}

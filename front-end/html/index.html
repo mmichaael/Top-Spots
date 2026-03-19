@@ -143,52 +143,32 @@
 
 
 <!-- ---------------- Теми ---------------- -->
-<section class="themes">
-  <div class="theme-cards">
-    <div class="theme-card" data-theme="romantic">
-      <div class="theme-content">
-        <h3>💞 Романтичні місця</h3>
-        <p>Для двох: атмосферні парки, оглядові майданчики та вузькі вулички</p>
-      </div>
+   <div class="grid-container" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:50px;">
+        <div class="cat-card" data-category="restaurant" style="background:rgba(255, 255, 255, 0.055);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="background:rgba(255,107,74,0.12);border:1px solid rgba(255,107,74,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#ff6b4a;transition:transform .3s ease;"><i class="fas fa-utensils"></i></div>
+            <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Ресторани</span>
+        </div>
+        <div class="cat-card" data-category="lodging" style="background:rgba(255, 255, 255, 0.055);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#e8c97a;transition:transform .3s ease;"><i class="fas fa-hotel"></i></div>
+            <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Готелі</span>
+        </div>
+        <div class="cat-card" data-category="park" style="background:rgba(255, 255, 255, 0.055);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="background:rgba(31,212,200,0.1);border:1px solid rgba(31,212,200,0.18);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#1fd4c8;transition:transform .3s ease;"><i class="fas fa-tree"></i></div>
+            <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Парки</span>
+        </div>
+        <div class="cat-card" data-category="museum" style="background:rgba(255, 255, 255, 0.055);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#a78bfa;transition:transform .3s ease;"><i class="fas fa-landmark"></i></div>
+            <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Музеї</span>
+        </div>
+        <div class="cat-card" data-category="cafe" style="background:rgba(255, 255, 255, 0.055);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.18);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#c9a84c;transition:transform .3s ease;"><i class="fas fa-mug-hot"></i></div>
+            <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Кафе</span>
+        </div>
+        <div class="cat-card" data-category="shopping_mall" style="background:rgba(255, 255, 255, 0.055);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="background:rgba(255,107,74,0.1);border:1px solid rgba(255,107,74,0.18);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#ff6b4a;transition:transform .3s ease;"><i class="fas fa-shopping-bag"></i></div>
+            <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Магазини</span>
+        </div>
     </div>
-
-    <div class="theme-card" data-theme="active">
-      <div class="theme-content">
-        <h3>🏕️ Активний відпочинок</h3>
-        <p>Походи, скелелазіння, сплави — для любителів драйву</p>
-      </div>
-    </div>
-
-    <div class="theme-card" data-theme="summer">
-      <div class="theme-content">
-        <h3>☀️ Літні тури</h3>
-        <p>Сонце, море та пригоди — відкрий Україну влітку</p>
-      </div>
-    </div>
-
-    <div class="theme-card" data-theme="historic">
-      <div class="theme-content">
-        <h3>🏰 Історичні локації</h3>
-        <p>Замки, фортеці та легенди минулих століть</p>
-      </div>
-    </div>
-
-    <div class="theme-card" data-theme="top">
-      <div class="theme-content">
-        <h3>⭐ Топові місця України</h3>
-        <p>10 найвідоміших точок, які варто побачити</p>
-      </div>
-    </div>
-
-
-    <div class="theme-card" data-theme="night_life">
-      <div class="theme-content">
-        <h3>🌃 Нічне життя</h3>
-        <p>Клуби, бари, вечірки та атмосферні нічні локації</p>
-      </div>
-    </div>
-  </div>
-</section>
 
 
 

@@ -20,14 +20,11 @@ router.delete('/api/user/account',         controller.checkValidityAccessToken, 
  router.get('/api/user/password-status', controller.checkValidityAccessToken, controller.getPasswordStatus);
 
 
-// Places API
-router.post("/places/autocomplete", controller.autocompletePlaces);
-router.post("/places/details", controller.placeDetails);
-//placeDetails 
-router.get('/places/:id', controller.getPlaceDetails);
-// Nearby places
-router.post("/nearby/get", controller.getNearbyPlaces);
-router.post("/nearby/save", controller.saveNearbyPlaces);
+router.post("/api/places/autocomplete", controller.autocompletePlaces);
+router.post("/api/places/details", controller.placeDetails);
+router.get('/api/places/:id', controller.getPlaceDetails);
+router.post("/api/nearby/get", controller.getNearbyPlaces);
+router.post("/api/nearby/save", controller.saveNearbyPlaces);
 
 // Chat Assistant
 router.post("/chat/assistant", controller.chatAssistant);

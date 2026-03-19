@@ -1,26 +1,166 @@
 import { mainPageFunctionsHandler } from './functions.js';
 const mainPageFunctions = new mainPageFunctionsHandler();
 
+// ============================================================
+// AUTH GUARD
+// ============================================================
+const AUTH_URL = '/html/auth.html';
+
+async function isLoggedIn() {
+    if (localStorage.getItem('topspots_user'))      return true;
+    if (sessionStorage.getItem('topspots_session')) return true;
+    try {
+        const res = await fetch('/api/user/me', { credentials: 'include' });
+        if (res.ok) {
+            const d = await res.json();
+            if (d?.id || d?.email) return true;
+        }
+    } catch (_) {}
+    return false;
+}
+
+function mountAuthGuard() {
+    if (document.getElementById('ag-backdrop')) return;
+    const el = document.createElement('div');
+    el.innerHTML = `
+    <div id="ag-backdrop">
+      <div id="ag-modal" role="dialog" aria-modal="true">
+        <div class="ag-particles">
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+        </div>
+        <button class="ag-close" id="ag-close" aria-label="Закрити">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+        <div class="ag-icon-wrap">
+          <div class="ag-icon-ring"></div>
+          <div class="ag-icon-inner">🔐</div>
+        </div>
+        <p class="ag-eyebrow">Top Spots</p>
+        <h2 class="ag-title">Потрібен акаунт</h2>
+        <p class="ag-desc">
+          Щоб скористатися
+          <strong id="ag-feature">цим функціоналом</strong>,
+          потрібно зареєструватись або увійти.
+        </p>
+        <div class="ag-perks">
+          <div class="ag-perk">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>Пошук місць
+          </div>
+          <div class="ag-perk">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>Улюблені
+          </div>
+          <div class="ag-perk">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+            </svg>Поряд з вами
+          </div>
+          <div class="ag-perk">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2"/>
+              <path d="M8 21h8M12 17v4"/>
+            </svg>AI-помічник
+          </div>
+        </div>
+        <div class="ag-actions">
+          <button class="ag-btn-reg" id="ag-reg-btn">
+            <span>Зареєструватись</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </button>
+          <button class="ag-btn-login" id="ag-login-btn">Вже є акаунт? Увійти</button>
+        </div>
+        <button class="ag-dismiss" id="ag-dismiss">Може пізніше</button>
+      </div>
+    </div>`;
+    document.body.appendChild(el.firstElementChild);
+
+    const close = () => {
+        document.getElementById('ag-backdrop')?.classList.remove('ag-open');
+        document.body.classList.remove('ag-body-lock');
+    };
+    const goAuth = (reg) => {
+        sessionStorage.setItem('ag_return', window.location.href);
+        window.location.href = reg ? AUTH_URL + '?mode=register' : AUTH_URL + '?mode=login';
+    };
+
+    document.getElementById('ag-close')    ?.addEventListener('click', close);
+    document.getElementById('ag-dismiss')  ?.addEventListener('click', close);
+    document.getElementById('ag-reg-btn')  ?.addEventListener('click', () => goAuth(true));
+    document.getElementById('ag-login-btn')?.addEventListener('click', () => goAuth(false));
+    document.getElementById('ag-backdrop') ?.addEventListener('click', e => { if (e.target.id === 'ag-backdrop') close(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+}
+
+function openAuthModal(featureName = 'цим функціоналом') {
+    mountAuthGuard();
+    const backdrop = document.getElementById('ag-backdrop');
+    const modal    = document.getElementById('ag-modal');
+    const feature  = document.getElementById('ag-feature');
+    if (!backdrop) return;
+    if (feature) feature.textContent = featureName;
+    if (backdrop.classList.contains('ag-open')) {
+        modal?.classList.remove('ag-shake');
+        void modal?.offsetWidth;
+        modal?.classList.add('ag-shake');
+        setTimeout(() => modal?.classList.remove('ag-shake'), 500);
+        return;
+    }
+    backdrop.classList.add('ag-open');
+    document.body.classList.add('ag-body-lock');
+}
+
+async function requireAuth(featureName, action) {
+    const ok = await isLoggedIn();
+    if (ok) {
+        if (typeof action === 'function') action();
+    } else {
+        openAuthModal(featureName);
+    }
+}
+
+function guardedAction(featureName, action) {
+    return async function (e) {
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        await requireAuth(featureName, action);
+    };
+}
+
+// ============================================================
+// ОСНОВНИЙ КОД ПУБЛІЧНОЇ СТОРІНКИ
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM повністю завантажено. Система готова.");
+
+    // Монтуємо модаль одразу
+    mountAuthGuard();
 
     // ============ КОНСТАНТИ ============
     const NO_PHOTO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%231e293b'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%2364748b' font-size='20' font-family='sans-serif'%3EНемає фото%3C/text%3E%3C/svg%3E";
 
-    const modernPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"%3E%3Cdefs%3E%3ClinearGradient id="modernGrad" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%2310b981;stop-opacity:1" /%3E%3Cstop offset="50%25" style="stop-color:%233b82f6;stop-opacity:1" /%3E%3Cstop offset="100%25" style="stop-color:%238b5cf6;stop-opacity:1" /%3E%3C/linearGradient%3E%3Cfilter id="blur"%3E%3CfeGaussianBlur in="SourceGraphic" stdDeviation="15" /%3E%3C/filter%3E%3C/defs%3E%3Crect width="800" height="600" fill="url(%23modernGrad)" filter="url(%23blur)"/%3E%3Ccircle cx="400" cy="300" r="100" fill="white" opacity="0.15"/%3E%3Ctext x="50%25" y="48%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="100" opacity="0.6"%3E📍%3C/text%3E%3Ctext x="50%25" y="62%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="24" opacity="0.4"%3EЗавантаження...%3C/text%3E%3C/svg%3E';
+    const modernPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"%3E%3Cdefs%3E%3ClinearGradient id="modernGrad" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%2310b981;stop-opacity:1" /%3E%3Cstop offset="50%25" style="stop-color:%233b82f6;stop-opacity:1" /%3E%3Cstop offset="100%25" style="stop-color:%238b5cf6;stop-opacity:1" /%3E%3C/linearGradient%3E%3Cfilter id="blur"%3E%3CfeGaussianBlur in="SourceGraphic" stdDeviation="15" /%3E%3C/filter%3E%3C/defs%3E%3Crect width="800" height="600" fill="url(%23modernGrad)" filter="url(%23blur)"/%3E%3Ccircle cx="400" cy="300" r="100" fill="white" opacity="0.15"/%3E%3Ctext x="50%25" y="48%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="100" opacity="0.6"%3E%F0%9F%93%8D%3C/text%3E%3Ctext x="50%25" y="62%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="24" opacity="0.4"%3EЗавантаження...%3C/text%3E%3C/svg%3E';
 
     // ============ ЕЛЕМЕНТИ DOM ============
-    const searchInput = document.getElementById("searchInput");
-    const suggestionsList = document.getElementById("suggestionsList");
-    const container = document.querySelector(".scroll-container");
-    const indicatorsContainer = document.querySelector(".scroll-indicators");
-    const categoryButtons = document.querySelectorAll('.search-category');
-    
-    const burger = document.getElementById("burger");
-    const navMenu = document.getElementById("navMenu");
-    const searchSection = document.querySelector(".search-section");
-    const leftBtn = document.querySelector(".scroll-button.left");
-    const rightBtn = document.querySelector(".scroll-button.right");
+    const searchInput        = document.getElementById("searchInput");
+    const suggestionsList    = document.getElementById("suggestionsList");
+    const container          = document.querySelector(".scroll-container");
+    const indicatorsContainer= document.querySelector(".scroll-indicators");
+    const categoryButtons    = document.querySelectorAll('.search-category');
+    const burger             = document.getElementById("burger");
+    const navMenu            = document.getElementById("navMenu");
+    const searchSection      = document.querySelector(".search-section");
+    const leftBtn            = document.querySelector(".scroll-button.left");
+    const rightBtn           = document.querySelector(".scroll-button.right");
 
     // ============ ДИНАМІЧНІ КНОПКИ ============
     const micBtn = document.createElement("span");
@@ -45,14 +185,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ============ ДЕФОЛТНІ МІСТА ============
     const cities = [
-        { name: "Київ", place_id: "ChIJBUVa4U7P1EAR_kYBF9IxSXY", photo: "../img/def-sity_img/kyiv.jpg", rating: 4.9 },
-        { name: "Одеса", place_id: "ChIJ8_S_In_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/odesa.jpg", rating: 4.8 },
-        { name: "Львів", place_id: "ChIJay7_In_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/lviv.jpg", rating: 4.9 },
-        { name: "Харків", place_id: "ChIJ9Wv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/harkiv.jpg", rating: 4.7 },
-        { name: "Дніпро", place_id: "ChIJ76v_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/dnepr.jpg", rating: 4.6 },
-        { name: "Івано-Франківськ", place_id: "ChIJ_6t_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/iv-fr.jpg", rating: 4.8 },
-        { name: "Запоріжжя", place_id: "ChIJsWv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/zaporoshe.jpg", rating: 4.5 },
-        { name: "Вінниця", place_id: "ChIJpWv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/vinica.jpg", rating: 4.7 }
+        { name: "Київ",            place_id: "ChIJBUVa4U7P1EAR_kYBF9IxSXY", photo: "../img/def-sity_img/kyiv.jpg",        rating: 4.9 },
+        { name: "Одеса",           place_id: "ChIJ8_S_In_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/odesa.jpg",       rating: 4.8 },
+        { name: "Львів",           place_id: "ChIJay7_In_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/lviv.jpg",        rating: 4.9 },
+        { name: "Харків",          place_id: "ChIJ9Wv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/harkiv.jpg",     rating: 4.7 },
+        { name: "Дніпро",          place_id: "ChIJ76v_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/dnepr.jpg",      rating: 4.6 },
+        { name: "Івано-Франківськ",place_id: "ChIJ_6t_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/iv-fr.jpg",     rating: 4.8 },
+        { name: "Запоріжжя",       place_id: "ChIJsWv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/zaporoshe.jpg", rating: 4.5 },
+        { name: "Вінниця",         place_id: "ChIJpWv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/vinica.jpg",    rating: 4.7 }
     ];
 
     // ============ УТИЛІТИ ============
@@ -67,23 +207,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============ GOOGLE MAPS API ============
     async function loadGoogleMapsAPI() {
         if (window.google && window.google.maps && window.google.maps.importLibrary) return true;
-        
         if (googleMapsPromise) return googleMapsPromise;
-
         googleMapsPromise = (async () => {
             try {
                 const response = await fetch('/api/google-maps-key');
                 const data = await response.json();
-
                 return new Promise((resolve, reject) => {
-                    if (document.getElementById('google-maps-sdk')) {
-                        resolve(true);
-                        return;
-                    }
+                    if (document.getElementById('google-maps-sdk')) { resolve(true); return; }
                     const script = document.createElement('script');
                     script.id = 'google-maps-sdk';
                     script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=places&v=weekly&loading=async`;
-                    
                     script.onload = () => {
                         const check = setInterval(() => {
                             if (window.google?.maps?.importLibrary) {
@@ -101,48 +234,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw err;
             }
         })();
-
         return googleMapsPromise;
     }
 
-async function getPlaceDataViaSDK(placeId, fullAddress = "") {
-    try {
-        await loadGoogleMapsAPI();
-        const { Place } = await google.maps.importLibrary("places");
-        
-        const place = new Place({ id: placeId, requestedLanguage: 'uk' });
-        await place.fetchFields({ fields: ["displayName", "formattedAddress", "photos", "types"] });
-
-        const cityName = place.displayName?.text || place.displayName || "Місто";
-        // Використовуємо або повну адресу з підказки, або ту, що дав Google
-        const searchQuery = fullAddress || place.formattedAddress || cityName;
-
-        log(`🏙️ Шукаю точне фото для: ${searchQuery}`);
-
-        const { places } = await Place.searchByText({
-            // Тепер запит включає область, наприклад "Київка, Чернігівська область"
-            textQuery: `пам'ятки та краєвиди ${searchQuery}`,
-            maxResultCount: 1,
-            fields: ["photos"]
-        });
-
-        let photoUrl = null;
-        if (places && places.length > 0 && places[0].photos?.length > 0) {
-            photoUrl = places[0].photos[0].getURI({ maxWidth: 1200 });
-        } else if (place.photos?.length > 0) {
-            photoUrl = place.photos[0].getURI({ maxWidth: 1200 });
+    async function getPlaceDataViaSDK(placeId, fullAddress = "") {
+        try {
+            await loadGoogleMapsAPI();
+            const { Place } = await google.maps.importLibrary("places");
+            const place = new Place({ id: placeId, requestedLanguage: 'uk' });
+            await place.fetchFields({ fields: ["displayName", "formattedAddress", "photos", "types"] });
+            const cityName = place.displayName?.text || place.displayName || "Місто";
+            const searchQuery = fullAddress || place.formattedAddress || cityName;
+            log(`🏙️ Шукаю точне фото для: ${searchQuery}`);
+            const { places } = await Place.searchByText({
+                textQuery: `пам'ятки та краєвиди ${searchQuery}`,
+                maxResultCount: 1,
+                fields: ["photos"]
+            });
+            let photoUrl = null;
+            if (places && places.length > 0 && places[0].photos?.length > 0) {
+                photoUrl = places[0].photos[0].getURI({ maxWidth: 1200 });
+            } else if (place.photos?.length > 0) {
+                photoUrl = place.photos[0].getURI({ maxWidth: 1200 });
+            }
+            return { place_id: placeId, name: cityName, photo_url: photoUrl, description: searchQuery };
+        } catch (err) {
+            return null;
         }
-
-        return {
-            place_id: placeId,
-            name: cityName,
-            photo_url: photoUrl,
-            description: searchQuery // Зберігаємо повну адресу
-        };
-    } catch (err) {
-        return null;
     }
-}
+
     // ============ AUTOCOMPLETE ============
     async function fetchSuggestions(query) {
         try {
@@ -162,7 +282,7 @@ async function getPlaceDataViaSDK(placeId, fullAddress = "") {
     // ============ СИНХРОНІЗАЦІЯ З БЕКЕНДОМ ============
     async function syncPlaceWithBackend(placeData) {
         try {
-            await fetch('/api/places/details', { 
+            await fetch('/api/places/details', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(placeData)
@@ -174,103 +294,83 @@ async function getPlaceDataViaSDK(placeId, fullAddress = "") {
     }
 
     // ============ ОНОВЛЕННЯ КАРТОК ============
-async function updateSliderCards(cityList, isInitial = false) {
-    if (!container) return;
+    async function updateSliderCards(cityList, isInitial = false) {
+        if (!container) return;
+        container.innerHTML = "";
+        if (indicatorsContainer) indicatorsContainer.innerHTML = "";
 
-    container.innerHTML = "";
-    if (indicatorsContainer) indicatorsContainer.innerHTML = "";
+        for (let i = 0; i < cityList.length; i++) {
+            const city = cityList[i];
+            const card = document.createElement("div");
+            card.className = "city-card show";
+            const displayName = truncateText(city.name, 40);
+            card.innerHTML = `
+                <img src="${modernPlaceholder}" class="city-image">
+                <div class="city-content">
+                    <h3 class="city-name" title="${city.name}">${displayName}</h3>
+                    <div class="city-rating">⭐ ${city.rating || '4.5'}</div>
+                    <button class="map-button">Детальніше</button>
+                </div>
+            `;
+            container.appendChild(card);
 
-    for (let i = 0; i < cityList.length; i++) {
-        const city = cityList[i];
-        const card = document.createElement("div");
-        // ПОВЕРТАЄМО ТВОЇ ОРИГІНАЛЬНІ КЛАСИ
-        card.className = "city-card show";
+            if (indicatorsContainer) {
+                const dot = document.createElement("div");
+                dot.className = `indicator ${i === 0 ? 'active' : ''}`;
+                indicatorsContainer.appendChild(dot);
+            }
 
-        const displayName = truncateText(city.name, 40);
-
-        // ПОВЕРТАЄМО ТВОЮ ОРИГІНАЛЬНУ СТРУКТУРУ HTML
-        card.innerHTML = `
-            <img src="${modernPlaceholder}" class="city-image">
-            <div class="city-content">
-                <h3 class="city-name" title="${city.name}">${displayName}</h3>
-                <div class="city-rating">⭐ ${city.rating || '4.5'}</div>
-                <button class="map-button">Детальніше</button>
-            </div>
-        `;
-        container.appendChild(card);
-
-        if (indicatorsContainer) {
-            const dot = document.createElement("div");
-            dot.className = `indicator ${i === 0 ? 'active' : ''}`;
-            indicatorsContainer.appendChild(dot);
-        }
-
-        card.onclick = () => {
-            window.location.href = `/html/city_page.html?placeId=${city.place_id}&name=${encodeURIComponent(city.name)}`;
-        };
-
-        if (!isInitial) {
-            card.style.opacity = "0.6";
-
-            // ПЕРЕДАЄМО ПОВНУ АДРЕСУ (description) ДЛЯ ТОЧНОГО ПОШУКУ ФОТО
-            getPlaceDataViaSDK(city.place_id, city.description).then(sdkData => {
-                if (sdkData && sdkData.photo_url) {
-                    const img = card.querySelector(".city-image");
-                    
-                    const tempImg = new Image();
-                    tempImg.src = sdkData.photo_url;
-                    tempImg.onload = () => {
-                        img.src = sdkData.photo_url;
-                        card.style.opacity = "1";
-                    };
-
-                    syncPlaceWithBackend(sdkData);
-                }
-            }).catch(err => {
-                console.error("SDK Error:", err);
-                card.style.opacity = "1";
+            // ── GUARD: клік по картці ──
+            card.onclick = guardedAction('перегляд місця', () => {
+                window.location.href = `/html/city_page.html?placeId=${city.place_id}&name=${encodeURIComponent(city.name)}`;
             });
-        } else if (city.photo) {
-            card.querySelector(".city-image").src = city.photo;
-            card.style.opacity = "1";
+
+            if (!isInitial) {
+                card.style.opacity = "0.6";
+                getPlaceDataViaSDK(city.place_id, city.description).then(sdkData => {
+                    if (sdkData && sdkData.photo_url) {
+                        const img = card.querySelector(".city-image");
+                        const tempImg = new Image();
+                        tempImg.src = sdkData.photo_url;
+                        tempImg.onload = () => { img.src = sdkData.photo_url; card.style.opacity = "1"; };
+                        syncPlaceWithBackend(sdkData);
+                    }
+                }).catch(() => { card.style.opacity = "1"; });
+            } else if (city.photo) {
+                card.querySelector(".city-image").src = city.photo;
+                card.style.opacity = "1";
+            }
         }
     }
-}
 
     // ============ КАТЕГОРІЇ ============
     categoryButtons.forEach(btn => {
         btn.addEventListener('click', async () => {
             categoryButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
             const type = btn.getAttribute('data-type');
             currentCategoryTypes = type;
-            
             const query = searchInput ? searchInput.value.trim() : '';
-            
             if (query.length >= 3) {
                 searchInput.dispatchEvent(new Event('input'));
             } else {
-                const suggestions = await fetchSuggestions(`популярні ${type} Україна`);
-                
-                suggestionsList.innerHTML = "";
-                suggestions.forEach(s => {
-                    const li = document.createElement("li");
-                    li.textContent = truncateText(s.description, 40);
-                    li.title = s.description;
-                    li.onclick = () => {
-                        window.location.href = `/html/city_page.html?placeId=${s.place_id}&name=${encodeURIComponent(s.description)}`;
-                    };
-                    suggestionsList.appendChild(li);
+                // ── GUARD: категорія ──
+                await requireAuth('пошук за категорією', async () => {
+                    const suggestions = await fetchSuggestions(`популярні ${type} Україна`);
+                    suggestionsList.innerHTML = "";
+                    suggestions.forEach(s => {
+                        const li = document.createElement("li");
+                        li.textContent = truncateText(s.description, 40);
+                        li.title = s.description;
+                        li.onclick = () => {
+                            window.location.href = `/html/city_page.html?placeId=${s.place_id}&name=${encodeURIComponent(s.description)}`;
+                        };
+                        suggestionsList.appendChild(li);
+                    });
+                    suggestionsList.classList.add("show");
+                    const searchResults = suggestions.map(s => ({ name: s.description, place_id: s.place_id, description: s.description }));
+                    updateSliderCards(searchResults, false);
                 });
-                suggestionsList.classList.add("show");
-
-                const searchResults = suggestions.map(s => ({
-                    name: s.description,
-                    place_id: s.place_id,
-                    description: s.description
-                }));
-                updateSliderCards(searchResults, false);
             }
         });
     });
@@ -290,35 +390,30 @@ async function updateSliderCards(cityList, isInitial = false) {
             }
 
             debounceTimer = setTimeout(async () => {
-                const suggestions = await fetchSuggestions(query);
-                
-                suggestionsList.innerHTML = "";
-                
-                if (suggestions.length === 0) {
-                    const li = document.createElement("li");
-                    li.textContent = "Нічого не знайдено";
-                    li.style.color = "#999";
-                    suggestionsList.appendChild(li);
-                } else {
-                    suggestions.forEach(s => {
+                // ── GUARD: пошук ──
+                await requireAuth('пошук міст та місць', async () => {
+                    const suggestions = await fetchSuggestions(query);
+                    suggestionsList.innerHTML = "";
+                    if (suggestions.length === 0) {
                         const li = document.createElement("li");
-                        li.textContent = truncateText(s.description, 40);
-                        li.title = s.description;
-                        li.onclick = () => {
-                            window.location.href = `/html/city_page.html?placeId=${s.place_id}&name=${encodeURIComponent(s.description)}`;
-                        };
+                        li.textContent = "Нічого не знайдено";
+                        li.style.color = "#999";
                         suggestionsList.appendChild(li);
-                    });
-                }
-                
-                suggestionsList.classList.add("show");
-
-                const searchResults = suggestions.map(s => ({
-                    name: s.description,
-                    place_id: s.place_id,
-                    description: s.description
-                }));
-                updateSliderCards(searchResults, false);
+                    } else {
+                        suggestions.forEach(s => {
+                            const li = document.createElement("li");
+                            li.textContent = truncateText(s.description, 40);
+                            li.title = s.description;
+                            li.onclick = () => {
+                                window.location.href = `/html/city_page.html?placeId=${s.place_id}&name=${encodeURIComponent(s.description)}`;
+                            };
+                            suggestionsList.appendChild(li);
+                        });
+                    }
+                    suggestionsList.classList.add("show");
+                    const searchResults = suggestions.map(s => ({ name: s.description, place_id: s.place_id, description: s.description }));
+                    updateSliderCards(searchResults, false);
+                });
             }, 300);
         });
     }
@@ -330,18 +425,16 @@ async function updateSliderCards(cityList, isInitial = false) {
             clearBtn.style.display = 'none';
             suggestionsList.innerHTML = '';
             suggestionsList.classList.remove('show');
-            
             categoryButtons.forEach(b => b.classList.remove('active'));
             currentCategoryTypes = "(cities)";
-            
             updateSliderCards(cities, true);
         });
     }
 
     // ============ ЗАКРИТИ ПІДКАЗКИ ============
     document.addEventListener('click', (e) => {
-        if (searchInput && suggestionsList && 
-            !searchInput.contains(e.target) && 
+        if (searchInput && suggestionsList &&
+            !searchInput.contains(e.target) &&
             !suggestionsList.contains(e.target)) {
             suggestionsList.classList.remove('show');
         }
@@ -367,11 +460,10 @@ async function updateSliderCards(cityList, isInitial = false) {
         leftBtn?.addEventListener("click", () => container.scrollBy({ left: -getScrollStep(), behavior: "smooth" }));
     }
 
-    // ============ БУРГЕР МЕНЮ ============
-
     // ============ ГОЛОСОВИЙ ПОШУК ============
     if (micBtn) {
-        micBtn.addEventListener("click", () => {
+        // ── GUARD: мікрофон ──
+        micBtn.addEventListener("click", guardedAction('голосовий пошук', () => {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) return alert("Браузер не підтримує голос.");
             const recognition = new SpeechRecognition();
@@ -381,10 +473,11 @@ async function updateSliderCards(cityList, isInitial = false) {
                 searchInput.value = e.results[0][0].transcript;
                 searchInput.dispatchEvent(new Event("input"));
             };
-        });
+        }));
     }
 
-        if (burger && navMenu) {
+    // ============ БУРГЕР МЕНЮ ============
+    if (burger && navMenu) {
         burger.addEventListener("click", () => {
             burger.classList.toggle("active");
             navMenu.classList.toggle("active");
@@ -404,9 +497,9 @@ async function updateSliderCards(cityList, isInitial = false) {
     handleCategoryClick(document.querySelectorAll(".theme-card"));
 
     // ============ ЧАТ-БОТ ============
-    const chatBox = document.querySelector(".chat-box");
+    const chatBox   = document.querySelector(".chat-box");
     const chatInput = document.querySelector(".chat-input");
-    const sendBtn = document.querySelector(".send-btn");
+    const sendBtn   = document.querySelector(".send-btn");
 
     if (sendBtn && chatBox && chatInput) {
         const appendMessage = (text, type) => {
@@ -416,7 +509,6 @@ async function updateSliderCards(cityList, isInitial = false) {
             chatBox.appendChild(msg);
             chatBox.scrollTop = chatBox.scrollHeight;
         };
-
         const sendMessage = async () => {
             const message = chatInput.value.trim();
             if (!message) return;
@@ -434,7 +526,6 @@ async function updateSliderCards(cityList, isInitial = false) {
                 appendMessage("Сервер не відповідає.", "bot");
             }
         };
-
         sendBtn.addEventListener("click", sendMessage);
         chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
     }
