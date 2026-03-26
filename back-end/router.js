@@ -26,6 +26,11 @@ router.get('/api/places/:id', controller.getPlaceDetails);
 router.post("/api/nearby/get", controller.getNearbyPlaces);
 router.post("/api/nearby/save", controller.saveNearbyPlaces);
 
+
+//Search shops System
+router.post('/api/shopping/search',    controller.checkValidityAccessToken, controller.searchShops);
+router.get ('/api/daily-top',         controller.getDailyTop);
+router.post('/api/daily-top/refresh', controller.refreshDailyTop); 
 // Chat Assistant
 router.post("/chat/assistant", controller.chatAssistant);
 

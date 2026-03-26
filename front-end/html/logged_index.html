@@ -25,16 +25,16 @@
 
             <!-- ДЕСКТОП НАВІГАЦІЯ (> 972px) -->
             <nav class="nav-menu" id="navMenu">
-                <button class="nav-item" data-page="profile"><i class="far fa-user"></i> Профіль</button>
                 <button class="nav-item active" data-page="dashboard"><i class="fas fa-th-large"></i> Головна</button>
                 <button class="nav-item" data-page="nearby"><i class="fas fa-heart"></i> Місця поруч</button>
-                <button class="nav-item" data-page="photos"><i class="fas fa-camera"></i> Фото</button>
+                <button class="nav-item" data-page="shopping"><i class="fas fa-shopping-bag"></i> Шопінг</button>
                 <button class="nav-item" data-page="settings"><i class="fas fa-cog"></i> Налаштування</button>
+                                <button class="nav-item" data-page="profile"><i class="far fa-user"></i> Профіль</button>
             </nav>
 
             <!-- ПРАВА ЧАСТИНА: logout + бургер -->
             <div class="header-right">
-                <button class="logout-icon" id="logoutBtn" title="Вийти">
+                <button class="logout-icon" id="headerLogoutBtn" title="Вийти">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
                 <!-- БУРГЕР (з'являється < 972px) -->
@@ -50,10 +50,7 @@
         <!-- МОБІЛЬНЕ МЕНЮ (< 972px) -->
         <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
             <nav class="mobile-nav">
-                <button class="mobile-nav-item" data-page="profile">
-                    <i class="far fa-user"></i>
-                    <span>Профіль</span>
-                </button>
+               
                 <button class="mobile-nav-item active" data-page="dashboard">
                     <i class="fas fa-th-large"></i>
                     <span>Головна</span>
@@ -62,13 +59,16 @@
                     <i class="fas fa-heart"></i>
                     <span>Місця поруч</span>
                 </button>
-                <button class="mobile-nav-item" data-page="photos">
-                    <i class="fas fa-camera"></i>
-                    <span>Фото</span>
-                </button>
+                   <button class="mobile-nav-item" data-page="shopping">
+        <i class="fas fa-shopping-bag"></i><span>Шопінг</span>
+    </button>
                 <button class="mobile-nav-item" data-page="settings">
                     <i class="fas fa-cog"></i>
                     <span>Налаштування</span>
+                </button>
+                 <button class="mobile-nav-item" data-page="profile">
+                    <i class="far fa-user"></i>
+                    <span>Профіль</span>
                 </button>
             </nav>
         </div>

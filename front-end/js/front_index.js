@@ -4,7 +4,7 @@ const mainPageFunctions = new mainPageFunctionsHandler();
 // ============================================================
 // AUTH GUARD
 // ============================================================
-const AUTH_URL = '/html/auth.html';
+const AUTH_URL = '/html/authentication.html';
 
 async function isLoggedIn() {
     if (localStorage.getItem('topspots_user'))      return true;
@@ -495,6 +495,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     handleCategoryClick(document.querySelectorAll(".idea-card"));
     handleCategoryClick(document.querySelectorAll(".theme-card"));
+ 
+    // ── ЗАДАЧА #7: Карточки категорій (ресторани, парки, тощо)
+    // на index.html → перехід до кабінету + автовибір категорії
+    document.querySelectorAll('.cat-card').forEach(card => {
+        card.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const category = card.dataset.category;
+            if (!category) return;
+ 
+            // Перевіряємо авторизацію (requireAuth вже є у файлі)
+            await requireAuth('пошук за категорією', () => {
+                // Зберігаємо категорію для автовибору в nearby
+                sessionStorage.setItem('pendingNearbyCategory', category);
+                // Переходимо до кабінету на сторінку nearby
+                window.location.href = '/new-main#nearby';
+            });
+        });
+    });
 
     // ============ ЧАТ-БОТ ============
     const chatBox   = document.querySelector(".chat-box");

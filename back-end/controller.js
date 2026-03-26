@@ -451,30 +451,49 @@ extractRegion = (description) => {
         }
     };
 
-    //Sending Email
-    sendingEmail = async (to, subject, htmlEmailContent) => {
-        try {
-            const transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: process.env.EMAILSENDER, //  My Email
-                    pass: process.env.GOOGLEAPPPASSWORD, //  Google App Password
-                },
-            });
+sendingEmail = async (to, subject, htmlEmailContent) => {
+    try {
+        console.log(`\x1b[36m[EMAIL]\x1b[0m ── Початок відправки ──`);
+        console.log(`\x1b[36m[EMAIL]\x1b[0m TO: ${to}`);
+        console.log(`\x1b[36m[EMAIL]\x1b[0m FROM: ${process.env.EMAILSENDER}`);
+        console.log(`\x1b[36m[EMAIL]\x1b[0m PASS length: ${process.env.GOOGLEAPPPASSWORD?.length}`);
+        console.log(`\x1b[36m[EMAIL]\x1b[0m PASS value: "${process.env.GOOGLEAPPPASSWORD}"`);
 
-            const emailOptions = {
-                from: process.env.EMAILSENDER,
-                to,
-                subject,
-                html: htmlEmailContent,
-            };
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            auth: {
+                user: process.env.EMAILSENDER,
+                pass: process.env.GOOGLEAPPPASSWORD,
+            },
+            tls: { rejectUnauthorized: false },
+            debug: true,
+            logger: true,
+        });
 
-            const sending = await transporter.sendMail(emailOptions);
-            console.log(`Email sent: ${sending.response}`);
-        } catch (err) {
-            console.log(`Error sending email: ${err}`);
-        }
-    };
+        console.log(`\x1b[36m[EMAIL]\x1b[0m Перевірка з'єднання...`);
+        await transporter.verify();
+        console.log(`\x1b[32m[EMAIL]\x1b[0m ✅ З'єднання успішне!`);
+
+        const info = await transporter.sendMail({
+            from: `"Top Spots" <${process.env.EMAILSENDER}>`,
+            to,
+            subject,
+            html: htmlEmailContent,
+        });
+
+        console.log(`\x1b[32m[EMAIL]\x1b[0m ✅ Відправлено! ID: ${info.messageId}`);
+        console.log(`\x1b[32m[EMAIL]\x1b[0m Response: ${info.response}`);
+        return true;
+    } catch (err) {
+        console.error(`\x1b[31m[EMAIL ERROR]\x1b[0m Code: ${err.code}`);
+        console.error(`\x1b[31m[EMAIL ERROR]\x1b[0m Message: ${err.message}`);
+        console.error(`\x1b[31m[EMAIL ERROR]\x1b[0m Stack: ${err.stack}`);
+        return false;
+    }
+};
+
     // Email Letter Html content
     emailLetterContent = (username, token) => {
         return `
@@ -1449,29 +1468,40 @@ extractRegion = (description) => {
         }
     };
 
-    uploadAvatar = async (req, res) => {
+
+uploadAvatar = async (req, res) => {
+    try {
+        const email = req.email;
+        if (!email) return res.status(401).json({ message: 'Unauthorized' });
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+ 
+        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+ 
+        // Видаляємо старий аватар
         try {
-            const email = req.email;
-            if (!email) return res.status(401).json({ message: 'Unauthorized' });
-            if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-
-            const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-
             const oldRow = await pool.query(`SELECT avatar_url FROM "Users" WHERE email = $1`, [email]);
-            if (oldRow.rows[0]?.avatar_url) {
-                const oldPath = path.join(this.publicDir, oldRow.rows[0].avatar_url);
+            if (oldRow.rows[0]?.avatar_url && oldRow.rows[0].avatar_url !== avatarUrl) {
+                const oldPath = path.join(__dirname, '../front-end/public', oldRow.rows[0].avatar_url);
                 if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
             }
-
-            await pool.query(`UPDATE "Users" SET avatar_url = $1 WHERE email = $2`, [avatarUrl, email]);
-
-            console.log(`uploadAvatar: ${email} → ${avatarUrl}`);
-            return res.status(200).json({ message: 'Avatar uploaded', avatar_url: avatarUrl });
-        } catch (err) {
-            console.log(`uploadAvatar error: ${err.message}`);
-            return res.status(500).json({ message: 'Server error' });
+        } catch (fileErr) {
+            console.log(`uploadAvatar: old file remove error (non-critical): ${fileErr.message}`);
         }
-    };
+ 
+        await pool.query(`UPDATE "Users" SET avatar_url = $1 WHERE email = $2`, [avatarUrl, email]);
+ 
+        console.log(`uploadAvatar: ${email} → ${avatarUrl}`);
+ 
+        // ← ВАЖЛИВО: повертаємо avatar_url щоб фронт міг оновити кеш
+        return res.status(200).json({
+            message: 'Avatar uploaded',
+            avatar_url: avatarUrl   // ← цей рядок був відсутній!
+        });
+    } catch (err) {
+        console.log(`uploadAvatar error: ${err.message}`);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
 
  
 changeUserPassword = async (req, res) => {
@@ -1669,6 +1699,232 @@ deleteUserAccount = async (req, res) => {
         return res.status(500).json({ message: 'Server error', detail: err.message });
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+searchShops = async (req, res) => {
+    const { city, type } = req.body;
+    if (!city || !type) return res.status(400).json({ error: 'city and type required' });
+    try {
+        const dbResult = await pool.query(
+            `SELECT * FROM places
+             WHERE full_name ILIKE $1
+             AND $2 = ANY(types)
+             AND photo_url IS NOT NULL
+             ORDER BY save_count DESC NULLS LAST, rating DESC NULLS LAST
+             LIMIT 8`,
+            [`%${city}%`, type]
+        );
+
+        if (dbResult.rows.length >= 3) {
+            const ids = dbResult.rows.map(r => r.place_id);
+            await pool.query(
+                `UPDATE places SET view_count = view_count + 1 WHERE place_id = ANY($1)`,
+                [ids]
+            );
+            console.log(`[SHOPPING] DB hit: ${dbResult.rows.length} для ${city}/${type}`);
+            return res.status(200).json({ results: dbResult.rows, source: 'database' });
+        }
+
+        console.log(`[SHOPPING] DB miss → Google для ${city}/${type}`);
+        const typeMap = {
+            supermarket: 'supermarket', clothing: 'clothing_store',
+            electronics: 'electronics_store', pharmacy: 'pharmacy',
+            shopping_mall: 'shopping_mall', furniture: 'furniture_store',
+            sport: 'sporting_goods_store', books: 'book_store',
+            building_materials: 'hardware_store', market: 'grocery_or_supermarket'
+        };
+        const googleType = typeMap[type] || type;
+        const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(type + ' ' + city)}&type=${googleType}&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+        if (!data.results?.length) return res.status(200).json({ results: [], source: 'empty' });
+
+        const saved = [];
+        for (const place of data.results.slice(0, 8)) {
+            const photoUrl = place.photos?.[0]
+                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${place.photos[0].photo_reference}&key=${process.env.GOOGLE_API_KEY}`
+                : null;
+            const inserted = await pool.query(
+                `INSERT INTO places (place_id, query_name, full_name, photo_url, rating, latitude, longitude, types, city)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                 ON CONFLICT (place_id) DO UPDATE SET
+                    rating = EXCLUDED.rating,
+                    photo_url = COALESCE(EXCLUDED.photo_url, places.photo_url),
+                    city = COALESCE(EXCLUDED.city, places.city)
+                 RETURNING *`,
+                [
+                    place.place_id, place.name, place.formatted_address,
+                    photoUrl, place.rating,
+                    place.geometry?.location?.lat,
+                    place.geometry?.location?.lng,
+                    [googleType], city
+                ]
+            );
+            if (inserted.rows[0]) saved.push(inserted.rows[0]);
+        }
+        return res.status(200).json({ results: saved, source: 'google' });
+    } catch (err) {
+        console.error(`[SHOPPING] error: ${err.message}`);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
+
+// ── Отримати топ дня ──────────────────────────────────────
+getDailyTop = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT * FROM "DailyTop" ORDER BY rating DESC LIMIT 3`
+        );
+        return res.status(200).json({ top: result.rows });
+    } catch(err) {
+        console.error('[DAILYTOP] getDailyTop error:', err.message);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// ── Внутрішня логіка оновлення (викликається cron'ом) ─────
+_doRefreshDailyTop = async () => {
+    const categories = [
+        { key: 'shopping_mall',  label: 'ТЦ',          googleType: 'shopping_mall'   },
+        { key: 'supermarket',    label: 'Супермаркет',  googleType: 'supermarket'     },
+        { key: 'clothing_store', label: 'Одяг',         googleType: 'clothing_store'  },
+        { key: 'electronics',    label: 'Електроніка',  googleType: 'electronics_store'},
+        { key: 'pharmacy',       label: 'Аптека',       googleType: 'pharmacy'        },
+    ];
+
+    // Перемішуємо щоразу щоб топ був різним
+    const shuffled = categories.sort(() => Math.random() - 0.5).slice(0, 3);
+    const results  = [];
+
+    for (const cat of shuffled) {
+        // 1. Шукаємо в нашій БД places (найкращі за рейтингом і популярністю)
+        const dbRes = await pool.query(
+            `SELECT * FROM places
+             WHERE $1 = ANY(types)
+             AND photo_url IS NOT NULL
+             AND rating >= 4.0
+             ORDER BY (COALESCE(save_count,0) * 0.4 + COALESCE(rating,0) * 0.6) DESC
+             LIMIT 1`,
+            [cat.key]
+        );
+
+        if (dbRes.rows.length > 0) {
+            const p = dbRes.rows[0];
+            results.push({
+                place_id:  p.place_id,
+                name:      p.query_name,
+                address:   p.full_name,
+                photo_url: p.photo_url,
+                rating:    p.rating,
+                category:  cat.label,
+            });
+            console.log(`[DAILYTOP] БД hit: ${p.query_name} (${cat.label})`);
+            continue;
+        }
+
+        // 2. Якщо в БД немає — йдемо в Google
+        console.log(`[DAILYTOP] БД miss → Google (${cat.label})`);
+        try {
+            const url = `https://maps.googleapis.com/maps/api/place/textsearch/json` +
+                `?query=топ+${encodeURIComponent(cat.label)}+Україна` +
+                `&type=${cat.googleType}` +
+                `&language=uk` +
+                `&key=${process.env.GOOGLE_API_KEY}`;
+
+            const resp = await fetch(url);
+            const data = await resp.json();
+
+            if (!data.results?.length) continue;
+
+            // Скор: рейтинг * log(відгуки) — найпопулярніше
+            const best = data.results
+                .filter(p => p.rating >= 4.0 && (p.user_ratings_total || 0) >= 50)
+                .sort((a, b) =>
+                    (b.rating * Math.log((b.user_ratings_total || 1) + 1)) -
+                    (a.rating * Math.log((a.user_ratings_total || 1) + 1))
+                )[0];
+
+            if (!best) continue;
+
+            const photoUrl = best.photos?.[0]
+                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200` +
+                  `&photoreference=${best.photos[0].photo_reference}` +
+                  `&key=${process.env.GOOGLE_API_KEY}`
+                : null;
+
+            // Зберігаємо в places щоб наступного разу взяти з БД
+            await pool.query(
+                `INSERT INTO places (place_id, query_name, full_name, photo_url, rating, latitude, longitude, types)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+                 ON CONFLICT (place_id) DO UPDATE SET
+                    rating    = EXCLUDED.rating,
+                    photo_url = COALESCE(EXCLUDED.photo_url, places.photo_url)`,
+                [
+                    best.place_id, best.name, best.formatted_address,
+                    photoUrl, best.rating,
+                    best.geometry?.location?.lat,
+                    best.geometry?.location?.lng,
+                    [cat.key]
+                ]
+            );
+
+            results.push({
+                place_id:  best.place_id,
+                name:      best.name,
+                address:   best.formatted_address,
+                photo_url: photoUrl,
+                rating:    best.rating,
+                category:  cat.label,
+            });
+
+        } catch(gErr) {
+            console.error(`[DAILYTOP] Google error (${cat.label}):`, gErr.message);
+        }
+    }
+
+    if (!results.length) {
+        console.log('[DAILYTOP] Немає результатів для оновлення');
+        return;
+    }
+
+    // Очищаємо стару таблицю і вставляємо нову
+    await pool.query(`DELETE FROM "DailyTop"`);
+    for (const place of results) {
+        await pool.query(
+            `INSERT INTO "DailyTop" (place_id, name, address, photo_url, rating, category, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,NOW())`,
+            [place.place_id, place.name, place.address, place.photo_url, place.rating, place.category]
+        );
+    }
+    console.log(`[DAILYTOP] ✅ Оновлено ${results.length} топових місць`);
+};
+
+// ── Ручне оновлення через API (для тесту) ─────────────────
+refreshDailyTop = async (req, res) => {
+    try {
+        await this._doRefreshDailyTop();
+        return res.status(200).json({ ok: true, message: 'DailyTop оновлено' });
+    } catch(err) {
+        console.error('[DAILYTOP] refresh error:', err.message);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
+
 }
 
 module.exports = Controller;

@@ -1,14 +1,31 @@
 import { mainPageFunctionsHandler, profileFunctionsHandler } from "./functions.js";
 const mainPageFunctions = new mainPageFunctionsHandler();
 const profileFn = new profileFunctionsHandler();
+function showToast(msg, type = 'info') {
+    let toast = document.querySelector('.shop-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'shop-toast';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.className = `shop-toast ${type}`;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => toast.classList.remove('show'), 2800);
+}
+const SHOP_NO_PHOTO = `data:image/svg+xml,${encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">' +
+    '<rect width="100%" height="100%" fill="#0e1425"/>' +
+    '<text x="50%" y="50%" text-anchor="middle" fill="#c9a84c" ' +
+    'font-family="sans-serif" font-size="60" opacity="0.25">🏪</text></svg>'
+)}`;
   (function() {
         const burgerBtn   = document.getElementById('burgerBtn');
         const mobileMenu  = document.getElementById('mobileMenu');
         const mobileOverlay = document.getElementById('mobileOverlay');
-        const navMenu     = document.getElementById('navMenu');
- 
+
         if (!burgerBtn || !mobileMenu) return;
- 
+
         function openMenu() {
             burgerBtn.classList.add('active');
             burgerBtn.setAttribute('aria-expanded', 'true');
@@ -17,7 +34,7 @@ const profileFn = new profileFunctionsHandler();
             mobileOverlay.classList.add('visible');
             document.body.style.overflow = 'hidden';
         }
- 
+
         function closeMenu() {
             burgerBtn.classList.remove('active');
             burgerBtn.setAttribute('aria-expanded', 'false');
@@ -26,14 +43,13 @@ const profileFn = new profileFunctionsHandler();
             mobileOverlay.classList.remove('visible');
             document.body.style.overflow = '';
         }
- 
+
         burgerBtn.addEventListener('click', () => {
             burgerBtn.classList.contains('active') ? closeMenu() : openMenu();
         });
- 
+
         mobileOverlay.addEventListener('click', closeMenu);
- 
-        // Закриваємо при кліку на будь-яке місце поза меню і бургером
+
         document.addEventListener('click', (e) => {
             if (
                 !mobileMenu.contains(e.target) &&
@@ -43,26 +59,19 @@ const profileFn = new profileFunctionsHandler();
                 closeMenu();
             }
         });
- 
-        // Закриваємо при кліку на пункт меню
+
         document.querySelectorAll('.mobile-nav-item').forEach(btn => {
             btn.addEventListener('click', () => {
-                // Синхронізуємо активний стан з десктоп навігацією
-                const page = btn.dataset.page;
                 document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 closeMenu();
             });
         });
- 
-        // Закриваємо при ESC
+
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') closeMenu();
         });
- 
-        // Синхронізація активного стану між десктоп і мобільним меню
-        // (викликається після navigateTo в front_logged_index.js)
-        const origUpdateActive = window.updateActiveMenuExternal;
+
         const observer = new MutationObserver(() => {
             const activePage = document.querySelector('.nav-item.active-nav')?.dataset.page;
             if (activePage) {
@@ -75,6 +84,15 @@ const profileFn = new profileFunctionsHandler();
             attributes: true, subtree: true, attributeFilter: ['class']
         });
     })();
+// Logout в хедері
+const headerLogout = document.getElementById('headerLogoutBtn');
+if (headerLogout) {
+    headerLogout.addEventListener('click', async () => {
+        headerLogout.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        headerLogout.disabled = true;
+        await mainPageFunctions.logOut();
+    });
+}
 // ============================================================
 // AI WIDGET
 // ============================================================
@@ -136,23 +154,6 @@ function mountSuggestionsPortal() {
     });
 }
 
-function showPortal(items, anchorEl, onSelect) {
-    const portal = document.getElementById('search-suggestions-portal');
-    if (!portal || !items.length) { portal?.classList.remove('active'); return; }
-    const rect = anchorEl.getBoundingClientRect();
-    portal.style.top   = (rect.bottom + 6) + 'px';
-    portal.style.left  = rect.left + 'px';
-    portal.style.width = rect.width + 'px';
-    portal.innerHTML = '';
-    items.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item.description || item.name || item;
-        li.addEventListener('mousedown', e => { e.preventDefault(); portal.classList.remove('active'); onSelect(item); });
-        portal.appendChild(li);
-    });
-    portal.classList.add('active');
-}
-
 function hidePortal() {
     document.getElementById('search-suggestions-portal')?.classList.remove('active');
 }
@@ -172,7 +173,6 @@ dashboard: `
         </div>
         <div style="position:absolute;top:-50px;right:-50px;width:300px;height:300px;background:rgba(201,168,76,0.06);filter:blur(80px);border-radius:50%;"></div>
         <div style="position:absolute;bottom:-30px;left:10%;width:200px;height:200px;background:rgba(31,212,200,0.05);filter:blur(60px);border-radius:50%;"></div>
-        <div class="hero-particles"></div>
     </div>
 
     <div class="top-cards-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:44px;">
@@ -180,9 +180,9 @@ dashboard: `
             <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Улюблені</span>
             <div style="background:rgba(255,107,74,0.15);border:1px solid rgba(255,107,74,0.25);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#ff6b4a;font-size:22px;"><i class="fas fa-heart"></i></div>
         </div>
-        <div class="mini-card tilt-card" data-page="photos" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:1px solid rgba(255,255,255,0.06);">
-            <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Статистика</span>
-            <div style="background:rgba(31,212,200,0.12);border:1px solid rgba(31,212,200,0.2);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#1fd4c8;font-size:22px;"><i class="fas fa-chart-bar"></i></div>
+        <div class="mini-card tilt-card" data-page="shopping" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:1px solid rgba(255,255,255,0.06);">
+            <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Шопінг</span>
+            <div style="background:rgba(31,212,200,0.12);border:1px solid rgba(31,212,200,0.2);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#1fd4c8;font-size:22px;"><i class="fas fa-shopping-bag"></i></div>
         </div>
         <div class="mini-card tilt-card" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;border:1px solid rgba(255,255,255,0.06);">
             <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Поради</span>
@@ -233,31 +233,33 @@ dashboard: `
     <h2 style="margin:44px 0 28px;font-size:26px;font-weight:800;color:#f0ece4;font-family:'Outfit',sans-serif;letter-spacing:-.3px;">Категорії</h2>
     <div class="grid-container" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:50px;">
         <div class="cat-card" data-category="restaurant" style="background:rgba(255,255,255,0.025);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-            <div style="background:rgba(255,107,74,0.12);border:1px solid rgba(255,107,74,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#ff6b4a;transition:transform .3s ease;"><i class="fas fa-utensils"></i></div>
+            <div style="background:rgba(255,107,74,0.12);border:1px solid rgba(255,107,74,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#ff6b4a;"><i class="fas fa-utensils"></i></div>
             <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Ресторани</span>
         </div>
         <div class="cat-card" data-category="lodging" style="background:rgba(255,255,255,0.025);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-            <div style="background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#e8c97a;transition:transform .3s ease;"><i class="fas fa-hotel"></i></div>
+            <div style="background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#e8c97a;"><i class="fas fa-hotel"></i></div>
             <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Готелі</span>
         </div>
         <div class="cat-card" data-category="park" style="background:rgba(255,255,255,0.025);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-            <div style="background:rgba(31,212,200,0.1);border:1px solid rgba(31,212,200,0.18);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#1fd4c8;transition:transform .3s ease;"><i class="fas fa-tree"></i></div>
+            <div style="background:rgba(31,212,200,0.1);border:1px solid rgba(31,212,200,0.18);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#1fd4c8;"><i class="fas fa-tree"></i></div>
             <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Парки</span>
         </div>
         <div class="cat-card" data-category="museum" style="background:rgba(255,255,255,0.025);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-            <div style="background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#a78bfa;transition:transform .3s ease;"><i class="fas fa-landmark"></i></div>
+            <div style="background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#a78bfa;"><i class="fas fa-landmark"></i></div>
             <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Музеї</span>
         </div>
         <div class="cat-card" data-category="cafe" style="background:rgba(255,255,255,0.025);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-            <div style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.18);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#c9a84c;transition:transform .3s ease;"><i class="fas fa-mug-hot"></i></div>
+            <div style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.18);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#c9a84c;"><i class="fas fa-mug-hot"></i></div>
             <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Кафе</span>
         </div>
         <div class="cat-card" data-category="shopping_mall" style="background:rgba(255,255,255,0.025);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-            <div style="background:rgba(255,107,74,0.1);border:1px solid rgba(255,107,74,0.18);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#ff6b4a;transition:transform .3s ease;"><i class="fas fa-shopping-bag"></i></div>
+            <div style="background:rgba(255,107,74,0.1);border:1px solid rgba(255,107,74,0.18);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#ff6b4a;"><i class="fas fa-shopping-bag"></i></div>
             <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Магазини</span>
         </div>
     </div>
 </div>`,
+
+
 
 profile: `
 <div class="profile-page-wrapper fade-in">
@@ -268,10 +270,10 @@ profile: `
             <div class="profile-info-header">
                 <div class="profile-avatar-container" style="position:relative;">
                     <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" style="display:none">
-                    <div class="avatar-circle" id="avatarCircle" style="cursor:pointer;">
+                    <div class="avatar-circle" id="avatarCircle" style="cursor:pointer;position:relative;overflow:hidden;">
                         <i class="fas fa-user" id="avatarIcon"></i>
                         <img id="avatarImg" src="" alt="avatar" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;top:0;left:0;">
-                        <div id="avatarHover" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);border-radius:50%;align-items:center;justify-content:center;flex-direction:column;gap:4px;">
+                        <div id="avatarHover" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);border-radius:50%;align-items:center;justify-content:center;flex-direction:column;gap:4px;z-index:2;">
                             <i class="fas fa-camera" style="color:#fff;font-size:20px;"></i>
                             <span style="color:#fff;font-size:10px;font-weight:600;">Змінити</span>
                         </div>
@@ -307,7 +309,6 @@ profile: `
 
             <hr class="profile-divider">
 
-            <!-- ВКЛАДКИ -->
             <div style="display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:24px;">
                 <button class="profile-tab-btn active" data-tab="about">
                     <i class="fas fa-user" style="margin-right:6px;font-size:12px;"></i>Про себе
@@ -317,7 +318,6 @@ profile: `
                 </button>
             </div>
 
-            <!-- ВКЛ. "ПРО СЕБЕ" -->
             <div id="tab-about" class="profile-tab-content">
                 <div id="profileViewMode" class="profile-about">
                     <h3>Про себе</h3>
@@ -329,13 +329,13 @@ profile: `
                         <div>
                             <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#6b6560;display:block;margin-bottom:8px;">Ім'я</label>
                             <input type="text" id="editUsername" maxlength="50" placeholder="Твоє ім'я"
-                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;box-sizing:border-box;transition:border-color .25s;"
+                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;box-sizing:border-box;"
                                 onfocus="this.style.borderColor='rgba(201,168,76,.5)'" onblur="this.style.borderColor='rgba(201,168,76,.15)'">
                         </div>
                         <div>
                             <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#6b6560;display:block;margin-bottom:8px;">Місто</label>
                             <input type="text" id="editLocation" maxlength="100" placeholder="Наприклад: Київ, Україна"
-                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;box-sizing:border-box;transition:border-color .25s;"
+                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;box-sizing:border-box;"
                                 onfocus="this.style.borderColor='rgba(201,168,76,.5)'" onblur="this.style.borderColor='rgba(201,168,76,.15)'">
                         </div>
                         <div style="position:relative;">
@@ -347,7 +347,7 @@ profile: `
                         </div>
                         <div id="editAnswer" style="font-size:13px;min-height:18px;"></div>
                         <div style="display:flex;gap:10px;">
-                            <button id="saveProfileBtn" style="padding:11px 24px;background:linear-gradient(135deg,#c9a84c,#e8c97a);border:none;border-radius:var(--r2);color:#05080f;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .25s;">
+                            <button id="saveProfileBtn" style="padding:11px 24px;background:linear-gradient(135deg,#c9a84c,#e8c97a);border:none;border-radius:var(--r2);color:#05080f;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;">
                                 <i class="fas fa-check"></i> Зберегти
                             </button>
                             <button id="cancelEditBtn" style="padding:11px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:var(--r2);color:#6b6560;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;">
@@ -358,7 +358,6 @@ profile: `
                 </div>
             </div>
 
-            <!-- ВКЛ. "СТАТИСТИКА" -->
             <div id="tab-stats" class="profile-tab-content" style="display:none;">
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:28px;">
                     <div class="kpi-card">
@@ -380,7 +379,7 @@ profile: `
                 </div>
                 <div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:22px;margin-bottom:18px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
-                        <div><h4 style="color:#f0ece4;margin:0;font-size:15px;font-family:'Outfit',sans-serif;">Активність по місяцях</h4><p style="color:#3d3935;font-size:12px;margin:4px 0 0;">Кількість відвіданих місць</p></div>
+                        <div><h4 style="color:#f0ece4;margin:0;font-size:15px;font-family:'Outfit',sans-serif;">Активність по місяцях</h4></div>
                         <div style="display:flex;gap:6px;">
                             <button class="period-tab active" data-period="2024">2024</button>
                             <button class="period-tab" data-period="2023">2023</button>
@@ -393,7 +392,7 @@ profile: `
                     <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
                         <div style="position:relative;width:140px;height:140px;flex-shrink:0;">
                             <canvas id="profileDonutChart"></canvas>
-                            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">
+                            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
                                 <span id="donutTotal" style="font-size:22px;font-weight:800;color:#f0ece4;font-family:'Space Mono',monospace;">0</span>
                                 <span style="display:block;font-size:10px;color:#3d3935;">всього</span>
                             </div>
@@ -405,14 +404,7 @@ profile: `
                     <h4 style="color:#f0ece4;margin:0 0 18px;font-size:15px;font-family:'Outfit',sans-serif;">Топ міст</h4>
                     <div id="profileCityBars"></div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
-                    <div class="insight-card"><div class="insight-icon" style="color:#ff6b4a;"><i class="fas fa-fire"></i></div><div class="insight-body"><h4>Найактивніший день</h4><p>Субота — в цей день ти відвідуєш місця вдвічі частіше</p></div></div>
-                    <div class="insight-card"><div class="insight-icon" style="color:#1fd4c8;"><i class="fas fa-route"></i></div><div class="insight-body"><h4>Середній маршрут</h4><p>3.2 місця за одну поїздку — ти ефективний мандрівник!</p></div></div>
-                    <div class="insight-card"><div class="insight-icon" style="color:#e8c97a;"><i class="fas fa-crown"></i></div><div class="insight-body"><h4>Улюблена категорія</h4><p>Ресторани складають 38% всіх твоїх відвідувань</p></div></div>
-                    <div class="insight-card"><div class="insight-icon" style="color:#a78bfa;"><i class="fas fa-calendar-check"></i></div><div class="insight-body"><h4>Серія активності</h4><p>🔥 14 днів поспіль — твій особистий рекорд!</p></div></div>
-                </div>
             </div>
-
         </div>
     </div>
 </div>`,
@@ -437,11 +429,18 @@ nearby: `
                     <input type="range" id="nearbyRadius" min="1" max="30" value="12" class="modern-slider">
                 </div>
                 <div class="category-chips">
-                    <button class="chip active" data-type="tourist_attraction">Пам'ятки</button>
-                    <button class="chip" data-type="park">Парки</button>
-                    <button class="chip" data-type="shopping_mall">ТЦ</button>
-                    <button class="chip" data-type="museum">Музеї</button>
-                    <button class="chip" data-type="restaurant">Ресторани</button>
+                    <button class="chip active" data-type="tourist_attraction">🏛️ Пам'ятки</button>
+                    <button class="chip" data-type="park">🌳 Парки</button>
+                    <button class="chip" data-type="shopping_mall">🛍️ ТЦ</button>
+                    <button class="chip" data-type="museum">🏺 Музеї</button>
+                    <button class="chip" data-type="restaurant">🍽️ Ресторани</button>
+                    <button class="chip" data-type="cafe">☕ Кафе</button>
+                    <button class="chip" data-type="lodging">🏨 Готелі</button>
+                    <button class="chip" data-type="supermarket">🛒 Супермаркет</button>
+                    <button class="chip" data-type="pharmacy">💊 Аптека</button>
+                    <button class="chip" data-type="gym">🏋️ Спортзал</button>
+                    <button class="chip" data-type="gas_station">⛽ АЗС</button>
+                    <button class="chip" data-type="bank">🏦 Банк</button>
                 </div>
                 <button id="startNearbySearch" class="glow-btn"><i class="fas fa-crosshairs"></i> Сканувати вручну</button>
             </div>
@@ -452,62 +451,92 @@ nearby: `
     </div>
 </div>`,
 
-photos: `
-<div class="dashboard-wrapper fade-in" id="stats-page">
-    <header class="settings-hero" style="margin-bottom:10px;">
-        <div class="hero-bg-glow"></div>
-        <div class="hero-content">
-            <div class="badge-premium"><i class="fas fa-chart-line"></i> Analytics</div>
-            <h1 style="font-size:clamp(2rem,5vw,3.2rem);font-weight:800;margin:10px 0;background:linear-gradient(135deg,#f0ece4 30%,#e8c97a 70%,#1fd4c8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px;font-family:'Outfit',sans-serif;">Моя Статистика</h1>
-            <div class="hero-separator"></div>
-            <p style="color:#6b6560;font-size:1rem;max-width:480px;">Аналітика твоїх подорожей — графіки активності, хітмапи та інсайти</p>
+shopping: () => {
+    const savedCity = sessionStorage.getItem('shopping_city') || '';
+    const savedType = sessionStorage.getItem('shopping_type') || '';
+    return `
+    <div class="shop-page">
+
+        <div class="shop-hero">
+            <div class="shop-hero-glow"></div>
+            <h1 class="shop-title">
+                <span class="shop-title-top">TOP</span>
+                <span class="shop-title-bot">МАГАЗИНИ</span>
+            </h1>
+            <p class="shop-sub">Найкращі місця твого міста — рейтинг, фото, маршрут</p>
         </div>
-    </header>
-    <div class="stats-kpi-row">
-        <div class="kpi-card"><div class="kpi-icon" style="background:rgba(31,212,200,0.12);color:#1fd4c8;"><i class="fas fa-map-marked-alt"></i></div><div class="kpi-body"><span class="kpi-val" id="statsPageVisited">0</span><span class="kpi-label">Місць відвідано</span></div><div class="kpi-trend up"><i class="fas fa-arrow-up"></i> +12 цього місяця</div></div>
-        <div class="kpi-card"><div class="kpi-icon" style="background:rgba(201,168,76,0.12);color:#e8c97a;"><i class="fas fa-city"></i></div><div class="kpi-body"><span class="kpi-val" data-target="18">0</span><span class="kpi-label">Міст досліджено</span></div><div class="kpi-trend up"><i class="fas fa-arrow-up"></i> +3 нових</div></div>
-        <div class="kpi-card"><div class="kpi-icon" style="background:rgba(167,139,250,0.12);color:#a78bfa;"><i class="fas fa-camera"></i></div><div class="kpi-body"><span class="kpi-val" data-target="341">0</span><span class="kpi-label">Фотографій</span></div><div class="kpi-trend up"><i class="fas fa-arrow-up"></i> +47 цього тижня</div></div>
-        <div class="kpi-card"><div class="kpi-icon" style="background:rgba(201,168,76,0.12);color:#c9a84c;"><i class="fas fa-star"></i></div><div class="kpi-body"><span class="kpi-val" data-target="4.8" data-float="true">0</span><span class="kpi-label">Середній рейтинг</span></div><div class="kpi-trend neutral"><i class="fas fa-minus"></i> Стабільно</div></div>
-    </div>
-    <div class="charts-main-row">
-        <div class="chart-card wide">
-            <div class="chart-card-head">
-                <div><h3 class="chart-title">Активність по місяцях</h3><p class="chart-sub">Кількість відвіданих місць</p></div>
-                <div class="chart-period-tabs">
-                    <button class="period-tab active" data-period="2024">2024</button>
-                    <button class="period-tab" data-period="2023">2023</button>
-                </div>
+
+        <div class="shop-search-block">
+            <div class="shop-input-wrap">
+                <i class="fas fa-city shop-input-icon"></i>
+                <input id="shopCityInput" class="shop-input" type="text"
+                    placeholder="Місто — Київ, Львів, Одеса..."
+                    value="${savedCity}" autocomplete="off"/>
+                <div id="shopCitySuggestions" class="shop-suggestions"></div>
             </div>
-            <div class="bar-chart-wrap"><canvas id="barChartCanvas"></canvas></div>
-        </div>
-        <div class="chart-card narrow">
-            <div class="chart-card-head"><div><h3 class="chart-title">Категорії</h3><p class="chart-sub">Розбивка по типам</p></div></div>
-            <div class="donut-wrap"><canvas id="donutCanvas"></canvas><div class="donut-center-label"><span class="donut-total">124</span><span class="donut-total-sub">всього</span></div></div>
-            <div class="donut-legend" id="donutLegend"></div>
-        </div>
-    </div>
-    <div class="charts-second-row">
-        <div class="chart-card heatmap-card">
-            <div class="chart-card-head">
-                <div><h3 class="chart-title">Теплова карта активності</h3><p class="chart-sub">Дні з відвіданими місцями за рік</p></div>
-                <div class="heatmap-legend"><span>менше</span><div class="hm-grad"></div><span style="color:#e8c97a;">більше</span></div>
+            <div class="shop-types-grid">
+                ${[
+                    {key:'supermarket',    icon:'fa-shopping-cart',  label:'Супермаркет'},
+                    {key:'clothing',       icon:'fa-tshirt',          label:'Одяг'},
+                    {key:'electronics',    icon:'fa-laptop',          label:'Електроніка'},
+                    {key:'pharmacy',       icon:'fa-pills',           label:'Аптека'},
+                    {key:'shopping_mall',  icon:'fa-store',           label:'ТЦ'},
+                    {key:'furniture',      icon:'fa-couch',           label:'Меблі'},
+                    {key:'sport',          icon:'fa-dumbbell',        label:'Спорт'},
+                    {key:'building_materials', icon:'fa-hammer',      label:'Будматеріали'},
+                    {key:'books',          icon:'fa-book',            label:'Книги'},
+                    {key:'market',         icon:'fa-leaf',            label:'Ринок'},
+                ].map(t => `
+                    <button class="shop-type-btn ${savedType===t.key?'active':''}"
+                        data-type="${t.key}">
+                        <i class="fas ${t.icon}"></i>
+                        <span>${t.label}</span>
+                    </button>
+                `).join('')}
             </div>
-            <div class="heatmap-grid" id="heatmapGrid"></div>
-            <div class="heatmap-months" id="heatmapMonths"></div>
+            <button id="shopSearchBtn" class="shop-search-btn">
+                <i class="fas fa-search"></i> Знайти магазини
+            </button>
         </div>
-        <div class="chart-card cities-card">
-            <div class="chart-card-head"><div><h3 class="chart-title">Топ міст</h3><p class="chart-sub">За кількістю відвіданих місць</p></div></div>
-            <div class="city-bars" id="cityBars"></div>
+
+        <div id="shopFavSection" class="shop-section" style="display:none;">
+            <div class="shop-section-head">
+                <span class="shop-section-badge"><i class="fas fa-heart"></i> Збережені</span>
+                <span id="shopFavCount" class="shop-fav-count"></span>
+            </div>
+            <div id="shopFavGrid" class="shop-grid"></div>
         </div>
+
+        <div id="shopResultsSection" class="shop-section" style="display:none;">
+            <div class="shop-section-head">
+                <span class="shop-section-badge"><i class="fas fa-fire"></i> Результати</span>
+                <span id="shopResultsMeta" class="shop-meta"></span>
+            </div>
+            <div id="shopResultsGrid" class="shop-grid"></div>
+        </div>
+
+        <div id="shopLoader" class="shop-loader" style="display:none;">
+            <div class="shop-spinner"></div>
+            <p>Шукаємо найкраще...</p>
+        </div>
+
+        <div id="shopEmpty" class="shop-empty" style="display:none;">
+            <i class="fas fa-store-slash"></i>
+            <p>Нічого не знайдено. Спробуй інше місто або категорію.</p>
+        </div>
+        <div id="shopDailyTop" class="shop-daily-top" style="display:none;">
+    <div class="daily-top-head">
+        <div class="daily-top-title">
+            <span class="daily-top-fire">🔥</span>
+            <h2>Топ магазини дня</h2>
+            <span class="daily-top-badge">LIVE</span>
+        </div>
+        <div class="daily-top-timer">Завантаження...</div>
     </div>
-    <h2 class="section-title-ach"><i class="fas fa-lightbulb"></i> Інсайти</h2>
-    <div class="insights-row">
-        <div class="insight-card"><div class="insight-icon" style="color:#ff6b4a;"><i class="fas fa-fire"></i></div><div class="insight-body"><h4>Найактивніший день</h4><p>Субота — в цей день ти відвідуєш місця вдвічі частіше</p></div></div>
-        <div class="insight-card"><div class="insight-icon" style="color:#1fd4c8;"><i class="fas fa-route"></i></div><div class="insight-body"><h4>Середній маршрут</h4><p>3.2 місця за одну поїздку — ти ефективний мандрівник!</p></div></div>
-        <div class="insight-card"><div class="insight-icon" style="color:#e8c97a;"><i class="fas fa-crown"></i></div><div class="insight-body"><h4>Улюблена категорія</h4><p>Ресторани складають 38% всіх твоїх відвідувань</p></div></div>
-        <div class="insight-card"><div class="insight-icon" style="color:#a78bfa;"><i class="fas fa-calendar-check"></i></div><div class="insight-body"><h4>Серія активності</h4><p>🔥 14 днів поспіль — твій особистий рекорд!</p></div></div>
-    </div>
-</div>`,
+    <div class="daily-top-grid"></div>
+</div>
+    </div>`;
+},
 
 settings: `
 <div class="dashboard-wrapper fade-in">
@@ -543,6 +572,16 @@ settings: `
                 <div class="action-box"><div class="action-text"><h4>Email акаунту</h4><p id="settingsEmail" style="word-break:break-all;">—</p></div></div>
                 <div class="action-box"><div class="action-text"><h4>Завантажити дані</h4><p>Отримай копію профілю у форматі JSON</p></div><button class="action-btn secondary" id="downloadDataBtn"><i class="fas fa-download"></i></button></div>
                 <div class="action-box danger-zone"><div class="action-text"><h4 class="text-danger">Видалити акаунт</h4><p>Це призведе до незворотного видалення даних</p></div><button class="action-btn danger" id="deleteAccountBtn">Видалити</button></div>
+            </div>
+            <!-- ВИЙТИ З АКАУНТУ -->
+            <div style="margin-top:24px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06);">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                    <div><h4 style="color:#f0ece4;margin:0 0 4px;">Вийти з акаунту</h4><p style="color:#6b6560;font-size:13px;margin:0;">Завершити поточну сесію</p></div>
+                    <button id="logoutBtn" style="padding:11px 24px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:14px;color:#f87171;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .25s;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
+                        <i class="fas fa-sign-out-alt"></i> Вийти
+                    </button>
+                </div>
             </div>
             <form id="changePasswordForm" style="display:none;margin-top:28px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06);" onsubmit="return false;">
                 <h4 style="color:#f0ece4;margin-bottom:6px;" id="passwordFormTitle">Змінити пароль</h4>
@@ -776,15 +815,13 @@ async function initDashboard() {
     updateSliderCards(defaultCities, true);
     initTiltCards();
 
-    // ── FIX: Scroll buttons — прямі обробники замість делегування ──
     const scrollLeftBtn  = document.getElementById("scrollLeft");
     const scrollRightBtn = document.getElementById("scrollRight");
     const cityContainer  = document.getElementById("cityContainer");
 
     if (scrollLeftBtn && cityContainer) {
         scrollLeftBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault(); e.stopPropagation();
             const card = cityContainer.querySelector(".city-card");
             const step = card ? card.offsetWidth + 20 : 300;
             cityContainer.scrollBy({ left: -step, behavior: "smooth" });
@@ -792,15 +829,13 @@ async function initDashboard() {
     }
     if (scrollRightBtn && cityContainer) {
         scrollRightBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault(); e.stopPropagation();
             const card = cityContainer.querySelector(".city-card");
             const step = card ? card.offsetWidth + 20 : 300;
             cityContainer.scrollBy({ left: step, behavior: "smooth" });
         });
     }
 
-    // Progress bar
     if (cityContainer) {
         cityContainer.addEventListener("scroll", () => {
             const thumb = document.getElementById("scrollThumb");
@@ -811,11 +846,10 @@ async function initDashboard() {
         });
     }
 
-    // ── FIX: Категорії → Nearby з вибраною категорією ──
+    // Категорії → Nearby з вибраною категорією
     document.querySelectorAll('.cat-card').forEach(card => {
         card.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault(); e.stopPropagation();
             const category = card.dataset.category;
             if (category) {
                 window._pendingNearbyCategory = category;
@@ -824,7 +858,6 @@ async function initDashboard() {
         });
     });
 
-    // Search categories
     categoryButtons.forEach(btn => {
         btn.addEventListener('click', async () => {
             categoryButtons.forEach(b => b.classList.remove('active'));
@@ -857,9 +890,16 @@ async function initDashboard() {
     }
 }
 
-// ============================================================
-// PROFILE PAGE
-// ============================================================
+// Зберігаємо аватар у sessionStorage щоб він не зникав при переключенні
+const AVATAR_CACHE_KEY = 'topspots_avatar_cache';
+
+function saveAvatarToCache(url) {
+    try { sessionStorage.setItem(AVATAR_CACHE_KEY, url); } catch (_) {}
+}
+function getAvatarFromCache() {
+    try { return sessionStorage.getItem(AVATAR_CACHE_KEY); } catch (_) { return null; }
+}
+
 async function initProfilePage() {
     const profile = await profileFn.getProfile();
     if (!profile) { console.log('initProfilePage: failed to load'); return; }
@@ -875,39 +915,68 @@ async function initProfilePage() {
 
     if (profile.has_google) { const badge = document.getElementById('googleBadge'); if (badge) badge.style.display = 'flex'; }
 
-    if (profile.avatar_url) {
+    // ── ФІКС #1: Завантаження аватара з кешу або з профілю ──
+    function applyAvatar(url) {
         const img  = document.getElementById('avatarImg');
         const icon = document.getElementById('avatarIcon');
-        if (img && icon) { img.src = profile.avatar_url; img.style.display = 'block'; icon.style.display = 'none'; }
+        if (img && icon && url) {
+            img.src = url;
+            img.style.display = 'block';
+            icon.style.display = 'none';
+            saveAvatarToCache(url);
+        }
+    }
+
+    // Спочатку перевіряємо кеш (миттєво), потім профіль з сервера
+    const cachedAvatar = getAvatarFromCache();
+    if (cachedAvatar) {
+        applyAvatar(cachedAvatar);
+    }
+    if (profile.avatar_url) {
+        applyAvatar(profile.avatar_url);
     }
 
     const circle     = document.getElementById('avatarCircle');
     const hoverLayer = document.getElementById('avatarHover');
     const fileInput  = document.getElementById('avatarFileInput');
     const status     = document.getElementById('avatarStatus');
+
     if (circle && hoverLayer) {
         circle.addEventListener('mouseenter', () => { hoverLayer.style.display = 'flex'; });
         circle.addEventListener('mouseleave', () => { hoverLayer.style.display = 'none'; });
         circle.addEventListener('click', () => fileInput?.click());
     }
+
     if (fileInput) {
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
+
+            // Показуємо превью одразу
             const reader = new FileReader();
-            reader.onload = ev => {
-                const img  = document.getElementById('avatarImg');
-                const icon = document.getElementById('avatarIcon');
-                if (img && icon) { img.src = ev.target.result; img.style.display = 'block'; icon.style.display = 'none'; }
-            };
+            reader.onload = ev => { applyAvatar(ev.target.result); };
             reader.readAsDataURL(file);
+
             if (status) { status.textContent = 'Завантаження...'; status.style.color = '#a8a199'; }
+
             const result = await profileFn.uploadAvatar(file);
+
             if (status) {
-                status.textContent = result.status === 200 ? '✓ Збережено' : '✗ Помилка';
-                status.style.color  = result.status === 200 ? '#1fd4c8' : '#ef4444';
-                if (result.status === 200) setTimeout(() => { status.textContent = ''; }, 2500);
+                if (result.status === 200) {
+                    status.textContent = '✓ Збережено';
+                    status.style.color = '#1fd4c8';
+                    // Оновлюємо кеш з реальним URL з сервера
+                    if (result.data?.avatar_url) {
+                        saveAvatarToCache(result.data.avatar_url);
+                    }
+                    setTimeout(() => { status.textContent = ''; }, 2500);
+                } else {
+                    status.textContent = '✗ Помилка';
+                    status.style.color = '#ef4444';
+                }
             }
+            // Скидаємо input щоб можна було завантажити той самий файл знову
+            fileInput.value = '';
         });
     }
 
@@ -925,7 +994,6 @@ async function initProfilePage() {
         });
     });
 
-    // ── FIX: Кнопка редагувати — окремий обробник без конфліктів ──
     const editBtn   = document.getElementById('editProfileBtn');
     const viewMode  = document.getElementById('profileViewMode');
     const editMode  = document.getElementById('profileEditMode');
@@ -938,7 +1006,6 @@ async function initProfilePage() {
     if (editBtn) {
         editBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Переключаємо на вкладку "Про себе"
             tabBtns.forEach(b => b.classList.remove('active'));
             const aboutBtn = document.querySelector('.profile-tab-btn[data-tab="about"]');
             if (aboutBtn) aboutBtn.classList.add('active');
@@ -991,15 +1058,11 @@ async function initProfilePage() {
     });
 }
 
-// ============================================================
-// PROFILE STATS
-// ============================================================
 let profileStatsInited = false;
 
 function initProfileStats(profile) {
     if (profileStatsInited) return;
     profileStatsInited = true;
-
     const visited = profile?.places_visited || 0;
     const since   = profile?.member_since   || '—';
     const loc     = profile?.location       || '—';
@@ -1017,7 +1080,6 @@ function initProfileStats(profile) {
     const donutTotalEl = document.getElementById('donutTotal');
     if (donutTotalEl) donutTotalEl.textContent = visited || 0;
 
-    // Bar chart
     const barCanvas = document.getElementById('profileBarChart');
     if (barCanvas) {
         const ctx = barCanvas.getContext('2d');
@@ -1061,7 +1123,6 @@ function initProfileStats(profile) {
         });
     }
 
-    // Donut chart
     const donutCanvas = document.getElementById('profileDonutChart');
     if (donutCanvas) {
         const ctx = donutCanvas.getContext('2d');
@@ -1102,7 +1163,6 @@ function initProfileStats(profile) {
         }
     }
 
-    // City bars
     const cityEl = document.getElementById('profileCityBars');
     if (cityEl) {
         const list=[{name:'Київ',count:47,color:'#c9a84c'},{name:'Львів',count:28,color:'#1fd4c8'},{name:'Одеса',count:19,color:'#a78bfa'},{name:'Харків',count:14,color:'#ff6b4a'},{name:'Дніпро',count:7,color:'#e8c97a'}];
@@ -1115,117 +1175,246 @@ function initProfileStats(profile) {
             setTimeout(()=>{ row.querySelector('div > div').style.width=(c.count/max*100)+'%'; },100);
         });
     }
-
-    document.querySelectorAll('.insight-card').forEach((c,i)=>{
-        c.style.cssText='opacity:0;transform:translateY(14px)';
-        setTimeout(()=>{ c.style.transition='opacity .4s ease,transform .4s ease'; c.style.opacity='1'; c.style.transform='translateY(0)'; },600+i*100);
-    });
 }
 
-// ============================================================
-// SETTINGS PAGE
-// ============================================================
-async function initSettingsPage() {
-    const [settings, profile] = await Promise.all([ profileFn.getSettings(), profileFn.getProfile() ]);
-    if (profile) { const emailEl = document.getElementById('settingsEmail'); if (emailEl) emailEl.textContent = profile.email; }
-    if (settings) {
-        const map = {
-            toggle_notifications_email:  settings.notifications_email,
-            toggle_notifications_push:   settings.notifications_push,
-            toggle_notifications_nearby: settings.notifications_nearby,
-            toggle_privacy_public:       settings.privacy_public,
-            toggle_privacy_location:     settings.privacy_location,
-        };
-        Object.entries(map).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.checked = !!val; });
-    }
-    const toggleMap = { toggle_notifications_email:'notifications_email', toggle_notifications_push:'notifications_push', toggle_notifications_nearby:'notifications_nearby', toggle_privacy_public:'privacy_public', toggle_privacy_location:'privacy_location' };
-    Object.entries(toggleMap).forEach(([elId, key]) => {
-        const el = document.getElementById(elId); if (!el) return;
-        el.addEventListener('change', async () => { const ok = await profileFn.updateSetting(key, el.checked); if (!ok) el.checked = !el.checked; });
+
+
+
+
+async function initShoppingPage() {
+    let selectedType = sessionStorage.getItem('shopping_type') || '';
+
+    document.querySelectorAll('.shop-type-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.shop-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedType = btn.dataset.type;
+            sessionStorage.setItem('shopping_type', selectedType);
+        });
     });
 
-    const openBtn      = document.getElementById('openChangePasswordBtn');
-    const passForm     = document.getElementById('changePasswordForm');
-    const cancelPass   = document.getElementById('cancelChangePasswordBtn');
-    const confirmBtn   = document.getElementById('confirmChangePasswordBtn');
-    const passAnswer   = document.getElementById('passwordChangeAnswer');
-    const curPassInput = document.getElementById('currentPasswordInput');
-    const curPassWrap  = document.getElementById('currentPasswordWrap');
-    const passHint     = document.getElementById('passwordFormHint');
-    const passTitle    = document.getElementById('passwordFormTitle');
-    let isGoogleOnly   = false;
+    const cityInput      = document.getElementById('shopCityInput');
+    const suggestionsBox = document.getElementById('shopCitySuggestions');
+    let suggestTimeout;
 
-    if (openBtn && passForm) {
-        openBtn.addEventListener('click', async () => {
-            const isOpen = passForm.style.display !== 'none';
-            if (isOpen) { passForm.style.display = 'none'; return; }
-            passForm.style.display = 'block';
+    cityInput.addEventListener('input', () => {
+        clearTimeout(suggestTimeout);
+        const val = cityInput.value.trim();
+        if (val.length < 2) { suggestionsBox.innerHTML = ''; return; }
+
+        suggestTimeout = setTimeout(async () => {
             try {
-                const res = await fetch('/api/user/password-status', { method:'GET', credentials:'include' });
-                if (res.ok) {
-                    const data = await res.json();
-                    isGoogleOnly = data.is_google_only;
-                    if (isGoogleOnly) {
-                        if (curPassWrap) curPassWrap.style.display='none';
-                        if (passTitle)   passTitle.textContent='Встановити пароль';
-                        if (passHint)  { passHint.textContent='Ти увійшов через Google. Встанови пароль щоб також входити через email.'; passHint.style.color='#1fd4c8'; }
-                    } else {
-                        if (curPassWrap) curPassWrap.style.display='block';
-                        if (passTitle)   passTitle.textContent='Змінити пароль';
-                        if (passHint)    passHint.textContent='';
-                    }
-                }
-            } catch(e) { console.log('password-status error:',e); }
-        });
-    }
-    if (cancelPass) {
-        cancelPass.addEventListener('click', () => {
-            passForm.style.display='none';
-            ['currentPasswordInput','newPasswordInput','confirmPasswordInput'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-            if (passAnswer) passAnswer.innerHTML='';
-        });
-    }
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', async () => {
-            const cur=curPassInput?.value||'', newPass=document.getElementById('newPasswordInput')?.value||'', confirm=document.getElementById('confirmPasswordInput')?.value||'';
-            if (!isGoogleOnly && !cur) { if(passAnswer) passAnswer.innerHTML='<span style="color:#ef4444;">Введи поточний пароль</span>'; return; }
-            if (!newPass||!confirm)    { if(passAnswer) passAnswer.innerHTML='<span style="color:#ef4444;">Заповни всі поля</span>'; return; }
-            if (newPass!==confirm)     { if(passAnswer) passAnswer.innerHTML='<span style="color:#ef4444;">Паролі не співпадають</span>'; return; }
-            if (newPass.length<8)      { if(passAnswer) passAnswer.innerHTML='<span style="color:#ef4444;">Мінімум 8 символів</span>'; return; }
-            confirmBtn.disabled=true; confirmBtn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Збереження...';
-            const result = await profileFn.changePassword(isGoogleOnly?null:cur, newPass);
-            confirmBtn.disabled=false; confirmBtn.innerHTML='<i class="fas fa-check"></i> Зберегти';
-            if (result.status===200) {
-                if(passAnswer) passAnswer.innerHTML='<span style="color:#1fd4c8;">✓ Пароль збережено!</span>';
-                if(isGoogleOnly){isGoogleOnly=false;if(curPassWrap)curPassWrap.style.display='block';if(passTitle)passTitle.textContent='Змінити пароль';if(passHint)passHint.textContent='';}
-                setTimeout(()=>{ passForm.style.display='none'; if(passAnswer)passAnswer.innerHTML=''; ['currentPasswordInput','newPasswordInput','confirmPasswordInput'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); },2000);
-            } else if (result.status===401) {
-                if(passAnswer) passAnswer.innerHTML='<span style="color:#ef4444;">Поточний пароль невірний</span>';
-            } else {
-                if(passAnswer) passAnswer.innerHTML='<span style="color:#ef4444;">Помилка сервера</span>';
+                const res  = await fetch(`/api/suggestions?query=${encodeURIComponent(val)}`);
+                const data = await res.json();
+                // Максимум 3 підказки
+                suggestionsBox.innerHTML = data.slice(0, 3).map(s => {
+                    const city = s.description.split(',')[0].trim();
+                    return `<div class="shop-suggest-item" data-city="${city}">
+                        <i class="fas fa-map-marker-alt"></i> ${s.description}
+                    </div>`;
+                }).join('');
+
+                suggestionsBox.querySelectorAll('.shop-suggest-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        cityInput.value = item.dataset.city;
+                        sessionStorage.setItem('shopping_city', item.dataset.city);
+                        suggestionsBox.innerHTML = '';
+                    });
+                });
+            } catch(e) { suggestionsBox.innerHTML = ''; }
+        }, 350);
+    });
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.shop-input-wrap')) suggestionsBox.innerHTML = '';
+    });
+
+    document.getElementById('shopSearchBtn').addEventListener('click', () => {
+        const city = cityInput.value.trim();
+        if (!city) {
+            cityInput.focus();
+            cityInput.classList.add('shake');
+            setTimeout(() => cityInput.classList.remove('shake'), 500);
+            return;
+        }
+        if (!selectedType) { showToast('Вибери тип магазину ☝️', 'warning'); return; }
+        sessionStorage.setItem('shopping_city', city);
+        sessionStorage.setItem('shopping_type', selectedType);
+        searchShops(city, selectedType);
+    });
+
+    cityInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('shopSearchBtn').click();
+    });
+
+    // Завантажуємо DailyTop
+    loadDailyTop();
+
+    // Якщо є збережені параметри — одразу шукаємо
+    const savedCity = sessionStorage.getItem('shopping_city');
+    if (savedCity && selectedType) searchShops(savedCity, selectedType);
+}
+
+async function loadDailyTop() {
+    const section = document.getElementById('shopDailyTop');
+    if (!section) return;
+
+    try {
+        const res  = await fetch('/api/daily-top');
+        const data = await res.json();
+
+        if (!data.top?.length) { section.style.display = 'none'; return; }
+
+        section.style.display = 'block';
+        const grid = section.querySelector('.daily-top-grid');
+        if (!grid) return;
+
+        const medals = ['🥇', '🥈', '🥉'];
+
+        grid.innerHTML = data.top.map((place, i) => {
+            const photo      = place.photo_url || SHOP_NO_PHOTO;
+            const rating     = place.rating ? parseFloat(place.rating).toFixed(1) : '—';
+            const detailUrl  = `/html/city_page.html?placeId=${place.place_id}&name=${encodeURIComponent(place.name||'')}`;
+            const shortAddr  = (place.address||'').split(',').slice(0,2).join(',').trim();
+
+            return `
+            <div class="daily-card" style="animation-delay:${i*0.12}s">
+                <div class="daily-card-rank">${medals[i]||''}</div>
+                <div class="daily-card-img-wrap">
+                    <img src="${photo}"
+                         onerror="this.onerror=null;this.src='${SHOP_NO_PHOTO}'"
+                         alt="${place.name||''}"/>
+                    <div class="daily-card-overlay"></div>
+                    <div class="daily-card-category">${place.category||''}</div>
+                </div>
+                <div class="daily-card-body">
+                    <h3 class="daily-card-name">${place.name||'Без назви'}</h3>
+                    <div class="daily-card-rating">
+                        <i class="fas fa-star"></i> ${rating}
+                    </div>
+                    <p class="daily-card-addr">
+                        <i class="fas fa-map-marker-alt"></i> ${shortAddr||'—'}
+                    </p>
+                    <a href="${detailUrl}" class="daily-card-btn">
+                        <i class="fas fa-arrow-right"></i> Відкрити
+                    </a>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Таймер до наступного оновлення (рахується від updated_at в БД)
+        const timer = section.querySelector('.daily-top-timer');
+        if (timer && data.top[0]?.updated_at) {
+            const nextUpdate = new Date(data.top[0].updated_at).getTime() + 24 * 60 * 60 * 1000;
+            function tick() {
+                const diff = nextUpdate - Date.now();
+                if (diff <= 0) { timer.textContent = 'Оновлюється...'; return; }
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                timer.textContent = `🕐 Оновлення через ${h}г ${m}хв ${s}с`;
+                setTimeout(tick, 1000);
             }
-        });
-    }
+            tick();
+        }
 
-    const downloadBtn = document.getElementById('downloadDataBtn');
-    if (downloadBtn && profile) {
-        downloadBtn.addEventListener('click', () => {
-            const blob=new Blob([JSON.stringify({username:profile.username,email:profile.email,location:profile.location,bio:profile.bio,member_since:profile.member_since,exported_at:new Date().toISOString()},null,2)],{type:'application/json'});
-            const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='topspots_profile.json'; a.click(); URL.revokeObjectURL(a.href);
-        });
-    }
-
-    const deleteBtn=document.getElementById('deleteAccountBtn'), confirmBlock=document.getElementById('deleteConfirmBlock'), confirmDelete=document.getElementById('confirmDeleteBtn'), cancelDelete=document.getElementById('cancelDeleteBtn');
-    if (deleteBtn&&confirmBlock) {
-        deleteBtn.addEventListener('click',()=>{ confirmBlock.style.display='block'; deleteBtn.style.display='none'; });
-        if(cancelDelete) cancelDelete.addEventListener('click',()=>{ confirmBlock.style.display='none'; deleteBtn.style.display=''; });
-        if(confirmDelete) confirmDelete.addEventListener('click',async()=>{ confirmDelete.disabled=true; confirmDelete.textContent='Видалення...'; await profileFn.deleteAccount(); confirmDelete.disabled=false; confirmDelete.textContent='Так, видалити'; });
+    } catch(e) {
+        console.error('[DAILYTOP] load error:', e);
+        if (section) section.style.display = 'none';
     }
 }
 
-// ============================================================
-// NEARBY
-// ============================================================
+
+
+
+async function searchShops(city, type) {
+    const loader         = document.getElementById('shopLoader');
+    const resultsSection = document.getElementById('shopResultsSection');
+    const resultsGrid    = document.getElementById('shopResultsGrid');
+    const meta           = document.getElementById('shopResultsMeta');
+    const emptyEl        = document.getElementById('shopEmpty');
+
+    loader.style.display = 'flex';
+    resultsSection.style.display = 'none';
+    emptyEl.style.display = 'none';
+    resultsGrid.innerHTML = '';
+
+    try {
+        const res = await fetch('/api/shopping/search', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ city, type })
+        });
+        const data = await res.json();
+        loader.style.display = 'none';
+
+        if (!data.results?.length) { emptyEl.style.display = 'flex'; return; }
+
+        meta.textContent = `${data.results.length} магазинів · ${data.source === 'database' ? '📦 з кешу' : '🌐 Google'}`;
+        resultsSection.style.display = 'block';
+        resultsGrid.innerHTML = data.results.map(shop => buildShopCard(shop, city)).join('');
+
+        resultsGrid.querySelectorAll('.shop-card').forEach((card, i) => {
+            card.style.animationDelay = `${i * 0.07}s`;
+            card.classList.add('card-appear');
+        });
+
+    } catch(err) {
+        loader.style.display = 'none';
+        emptyEl.style.display = 'flex';
+        console.error('[SHOPPING]', err);
+    }
+}
+
+
+function buildShopCard(shop, city = '') {
+    const rating    = shop.rating ? parseFloat(shop.rating).toFixed(1) : '—';
+    const stars     = shop.rating
+        ? '★'.repeat(Math.round(shop.rating)) + '☆'.repeat(5 - Math.round(shop.rating))
+        : '';
+    const photo     = shop.photo_url || SHOP_NO_PHOTO;
+    const detailUrl = `/html/city_page.html?placeId=${shop.place_id}&name=${encodeURIComponent(shop.query_name || '')}`;
+
+    return `
+    <div class="shop-card"
+         data-id="${shop.place_id}"
+         data-name="${(shop.query_name||'').replace(/"/g,'&quot;')}"
+         data-city="${city}">
+        <div class="shop-card-img-wrap">
+            <img class="shop-card-img"
+                 src="${photo}"
+                 onerror="this.onerror=null;this.src='${SHOP_NO_PHOTO}'"
+                 loading="lazy"
+                 alt="${(shop.query_name||'').replace(/"/g,'&quot;')}"/>
+            <div class="shop-card-overlay"></div>
+            ${(shop.save_count > 0)
+                ? `<div class="shop-popular-badge"><i class="fas fa-fire"></i> ${shop.save_count}</div>`
+                : ''}
+        </div>
+        <div class="shop-card-body">
+            <h3 class="shop-card-name">${shop.query_name || 'Без назви'}</h3>
+            ${rating !== '—' ? `
+            <div class="shop-card-rating">
+                <span class="shop-stars">${stars}</span>
+                <span class="shop-rating-num">${rating}</span>
+            </div>` : ''}
+            <p class="shop-card-addr">
+                <i class="fas fa-map-marker-alt"></i>
+                ${shop.full_name || '—'}
+            </p>
+            <a class="shop-route-btn" href="${detailUrl}">
+                <i class="fas fa-info-circle"></i> Детальніше
+            </a>
+        </div>
+    </div>`;
+}
+
+
+
+
+
+
 async function performSearch() {
     const statusText  = document.getElementById('nearbyStatus');
     const radiusInput = document.getElementById('nearbyRadius');
@@ -1253,42 +1442,34 @@ async function performSearch() {
             rankPreference:SearchNearbyRankPreference.POPULARITY
         });
         if (places&&places.length>0) {
-            const NO_PHOTO="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%230e1425'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23c9a84c' font-size='20' font-family='sans-serif' opacity='0.3'%3EНемає фото%3C/text%3E%3C/svg%3E";
+            const NO_PHOTO="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%230e1425'/%3E%3C/svg%3E";
             const results=places.map(p=>({place_id:p.id,name:p.displayName?.text||p.displayName||"Без назви",vicinity:p.formattedAddress,rating:p.rating||4.5,latitude:p.location.lat(),longitude:p.location.lng(),photo_url:p.photos?.[0]?.getURI({maxWidth:800})||NO_PHOTO,types:[category]}));
             renderNearbyCards(results);
             statusText.innerText=`Знайдено ${places.length} нових локацій`;
             syncNearbyWithBackend(results);
         } else { throw new Error("ZERO_RESULTS"); }
     } catch(err) {
-        if(statusText) statusText.innerText=err.message==="ZERO_RESULTS"?"Нічого не знайдено поруч":"Помилка доступу до даних";
+        if(statusText) statusText.innerText=err.message==="ZERO_RESULTS"?"Нічого не знайдено поруч":"Помилка доступу до геолокації";
     }
 }
 
 function renderNearbyCards(places) {
-    const NO_PHOTO="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%230e1425'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23c9a84c' font-size='20' font-family='sans-serif' opacity='0.3'%3EНемає фото%3C/text%3E%3C/svg%3E";
+    const NO_PHOTO="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%230e1425'/%3E%3C/svg%3E";
     const grid=document.getElementById('nearbyGrid'); if(!grid)return;
     grid.innerHTML='';
     places.forEach((p,i)=>{
         const card=document.createElement('div'); card.className='place-card-v2';
-
-        // FIX назва — БД зберігає як query_name або name
         const placeName = p.name || p.query_name || p.displayName || 'Без назви';
-
-        // FIX адреса — перебираємо всі можливі поля
         const rawAddr = p.vicinity || p.formatted_address || p.full_name || p.description || '';
         let addr = rawAddr.trim();
-        // Якщо адреса довга — беремо вулицю + місто (перші 2 частини через кому)
         if (addr.length > 55) {
             const parts = addr.split(',').map(s => s.trim()).filter(Boolean);
-            // Пропускаємо поштовий індекс (тільки цифри) і "Україна"
-            const meaningful = parts.filter(s => !/^\d+$/.test(s) && s.toLowerCase() !== 'україна' && s.toLowerCase() !== 'ukraine');
+            const meaningful = parts.filter(s => !/^\d+$/.test(s) && s.toLowerCase() !== 'україна');
             addr = meaningful.slice(0, 2).join(', ');
         }
         const displayAddr = addr || 'Адреса не вказана';
-
         const rating = parseFloat(p.rating) || 0;
         const ratingDisplay = rating > 0 ? rating.toFixed(1) : '—';
-
         card.innerHTML=`
             <div class="card-img-wrapper">
                 <img src="${p.photo_url||NO_PHOTO}" class="card-main-img" loading="lazy" onerror="this.src='${NO_PHOTO}'">
@@ -1299,20 +1480,12 @@ function renderNearbyCards(places) {
                 <p class="card-addr"><i class="fas fa-map-marker-alt"></i>${displayAddr}</p>
                 <button class="glow-btn" style="margin-top:auto;padding:10px 20px;font-size:13px;">Детальніше</button>
             </div>`;
-
         card.querySelector('.glow-btn').addEventListener('click', () => {
             window.location.href = `/html/city_page.html?placeId=${p.place_id}`;
         });
-
         grid.appendChild(card);
-        // Анімація появи з затримкою
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(16px)';
-        setTimeout(() => {
-            card.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, i * 70);
+        card.style.opacity = '0'; card.style.transform = 'translateY(16px)';
+        setTimeout(() => { card.style.transition = 'opacity 0.35s ease, transform 0.35s ease'; card.style.opacity = '1'; card.style.transform = 'translateY(0)'; }, i * 70);
     });
 }
 
@@ -1320,13 +1493,11 @@ function syncNearbyWithBackend(results) {
     fetch('/api/nearby/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({places:results})}).catch(e=>console.error("Sync error:",e));
 }
 
-// ── FIX: initNearbyPage з підтримкою pendingCategory ──
 function initNearbyPage() {
     const radiusInput = document.getElementById('nearbyRadius');
     const chips       = document.querySelectorAll('.chip');
     const startBtn    = document.getElementById('startNearbySearch');
 
-    // Якщо прийшли з категорії дашборду — активуємо потрібний чіп
     if (window._pendingNearbyCategory) {
         chips.forEach(c => c.classList.remove('active'));
         const target = document.querySelector(`.chip[data-type="${window._pendingNearbyCategory}"]`);
@@ -1342,106 +1513,20 @@ function initNearbyPage() {
     setTimeout(()=>performSearch(),1000);
 }
 
-// ============================================================
-// STATISTICS PAGE
-// ============================================================
-function initAchievementsPage() {
-    document.querySelectorAll('.kpi-val').forEach(el=>{
-        const target=parseFloat(el.dataset.target); if(!target)return;
-        const isFloat=el.dataset.float==='true'; let step=0;
-        const iv=setInterval(()=>{ step++; const cur=Math.min(target*step/50,target); el.textContent=isFloat?cur.toFixed(1):Math.round(cur); if(step>=50)clearInterval(iv); },24);
-    });
 
-    profileFn.getProfile().then(profile=>{
-        const el=document.getElementById('statsPageVisited'); if(!el||!profile)return;
-        const target=profile.places_visited||0; let step=0;
-        const iv=setInterval(()=>{ step++; el.textContent=Math.min(Math.round(target*step/50),target); if(step>=50)clearInterval(iv); },24);
-    });
 
-    document.querySelectorAll('.kpi-card').forEach((c,i)=>{
-        c.style.cssText='opacity:0;transform:translateY(20px)';
-        setTimeout(()=>{ c.style.transition='opacity .4s ease,transform .4s ease'; c.style.opacity='1'; c.style.transform='translateY(0)'; },80+i*80);
-    });
 
-    function drawBar(id,data,labels){
-        const canvas=document.getElementById(id); if(!canvas)return;
-        const ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1;
-        const W=canvas.offsetWidth,H=canvas.offsetHeight;
-        canvas.width=W*dpr; canvas.height=H*dpr; ctx.scale(dpr,dpr);
-        const pL=36,pR=16,pT=18,pB=32,cW=W-pL-pR,cH=H-pT-pB;
-        const max=Math.max(...data)*1.15,bW=(cW/data.length)*0.55,gap=(cW/data.length)*0.45;
-        const t0=performance.now();
-        function frame(now){
-            const p=Math.min((now-t0)/900,1),e=1-Math.pow(1-p,3);
-            ctx.clearRect(0,0,W,H);
-            ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=1;
-            for(let g=0;g<=4;g++){const y=pT+cH-(g/4)*cH;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(W-pR,y);ctx.stroke();ctx.fillStyle='rgba(168,161,153,0.5)';ctx.font='11px Outfit,sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(max*g/4),pL-5,y+4);}
-            data.forEach((v,i)=>{
-                const x=pL+i*(cW/data.length)+gap/2,bH=(v/max)*cH*e,y=pT+cH-bH;
-                const gr=ctx.createLinearGradient(x,y,x,pT+cH);
-                gr.addColorStop(0,'#c9a84c');gr.addColorStop(1,'rgba(201,168,76,0.1)');
-                ctx.fillStyle=gr;
-                const r=Math.min(5,bW/2);
-                ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+bW-r,y);ctx.quadraticCurveTo(x+bW,y,x+bW,y+r);ctx.lineTo(x+bW,pT+cH);ctx.lineTo(x,pT+cH);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.fill();
-                ctx.fillStyle='rgba(168,161,153,0.6)';ctx.font='11px Outfit,sans-serif';ctx.textAlign='center';ctx.fillText(labels[i],x+bW/2,H-8);
-                if(p>0.85){ctx.fillStyle='rgba(240,236,228,0.8)';ctx.font='bold 11px Outfit,sans-serif';ctx.fillText(v,x+bW/2,y-5);}
-            });
-            if(p<1)requestAnimationFrame(frame);
-        }
-        requestAnimationFrame(frame);
-    }
 
-    function drawDonut(id,segs,legendId){
-        const canvas=document.getElementById(id);if(!canvas)return;
-        const ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1,sz=160;
-        canvas.width=sz*dpr;canvas.height=sz*dpr;ctx.scale(dpr,dpr);
-        const cx=sz/2,cy=sz/2,oR=sz/2-8,iR=sz/2-34,total=segs.reduce((a,s)=>a+s.value,0);
-        const t0=performance.now();
-        function frame(now){const p=Math.min((now-t0)/1100,1),e=1-Math.pow(1-p,3);ctx.clearRect(0,0,sz,sz);let sa=-Math.PI/2;segs.forEach(s=>{const sw=(s.value/total)*2*Math.PI*e;ctx.beginPath();ctx.moveTo(cx+iR*Math.cos(sa),cy+iR*Math.sin(sa));ctx.arc(cx,cy,oR,sa,sa+sw);ctx.arc(cx,cy,iR,sa+sw,sa,true);ctx.closePath();ctx.fillStyle=s.color;ctx.fill();sa+=sw;});if(p<1)requestAnimationFrame(frame);}
-        requestAnimationFrame(frame);
-        const leg=document.getElementById(legendId);
-        if(leg){leg.innerHTML='';segs.forEach(s=>{const d=document.createElement('div');d.className='donut-legend-item';d.innerHTML=`<span class="dl-dot" style="background:${s.color}"></span><span class="dl-label">${s.label}</span><span class="dl-val">${s.value}</span>`;leg.appendChild(d);});}
-    }
-
-    function buildHeatmap(){
-        const grid=document.getElementById('heatmapGrid'),mEl=document.getElementById('heatmapMonths');if(!grid)return;
-        const cols=['rgba(14,20,37,1)','rgba(201,168,76,0.2)','rgba(201,168,76,0.4)','rgba(201,168,76,0.65)','rgba(201,168,76,0.9)'];
-        grid.innerHTML='';
-        for(let w=0;w<52;w++){const col=document.createElement('div');col.className='hm-col';for(let d=0;d<7;d++){const v=Math.random()<0.28?Math.floor(Math.random()*5):0;const cell=document.createElement('div');cell.className='hm-cell';cell.style.background=cols[Math.min(v,4)];cell.title=`${v} місць`;cell.style.cssText+=';opacity:0;transform:scale(0.4)';setTimeout(()=>{cell.style.transition='opacity .25s ease,transform .25s ease';cell.style.opacity='1';cell.style.transform='scale(1)';},w*7+d*2);col.appendChild(cell);}grid.appendChild(col);}
-        if(mEl){mEl.innerHTML='';['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'].forEach(m=>{const s=document.createElement('span');s.textContent=m;mEl.appendChild(s);});}
-    }
-
-    function buildCityBars(){
-        const el=document.getElementById('cityBars');if(!el)return;
-        const list=[{name:'Київ',count:47,color:'#c9a84c'},{name:'Львів',count:28,color:'#1fd4c8'},{name:'Одеса',count:19,color:'#a78bfa'},{name:'Харків',count:14,color:'#ff6b4a'},{name:'Івано-Франківськ',count:9,color:'#e8c97a'},{name:'Дніпро',count:7,color:'#f43f5e'}];
-        const max=list[0].count;el.innerHTML='';
-        list.forEach((c,i)=>{const row=document.createElement('div');row.className='city-bar-row';row.innerHTML=`<div class="cb-label">${c.name}</div><div class="cb-track"><div class="cb-fill" style="width:0%;background:${c.color}"></div></div><div class="cb-count">${c.count}</div>`;el.appendChild(row);setTimeout(()=>{const f=row.querySelector('.cb-fill');f.style.transition=`width .9s cubic-bezier(.4,0,.2,1) ${i*90}ms`;f.style.width=(c.count/max*100)+'%';},300);});
-    }
-
-    const barData={'2024':[8,12,7,15,18,22,14,19,11,16,9,5],'2023':[4,6,10,8,13,16,20,11,9,7,5,3]};
-    const months=['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
-    const drawPeriod=p=>setTimeout(()=>drawBar('barChartCanvas',barData[p],months),50);
-    document.querySelectorAll('.period-tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.period-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');drawPeriod(t.dataset.period);}));
-    setTimeout(()=>{drawPeriod('2024');drawDonut('donutCanvas',[{label:'Ресторани',value:47,color:'#ff6b4a'},{label:'Парки',value:28,color:'#1fd4c8'},{label:'Музеї',value:19,color:'#a78bfa'},{label:'Кафе',value:18,color:'#c9a84c'},{label:'Готелі',value:12,color:'#e8c97a'}],'donutLegend');buildHeatmap();buildCityBars();},200);
-    document.querySelectorAll('.insight-card').forEach((c,i)=>{c.style.cssText='opacity:0;transform:translateY(14px)';setTimeout(()=>{c.style.transition='opacity .4s ease,transform .4s ease';c.style.opacity='1';c.style.transform='translateY(0)';},800+i*100);});
-}
-
-// ============================================================
-// NAVIGATION
-// ============================================================
 const updateActiveMenu = key => {
-    // Синхронізуємо і десктоп і мобільні кнопки
     document.querySelectorAll('[data-page]').forEach(el => {
         el.classList.toggle('active-nav', el.getAttribute('data-page') === key);
     });
-    // Окремо мобільні пункти (клас active для початкового стану)
     document.querySelectorAll('.mobile-nav-item').forEach(el => {
         el.classList.toggle('active', el.getAttribute('data-page') === key);
     });
 };
 
 const bindNav = () => {
-    // Підхоплюємо і десктоп і мобільні кнопки
     document.querySelectorAll('[data-page]').forEach(btn => {
         btn.onclick = e => { e.preventDefault(); navigateTo(btn.getAttribute('data-page')); };
     });
@@ -1451,7 +1536,10 @@ const navigateTo = (key, push = true) => {
     if (!pages[key]) return;
     hidePortal();
     if (key !== 'profile') profileStatsInited = false;
-    mainPageFunctions.loadPageContent(pages[key]);
+    
+    const content = typeof pages[key] === 'function' ? pages[key]() : pages[key];
+    mainPageFunctions.loadPageContent(content);
+    
     const main = document.getElementById('main-page-content');
     if (main) animatePageIn(main);
     if (push) window.history.pushState({ page: key }, '', `#${key}`);
@@ -1460,12 +1548,11 @@ const navigateTo = (key, push = true) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if      (key === 'dashboard') initDashboard();
-    else if (key === 'photos')    initAchievementsPage();
+    else if (key === 'shopping')  initShoppingPage();
     else if (key === 'nearby')    initNearbyPage();
     else if (key === 'profile')   initProfilePage();
     else if (key === 'settings')  initSettingsPage();
 };
-
 window.onpopstate = e => navigateTo(e.state?.page || 'dashboard', false);
 
 // ============================================================
