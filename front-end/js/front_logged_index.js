@@ -524,7 +524,7 @@ shopping: () => {
             <i class="fas fa-store-slash"></i>
             <p>Нічого не знайдено. Спробуй інше місто або категорію.</p>
         </div>
-        <div id="shopDailyTop" class="shop-daily-top" style="display:none;">
+    <div id="shopDailyTop" class="shop-daily-top" style="display:none;">
     <div class="daily-top-head">
         <div class="daily-top-title">
             <span class="daily-top-fire">🔥</span>
@@ -533,6 +533,14 @@ shopping: () => {
         </div>
         <div class="daily-top-timer">Завантаження...</div>
     </div>
+    <div class="daily-top-board">
+        <div class="board-pin tl"></div>
+        <div class="board-pin tr"></div>
+        <div class="board-pin bl"></div>
+        <div class="board-pin br"></div>
+        <div class="daily-top-grid"></div>
+    </div>
+</div>
     <div class="daily-top-grid"></div>
 </div>
     </div>`;
@@ -1201,28 +1209,6 @@ async function initShoppingPage() {
         clearTimeout(suggestTimeout);
         const val = cityInput.value.trim();
         if (val.length < 2) { suggestionsBox.innerHTML = ''; return; }
-
-        suggestTimeout = setTimeout(async () => {
-            try {
-                const res  = await fetch(`/api/suggestions?query=${encodeURIComponent(val)}`);
-                const data = await res.json();
-                // Максимум 3 підказки
-                suggestionsBox.innerHTML = data.slice(0, 3).map(s => {
-                    const city = s.description.split(',')[0].trim();
-                    return `<div class="shop-suggest-item" data-city="${city}">
-                        <i class="fas fa-map-marker-alt"></i> ${s.description}
-                    </div>`;
-                }).join('');
-
-                suggestionsBox.querySelectorAll('.shop-suggest-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        cityInput.value = item.dataset.city;
-                        sessionStorage.setItem('shopping_city', item.dataset.city);
-                        suggestionsBox.innerHTML = '';
-                    });
-                });
-            } catch(e) { suggestionsBox.innerHTML = ''; }
-        }, 350);
     });
 
     document.addEventListener('click', e => {
@@ -1247,7 +1233,6 @@ async function initShoppingPage() {
         if (e.key === 'Enter') document.getElementById('shopSearchBtn').click();
     });
 
-    // Завантажуємо DailyTop
     loadDailyTop();
 
     // Якщо є збережені параметри — одразу шукаємо

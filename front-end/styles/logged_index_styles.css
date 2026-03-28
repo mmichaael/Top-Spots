@@ -2746,162 +2746,362 @@ input:checked + .ios-slider:before { transform:translateX(22px); }
 
 
 
+/* ══ DAILY TOP — ДОШКА ОГОЛОШЕНЬ ══════════════════════════ */
 
-/* ══ DAILY TOP ══════════════════════════════════════════ */
 .shop-daily-top {
-    margin: 40px 24px 0;
-    padding: 32px;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(201,168,76,0.15);
-    border-radius: 28px;
+    margin: 48px 24px 0;
     position: relative;
-    overflow: hidden;
-}
-.shop-daily-top::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--gold), var(--teal), var(--gold));
-    background-size: 300%; animation: headerShimmer 4s ease infinite;
 }
 
+/* ── Заголовок дошки ─────────────────────────────────────── */
 .daily-top-head {
     display: flex; align-items: center;
     justify-content: space-between;
-    margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+    margin-bottom: 32px; flex-wrap: wrap; gap: 12px;
 }
 .daily-top-title {
     display: flex; align-items: center; gap: 12px;
 }
 .daily-top-title h2 {
-    font-size: 22px; font-weight: 800;
+    font-size: 24px; font-weight: 800;
     color: var(--t1); margin: 0;
     font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.5px;
 }
-.daily-top-fire { font-size: 24px; }
+.daily-top-fire { font-size: 26px; animation: fireShake 2s ease-in-out infinite; }
+@keyframes fireShake {
+    0%,100% { transform: rotate(-8deg) scale(1);   }
+    25%      { transform: rotate( 8deg) scale(1.1); }
+    50%      { transform: rotate(-5deg) scale(1);   }
+    75%      { transform: rotate( 5deg) scale(1.05);}
+}
+
 .daily-top-badge {
     background: rgba(255,107,74,0.2);
-    border: 1px solid rgba(255,107,74,0.4);
+    border: 1px solid rgba(255,107,74,0.5);
     color: #ff6b4a; font-size: 10px; font-weight: 800;
-    padding: 3px 8px; border-radius: 6px;
-    letter-spacing: 1.5px;
-    animation: pulse 2s ease infinite;
+    padding: 4px 10px; border-radius: 6px;
+    letter-spacing: 2px; text-transform: uppercase;
+    animation: livePulse 1.8s ease infinite;
+    position: relative;
 }
-@keyframes pulse {
-    0%,100% { opacity: 1; }
-    50%      { opacity: 0.6; }
+.daily-top-badge::before {
+    content: '';
+    position: absolute; top: 50%; left: -14px;
+    transform: translateY(-50%);
+    width: 7px; height: 7px;
+    background: #ff6b4a; border-radius: 50%;
+    animation: livePulse 1.8s ease infinite;
 }
+@keyframes livePulse {
+    0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,107,74,0.4); }
+    50%      { opacity: 0.7; box-shadow: 0 0 0 5px rgba(255,107,74,0); }
+}
+
 .daily-top-timer {
     font-size: 12px; color: var(--t3);
     font-family: 'Space Mono', monospace;
     background: rgba(255,255,255,0.04);
     border: 1px solid var(--edge);
-    padding: 6px 14px; border-radius: 20px;
+    padding: 7px 16px; border-radius: 20px;
+    letter-spacing: 0.5px;
 }
 
-/* Grid — горизонтальні картки */
+/* ── Дошка — фон з текстурою ─────────────────────────────── */
+.daily-top-board {
+    background:
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 28px,
+            rgba(201,168,76,0.04) 28px,
+            rgba(201,168,76,0.04) 29px
+        ),
+        linear-gradient(135deg,
+            rgba(14,20,37,0.95) 0%,
+            rgba(9,13,24,1) 50%,
+            rgba(14,20,37,0.95) 100%
+        );
+    border: 1px solid rgba(201,168,76,0.18);
+    border-radius: 28px;
+    padding: 36px 32px 40px;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        inset 0 1px 0 rgba(201,168,76,0.12),
+        0 24px 80px rgba(0,0,0,0.6);
+}
+
+/* Шимер-лінія зверху */
+.daily-top-board::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--gold) 25%,
+        var(--teal) 50%,
+        var(--gold2) 75%,
+        transparent 100%);
+    background-size: 300% 100%;
+    animation: boardShimmer 5s ease-in-out infinite;
+}
+@keyframes boardShimmer {
+    0%,100% { background-position: 0%   50%; opacity: 0.6; }
+    50%      { background-position: 100% 50%; opacity: 1;   }
+}
+
+/* Декоративні кути як у справжньої дошки */
+.daily-top-board::after {
+    content: '';
+    position: absolute; inset: 8px;
+    border: 1px solid rgba(201,168,76,0.06);
+    border-radius: 22px;
+    pointer-events: none;
+}
+
+/* ── Кнопки-цвяшки по кутах дошки ───────────────────────── */
+.board-pin {
+    position: absolute;
+    width: 16px; height: 16px;
+    background: radial-gradient(circle at 35% 35%, #e8c97a, #8a6a1a);
+    border-radius: 50%;
+    box-shadow:
+        0 2px 6px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+    z-index: 2;
+    animation: pinWobble 6s ease-in-out infinite;
+}
+.board-pin::after {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 5px; height: 5px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 50%;
+}
+.board-pin.tl { top: 18px;  left: 18px;  animation-delay: 0s;    }
+.board-pin.tr { top: 18px;  right: 18px; animation-delay: 0.8s;  }
+.board-pin.bl { bottom: 18px; left: 18px; animation-delay: 1.6s; }
+.board-pin.br { bottom: 18px; right: 18px; animation-delay: 2.4s;}
+
+@keyframes pinWobble {
+    0%,100% { transform: rotate(0deg)   scale(1);    }
+    25%      { transform: rotate(-8deg) scale(1.05); }
+    75%      { transform: rotate( 6deg) scale(0.97); }
+}
+
+/* ── Сітка карток ────────────────────────────────────────── */
 .daily-top-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    gap: 24px;
+    position: relative; z-index: 1;
 }
 
+/* ── Картка — підвішений аркуш паперу ───────────────────── */
 .daily-card {
-    position: relative;
-    border-radius: 20px;
-    overflow: hidden;
     background: var(--bg-card2);
-    border: 1px solid var(--edge);
-    transition: transform 0.3s var(--spring), box-shadow 0.3s, border-color 0.3s;
-    animation: cardAppear 0.5s ease both;
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 18px;
+    overflow: visible;
+    position: relative;
     display: flex; flex-direction: column;
+    /* Ефект висячої картки */
+    transform-origin: top center;
+    animation: cardHang 0.6s cubic-bezier(0.34,1.56,0.64,1) both,
+               cardSway 8s ease-in-out infinite;
+    box-shadow:
+        0 8px 32px rgba(0,0,0,0.5),
+        0 2px 8px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: box-shadow 0.3s, border-color 0.3s;
 }
+
+/* Різний delay для кожної картки */
+.daily-card:nth-child(1) { animation-delay: 0s,   0s;    }
+.daily-card:nth-child(2) { animation-delay: 0.15s, 1.2s; }
+.daily-card:nth-child(3) { animation-delay: 0.3s,  2.4s; }
+
+@keyframes cardHang {
+    from { opacity: 0; transform: translateY(-40px) rotate(-5deg); }
+    to   { opacity: 1; transform: translateY(0) rotate(0deg); }
+}
+
+/* Похитування як на вітрі */
+@keyframes cardSway {
+    0%,100% { transform: rotate(-0.8deg) translateY(0);    }
+    25%      { transform: rotate( 0.6deg) translateY(-2px); }
+    50%      { transform: rotate(-0.4deg) translateY(1px);  }
+    75%      { transform: rotate( 0.9deg) translateY(-1px); }
+}
+
 .daily-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    border-color: rgba(201,168,76,0.3);
-    box-shadow: var(--s3), var(--glow-gold);
+    animation: none;
+    transform: translateY(-10px) rotate(0deg) scale(1.03);
+    border-color: rgba(201,168,76,0.4);
+    box-shadow:
+        0 20px 60px rgba(0,0,0,0.6),
+        0 0 0 1px rgba(201,168,76,0.2),
+        var(--glow-gold);
+    z-index: 10;
 }
 
+/* ── Мотузочка зверху (декор) ────────────────────────────── */
+.daily-card::before {
+    content: '';
+    position: absolute; top: -14px; left: 50%;
+    transform: translateX(-50%);
+    width: 2px; height: 14px;
+    background: linear-gradient(to bottom, rgba(201,168,76,0.6), rgba(201,168,76,0.2));
+    border-radius: 1px;
+    z-index: 3;
+}
+
+/* Цвяшок на мотузці */
+.daily-card::after {
+    content: '';
+    position: absolute; top: -20px; left: 50%;
+    transform: translateX(-50%);
+    width: 10px; height: 10px;
+    background: radial-gradient(circle at 35% 35%, #e8c97a, #7a5c10);
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+    z-index: 3;
+}
+
+/* ── Медаль ───────────────────────────────────────────────── */
 .daily-card-rank {
-    position: absolute; top: 12px; left: 12px;
-    font-size: 28px; z-index: 3;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    position: absolute; top: -10px; right: 14px;
+    font-size: 26px; z-index: 4;
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,0.6));
+    animation: medalFloat 3s ease-in-out infinite;
+}
+.daily-card:nth-child(2) .daily-card-rank { animation-delay: 0.5s; }
+.daily-card:nth-child(3) .daily-card-rank { animation-delay: 1s;   }
+@keyframes medalFloat {
+    0%,100% { transform: translateY(0)    rotate(-5deg); }
+    50%      { transform: translateY(-4px) rotate( 5deg); }
 }
 
+/* ── Зображення ──────────────────────────────────────────── */
 .daily-card-img-wrap {
-    position: relative; height: 220px; flex-shrink: 0;
+    position: relative;
+    height: 200px; flex-shrink: 0;
     overflow: hidden;
+    border-radius: 17px 17px 0 0;
 }
 .daily-card-img-wrap img {
     width: 100%; height: 100%;
-    object-fit: cover;
+    object-fit: cover; display: block;
     transition: transform 0.6s ease;
-    display: block;
 }
-.daily-card:hover .daily-card-img-wrap img { transform: scale(1.08); }
+.daily-card:hover .daily-card-img-wrap img { transform: scale(1.07); }
 
 .daily-card-overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(5,8,15,0.85) 0%, rgba(5,8,15,0.1) 60%, transparent 100%);
+    background: linear-gradient(
+        to top,
+        rgba(5,8,15,0.85) 0%,
+        rgba(5,8,15,0.15) 55%,
+        transparent 100%
+    );
 }
 
+/* Бейдж категорії */
 .daily-card-category {
     position: absolute; bottom: 12px; right: 12px;
-    background: rgba(201,168,76,0.85);
+    background: rgba(201,168,76,0.9);
+    backdrop-filter: blur(4px);
     color: var(--ink); font-size: 11px; font-weight: 700;
-    padding: 4px 10px; border-radius: 8px;
+    padding: 4px 11px; border-radius: 8px;
     font-family: 'Outfit', sans-serif;
+    letter-spacing: 0.3px;
 }
 
+/* ── Тіло картки ─────────────────────────────────────────── */
 .daily-card-body {
-    padding: 18px 20px 20px;
-    display: flex; flex-direction: column; gap: 8px; flex: 1;
+    padding: 16px 18px 20px;
+    display: flex; flex-direction: column;
+    gap: 7px; flex: 1;
+    background: var(--bg-card2);
+    border-radius: 0 0 17px 17px;
 }
+
 .daily-card-name {
-    font-size: 17px; font-weight: 800;
+    font-size: 16px; font-weight: 800;
     color: var(--t1); margin: 0;
     font-family: 'Outfit', sans-serif;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    letter-spacing: -0.2px;
 }
+
 .daily-card-rating {
     display: flex; align-items: center; gap: 6px;
-    font-size: 14px; font-weight: 700;
-    color: var(--gold2);
+    font-size: 14px; font-weight: 700; color: var(--gold2);
 }
-.daily-card-rating i { font-size: 12px; }
+.daily-card-rating i { font-size: 11px; color: var(--gold); }
+
 .daily-card-addr {
     font-size: 12px; color: var(--t3);
     display: flex; align-items: flex-start; gap: 6px;
-    margin: 0; line-height: 1.4;
+    margin: 0; line-height: 1.45;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
-.daily-card-addr i { color: var(--gold); font-size: 10px; flex-shrink: 0; margin-top: 2px; }
+.daily-card-addr i {
+    color: var(--gold); font-size: 10px;
+    flex-shrink: 0; margin-top: 2px;
+}
+
+/* Кнопка */
 .daily-card-btn {
     display: inline-flex; align-items: center; gap: 7px;
     margin-top: auto; padding: 10px 18px;
     background: linear-gradient(135deg, var(--gold), var(--gold2));
-    border-radius: 12px; color: var(--ink);
+    border-radius: 11px; color: var(--ink);
     font-size: 13px; font-weight: 700;
     font-family: 'Outfit', sans-serif;
     text-decoration: none; align-self: flex-start;
     transition: transform 0.2s var(--spring), box-shadow 0.2s;
-    box-shadow: 0 4px 16px rgba(201,168,76,0.25);
+    box-shadow: 0 4px 14px rgba(201,168,76,0.25);
 }
 .daily-card-btn:hover {
-    transform: translateX(4px);
-    box-shadow: 0 8px 24px rgba(201,168,76,0.45);
+    transform: translateX(5px);
+    box-shadow: 0 8px 24px rgba(201,168,76,0.5);
     color: var(--ink);
 }
+.daily-card-btn i { transition: transform 0.2s; }
+.daily-card-btn:hover i { transform: translateX(3px); }
 
-/* ── Також виправи searchingSugges в controller.js ──────
-   (нагадування — вже дав раніше, types=(regions), slice 3)
-*/
-
-@media (max-width: 900px) {
-    .daily-top-grid { grid-template-columns: 1fr; }
-    .daily-card-img-wrap { height: 180px; }
-    .shop-daily-top { margin: 24px 12px 0; padding: 20px 16px; }
+/* ── Адаптив ─────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+    .daily-top-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .daily-top-board { padding: 28px 20px 32px; }
 }
 
+@media (max-width: 768px) {
+    .daily-top-grid {
+        grid-template-columns: 1fr;
+        gap: 36px; /* більший gap бо є мотузочки */
+    }
+    .daily-card-img-wrap { height: 180px; }
+    .daily-top-board { padding: 24px 16px 28px; border-radius: 20px; }
+    .shop-daily-top { margin: 32px 12px 0; }
+    .daily-top-title h2 { font-size: 19px; }
+    .board-pin { width: 12px; height: 12px; }
 
+    /* На мобільному картки висять по центру */
+    .daily-card { transform-origin: top center; }
+}
+
+@media (max-width: 480px) {
+    .daily-top-grid { gap: 32px; }
+    .daily-card-img-wrap { height: 160px; }
+    .daily-top-head { flex-direction: column; align-items: flex-start; }
+    .daily-top-timer { font-size: 11px; padding: 5px 12px; }
+}
 
 
 
