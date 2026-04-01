@@ -142,7 +142,7 @@ function guardedAction(featureName, action) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM повністю завантажено. Система готова.");
 
-    // Монтуємо модаль одразу
+    // 🔧 ФІКС: монтуємо модаль одразу для швидшої роботи
     mountAuthGuard();
 
     // ============ КОНСТАНТИ ============
@@ -299,13 +299,17 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = "";
         if (indicatorsContainer) indicatorsContainer.innerHTML = "";
 
-        for (let i = 0; i < cityList.length; i++) {
-            const city = cityList[i];
+        // 🔧 ФІКС: обмежуємо кількість карточок для швидшої загрузки
+        const maxCards = isInitial ? 8 : 12;
+        const limitedList = cityList.slice(0, maxCards);
+
+        for (let i = 0; i < limitedList.length; i++) {
+            const city = limitedList[i];
             const card = document.createElement("div");
             card.className = "city-card show";
             const displayName = truncateText(city.name, 40);
             card.innerHTML = `
-                <img src="${modernPlaceholder}" class="city-image">
+                <img src="${modernPlaceholder}" class="city-image" loading="lazy">
                 <div class="city-content">
                     <h3 class="city-name" title="${city.name}">${displayName}</h3>
                     <div class="city-rating">⭐ ${city.rating || '4.5'}</div>
@@ -325,19 +329,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = `/html/city_page.html?placeId=${city.place_id}&name=${encodeURIComponent(city.name)}`;
             });
 
-            if (!isInitial) {
-                card.style.opacity = "0.6";
-                getPlaceDataViaSDK(city.place_id, city.description).then(sdkData => {
-                    if (sdkData && sdkData.photo_url) {
-                        const img = card.querySelector(".city-image");
-                        const tempImg = new Image();
-                        tempImg.src = sdkData.photo_url;
-                        tempImg.onload = () => { img.src = sdkData.photo_url; card.style.opacity = "1"; };
-                        syncPlaceWithBackend(sdkData);
-                    }
-                }).catch(() => { card.style.opacity = "1"; });
-            } else if (city.photo) {
+            // 🔧 ФІКС: завантажуємо фото тільки для початкових карточок або при скролі
+            if (isInitial && city.photo) {
                 card.querySelector(".city-image").src = city.photo;
+                card.style.opacity = "1";
+            } else if (!isInitial) {
+                // 🔧 ФІКС: додаємо lazy loading для пошукових результатів
+                card.style.opacity = "0.8";
+                setTimeout(() => {
+                    getPlaceDataViaSDK(city.place_id, city.description).then(sdkData => {
+                        if (sdkData && sdkData.photo_url) {
+                            const img = card.querySelector(".city-image");
+                            const tempImg = new Image();
+                            tempImg.src = sdkData.photo_url;
+                            tempImg.onload = () => {
+                                img.src = sdkData.photo_url;
+                                card.style.opacity = "1";
+                            };
+                            tempImg.onerror = () => { card.style.opacity = "1"; };
+                        } else {
+                            card.style.opacity = "1";
+                        }
+                    }).catch(() => { card.style.opacity = "1"; });
+                }, i * 100); // 🔧 ФІКС: послідовна загрузка з затримкою
+            } else {
                 card.style.opacity = "1";
             }
         }
@@ -531,19 +546,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const sendMessage = async () => {
             const message = chatInput.value.trim();
             if (!message) return;
-            appendMessage(message, "user");
-            chatInput.value = "";
-            try {
-                const res = await fetch("/api/chat-assistant", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message })
-                });
-                const data = await res.json();
-                appendMessage(data.reply, "bot");
-            } catch (err) {
-                appendMessage("Сервер не відповідає.", "bot");
-            }
+            // 🔧 ФІКС: додаємо guard для чат-бота
+            await requireAuth('AI-помічник', async () => {
+                appendMessage(message, "user");
+                chatInput.value = "";
+                try {
+                    const res = await fetch("/api/chat-assistant", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message })
+                    });
+                    const data = await res.json();
+                    appendMessage(data.reply, "bot");
+                } catch (err) {
+                    appendMessage("Сервер не відповідає.", "bot");
+                }
+            });
         };
         sendBtn.addEventListener("click", sendMessage);
         chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });

@@ -12,12 +12,15 @@
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "csurf": "^1.11.0",
     "dotenv": "^16.4.7",
     "dotenv-flow": "^4.1.0",
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.1",
+    "express-validator": "^7.3.1",
     "fs": "^0.0.1-security",
+    "helmet": "^8.1.0",
     "https": "^1.0.0",
     "jsonwebtoken": "^9.0.2",
     "node-cache": "^5.1.2",
@@ -30,9 +33,11 @@
     "passport-google-oauth20": "^2.0.0",
     "path": "^0.12.7",
     "pg": "^8.13.1",
-    "supabase": "^2.15.8"
+    "supabase": "^2.15.8",
+    "xss-clean": "^0.1.4"
   },
   "devDependencies": {
+    "morgan": "^1.10.1",
     "prettier": "^3.5.3"
   }
 }

@@ -38,6 +38,22 @@ class Controller {
         this.chatCache = new NodeCache({ stdTTL: 60, checkperiod: 120 }); // 60 сек кеш
     }
 
+    hashToken = (token) => {
+        return crypto.createHash('sha3-256').update(token).digest('hex');
+    };
+
+    saveSearchStats = async (user_id, query, category, source, results_count) => {
+        if (!user_id || !query) return;
+        try {
+            await pool.query(
+                `INSERT INTO "SearchStats" (user_id, query_text, category, source, results_count, created_at)
+                 VALUES ($1, $2, $3, $4, $5, NOW())`,
+                [user_id, query, category || null, source || 'unknown', results_count || 0],
+            );
+        } catch (err) {
+            console.warn(`SearchStats insert failed: ${err.message}`);
+        }
+    };
 
 chatAssistant = async (req, res) => {
         try {
@@ -93,7 +109,15 @@ chatAssistant = async (req, res) => {
 
  autocompletePlaces = async (req, res) => {
     const { input, category } = req.body;
+    const email = req.email || null;
+    let userId = null;
+
     console.log(`\x1b[36m[API CALL]\x1b[0m Input: "${input}", Cat: "${category}"`);
+
+    if (email) {
+        const userRow = await pool.query(`SELECT user_id FROM "Users" WHERE email = $1`, [email]);
+        if (userRow.rowCount > 0) userId = userRow.rows[0].user_id;
+    }
 
     try {
         // 1. Пошук у базі даних з фільтрацією по типах
@@ -113,9 +137,11 @@ chatAssistant = async (req, res) => {
 
         if (dbSearch.rows.length > 0) {
             console.log(`\x1b[32m[DB HIT]\x1b[0m Знайдено ${dbSearch.rows.length} записів.`);
+            await this.saveSearchStats(userId, input, category, 'db', dbSearch.rows.length);
             return res.status(200).json({ predictions: dbSearch.rows });
         }
 
+        await this.saveSearchStats(userId, input, category, 'db', 0);
         // 2. Якщо в БД порожньо — запит до Google
         console.log(`\x1b[33m[DB MISS]\x1b[0m Запит до Google API...`);
         
@@ -139,6 +165,7 @@ chatAssistant = async (req, res) => {
             rating: 4.5
         }));
 
+        await this.saveSearchStats(userId, input, category, 'google', formatted.length);
         return res.status(200).json({ predictions: formatted });
     } catch (err) {
         console.error("❌ Помилка сервера:", err);
@@ -254,14 +281,40 @@ placeDetails = async (req, res) => {
     console.log(`       Photo URL прийшов: ${photo_url ? photo_url.substring(0, 50) + '...' : 'ПУСТО'}`);
 
     try {
-        const query = `...`; // твій INSERT query
-        const result = await pool.query(query, [/* параметри */]);
+        // Перевірити чи місце вже існує
+        const checkQuery = `SELECT place_id FROM places WHERE place_id = $1`;
+        const checkResult = await pool.query(checkQuery, [place_id]);
+        
+        if (checkResult.rows.length > 0) {
+            // Місце вже існує, повернути його
+            console.log(`✅ Місце ${name} вже у БД`);
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Place already exists',
+                place_id: place_id 
+            });
+        }
+        
+        // Додати нове місце
+        const insertQuery = `
+            INSERT INTO places (place_id, query_name, full_name, photo_url, rating)
+            VALUES ($1, $2, $3, $4, 4.5)
+            ON CONFLICT(place_id) DO UPDATE SET photo_url = $4
+            RETURNING place_id, query_name, full_name
+        `;
+        const result = await pool.query(insertQuery, [place_id, name, name, photo_url || null]);
         
         console.log(`✅ Успішно збережено в БД: ${name}`);
-        res.status(200).json({ result: result.rows[0] });
+        res.status(200).json({ 
+            success: true, 
+            result: result.rows[0] 
+        });
     } catch (err) {
         console.log(`🔴 Помилка при збереженні ${name}:`, err.message);
-        res.status(500).json({ error: "Server error" });
+        res.status(500).json({ 
+            success: false,
+            error: "Server error: could not save place details"
+        });
     }
 }
 getPlaceDetails = async (req, res) => {
@@ -420,6 +473,7 @@ extractRegion = (description) => {
                 refreshTokenPayload,
                 process.env.REFRESHJWTTOKEN,
             );
+            const hashedRefreshToken = this.hashToken(refreshToken);
             const saveToken = await pool.query(
                 `
                     INSERT INTO "JWTRefreshToken" (refresh_token) 
@@ -427,7 +481,7 @@ extractRegion = (description) => {
                     ON CONFLICT (refresh_token) 
                     DO UPDATE SET refresh_token = EXCLUDED.refresh_token 
                     RETURNING reftoken_id`,
-                [refreshToken],
+                [hashedRefreshToken],
             );
             if (saveToken.rowCount === 0) {
                 console.log(`Refresh Token have not saved in Database`);
@@ -835,12 +889,13 @@ sendingEmail = async (to, subject, htmlEmailContent) => {
                 this.clearCookies(res);
                 return res.redirect('/checkUser');
             }
+            const hashedRefresh = this.hashToken(refreshToken);
             const response = await pool.query(
                 `UPDATE "JWTRefreshToken" 
                     SET refresh_token = NULL
                     WHERE refresh_token = $1 
                     RETURNING *`,
-                [refreshToken],
+                [hashedRefresh],
             );
             if (response.rowCount > 0) {
                 console.log(`Refresh Token is deleted from Database`);
@@ -930,15 +985,16 @@ sendingEmail = async (to, subject, htmlEmailContent) => {
                 `Refresh token decoded successfully for user: ${username}, email: ${email}`,
             );
 
+            const hashedRefresh = this.hashToken(refreshToken);
             //Check if this RefreshToken exists in the Database
             const checkTokenPayload = await pool.query(
                 `
             SELECT jt.reftoken_id 
             FROM "JWTRefreshToken" jt 
             JOIN "Users" u 
-            ON U.reftoken_id = jt.reftoken_id 
+            ON u.reftoken_id = jt.reftoken_id 
             WHERE u.email = $1 AND jt.refresh_token = $2`,
-                [email, refreshToken],
+                [email, hashedRefresh],
             );
 
             //If Refresh Token is not in database or invalid, we redirect to login
@@ -1413,6 +1469,25 @@ sendingEmail = async (to, subject, htmlEmailContent) => {
                 ? new Date(user.created_at).getFullYear()
                 : new Date().getFullYear();
 
+            const statsQuery = await pool.query(
+                `SELECT query_text, category, source, results_count, created_at
+                 FROM "SearchStats"
+                 WHERE user_id = $1
+                 ORDER BY created_at DESC
+                 LIMIT 30`,
+                [user.user_id],
+            );
+
+            const categorySummaryRes = await pool.query(
+                `SELECT category, COUNT(*) AS searches, AVG(results_count)::NUMERIC(10,2) AS avg_results
+                 FROM "SearchStats"
+                 WHERE user_id = $1
+                 GROUP BY category
+                 ORDER BY searches DESC
+                 LIMIT 5`,
+                [user.user_id],
+            );
+
             console.log(`getProfile: success for ${email}`);
             return res.status(200).json({
                 user_id:        user.user_id,
@@ -1425,6 +1500,8 @@ sendingEmail = async (to, subject, htmlEmailContent) => {
                 places_visited: user.places_visited || 0,
                 provider:       user.provider,
                 has_google:     !!user.google_id,
+                search_stats:   statsQuery.rows,
+                search_summary: categorySummaryRes.rows,
             });
         } catch (err) {
             console.log(`getProfile error: ${err.message}`);

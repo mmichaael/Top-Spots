@@ -19,7 +19,125 @@ const SHOP_NO_PHOTO = `data:image/svg+xml,${encodeURIComponent(
     '<text x="50%" y="50%" text-anchor="middle" fill="#c9a84c" ' +
     'font-family="sans-serif" font-size="60" opacity="0.25">🏪</text></svg>'
 )}`;
-  (function() {
+
+// ----------------------------------------
+// SIMPLE CLIENT RATE LIMIT + TOKEN PROTECTION
+// ----------------------------------------
+const MAX_ACTIONS_PER_MINUTE = 7;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const appRateLimitState = {
+    windowStart: Date.now(),
+    actionCount: 0,
+    blockedUntil: 0
+};
+
+const STORAGE_LEVEL = {
+    allowed: ['shopping_city','shopping_type','topspots_avatar','topspots_session','topspots_token','topspots_user','topspots_session'],
+};
+
+function sanitizeStorageValue(value) {
+    if (typeof value !== 'string') return '';
+    return value.replace(/[<>"'`;\/]/g, '');
+}
+
+function safeSetStorage(type, key, value) {
+    try {
+        if (!STORAGE_LEVEL.allowed.includes(key)) return;
+        const clean = sanitizeStorageValue(String(value));
+        (type === 'session' ? sessionStorage : localStorage).setItem(key, clean);
+    } catch (e) {
+        console.warn('safeSetStorage failed', e);
+    }
+}
+
+function safeGetStorage(type, key) {
+    try {
+        if (!STORAGE_LEVEL.allowed.includes(key)) return null;
+        const raw = (type === 'session' ? sessionStorage : localStorage).getItem(key);
+        return sanitizeStorageValue(raw || '');
+    } catch (e) {
+        return null;
+    }
+}
+
+function safeRemoveStorage(type, key) {
+    try {
+        (type === 'session' ? sessionStorage : localStorage).removeItem(key);
+    } catch (e) {}
+}
+
+function clearSensitiveStorage() {
+    try {
+        safeRemoveStorage('local', 'topspots_user');
+        safeRemoveStorage('local', 'topspots_session');
+        safeRemoveStorage('local', 'topspots_token');
+        safeRemoveStorage('session', 'topspots_token');
+        safeRemoveStorage('session', 'topspots_session');
+    } catch (e) {
+        console.warn('Не вдалося очистити локальне сховище', e);
+    }
+}
+
+async function securityLockout(reason) {
+    showToast(reason, 'error');
+    clearSensitiveStorage();
+    try { await mainPageFunctions.logOut?.(); } catch (e) { console.warn('logout failed', e); }
+    setTimeout(() => { window.location.href = '/login.html'; }, 600);
+}
+
+function checkRateLimit(action) {
+    const now = Date.now();
+
+    if (now < appRateLimitState.blockedUntil) {
+        showToast(`Забагато запитів (тимчасово заблоковано).`, 'warning');
+        return false;
+    }
+
+    if (now - appRateLimitState.windowStart > RATE_LIMIT_WINDOW_MS) {
+        appRateLimitState.windowStart = now;
+        appRateLimitState.actionCount = 0;
+    }
+
+    appRateLimitState.actionCount += 1;
+
+    if (appRateLimitState.actionCount > MAX_ACTIONS_PER_MINUTE) {
+        appRateLimitState.blockedUntil = now + RATE_LIMIT_WINDOW_MS;
+        showToast('Досягнуто ліміт запитів (7/хв). Повторіть через 60 секунд.', 'warning');
+        // Без securityLockout, тільки обмеження тимчасове
+        return false;
+    }
+
+    console.debug(`Rate limit [${action}]: ${appRateLimitState.actionCount}/${MAX_ACTIONS_PER_MINUTE}`);
+    return true;
+}
+
+async function keccak256(text) {
+    if (!text) return null;
+    if (window.crypto && window.crypto.subtle) {
+        const data = new TextEncoder().encode(text);
+        const digest = await window.crypto.subtle.digest('SHA-256', data); // SHA-256 як fallback
+        return Array.from(new Uint8Array(digest)).map(x => x.toString(16).padStart(2, '0')).join('');
+    }
+    return null;
+}
+
+function ensureTokenIntegrity() {
+    const token = safeGetStorage('local', 'topspots_token') || safeGetStorage('session', 'topspots_token');
+    if (!token) {
+        // 🔧 ФІКС: не викидати користувача, якщо токена немає - просто продовжуємо
+        // console.debug('ensureTokenIntegrity: токен відсутній');
+        return false;
+    }
+    if (typeof token !== 'string' || token.length < 20) {
+        console.warn('ensureTokenIntegrity: токен некоректний');
+        return false;
+    }
+    // 🔧 ФІКС: видаляємо агресивну перевірку хеша, яка викидала користувачів
+    // Сервер сам перевірить токен при запитах
+    return true;
+}
+
+(function() {
         const burgerBtn   = document.getElementById('burgerBtn');
         const mobileMenu  = document.getElementById('mobileMenu');
         const mobileOverlay = document.getElementById('mobileOverlay');
@@ -176,28 +294,28 @@ dashboard: `
     </div>
 
     <div class="top-cards-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:44px;">
-        <div class="mini-card tilt-card" data-page="favorites" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:1px solid rgba(255,255,255,0.06);">
-            <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Улюблені</span>
-            <div style="background:rgba(255,107,74,0.15);border:1px solid rgba(255,107,74,0.25);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#ff6b4a;font-size:22px;"><i class="fas fa-heart"></i></div>
-        </div>
         <div class="mini-card tilt-card" data-page="shopping" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:1px solid rgba(255,255,255,0.06);">
             <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Шопінг</span>
             <div style="background:rgba(31,212,200,0.12);border:1px solid rgba(31,212,200,0.2);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#1fd4c8;font-size:22px;"><i class="fas fa-shopping-bag"></i></div>
         </div>
-        <div class="mini-card tilt-card" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;border:1px solid rgba(255,255,255,0.06);">
-            <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Поради</span>
-            <div style="background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.2);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#e8c97a;font-size:22px;"><i class="fas fa-magic"></i></div>
+        <div class="mini-card tilt-card" data-page="nearby" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:1px solid rgba(255,255,255,0.06);">
+            <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Поруч</span>
+            <div style="background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.2);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#e8c97a;font-size:22px;"><i class="fas fa-location-dot"></i></div>
+        </div>
+        <div class="mini-card tilt-card" data-page="profile" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:1px solid rgba(255,255,255,0.06);">
+            <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Профіль</span>
+            <div style="background:rgba(255,107,74,0.15);border:1px solid rgba(255,107,74,0.25);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#ff6b4a;font-size:22px;"><i class="fas fa-user"></i></div>
         </div>
     </div>
 
     <div class="main-options-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:44px;">
-        <div class="option-card tilt-card" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);">
-            <div style="background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.2);min-width:64px;height:64px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#e8c97a;"><i class="fas fa-chart-line"></i></div>
-            <div><h3 style="margin:0;font-size:20px;color:#f0ece4;font-weight:800;font-family:'Outfit',sans-serif;">Тренди</h3><p style="margin:5px 0 0;font-size:13px;color:#6b6560;">Популярне зараз</p></div>
-        </div>
         <div class="option-card tilt-card" data-page="nearby" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
             <div style="background:rgba(31,212,200,0.1);border:1px solid rgba(31,212,200,0.2);min-width:64px;height:64px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#1fd4c8;"><i class="fas fa-location-dot"></i></div>
             <div><h3 style="margin:0;font-size:20px;color:#f0ece4;font-weight:800;font-family:'Outfit',sans-serif;">Поруч</h3><p style="margin:5px 0 0;font-size:13px;color:#6b6560;">Місця неподалік</p></div>
+        </div>
+        <div class="option-card tilt-card" data-page="settings" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
+            <div style="background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.2);min-width:64px;height:64px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#e8c97a;"><i class="fas fa-sliders-h"></i></div>
+            <div><h3 style="margin:0;font-size:20px;color:#f0ece4;font-weight:800;font-family:'Outfit',sans-serif;">Налаштування</h3><p style="margin:5px 0 0;font-size:13px;color:#6b6560;">Управління обліком</p></div>
         </div>
     </div>
 
@@ -359,6 +477,16 @@ profile: `
             </div>
 
             <div id="tab-stats" class="profile-tab-content" style="display:none;">
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:12px 18px;margin-bottom:18px;">
+                    <h4 style="color:#f0ece4;margin:0 0 12px;font-size:14px;font-family:'Outfit',sans-serif;">Останні пошукові запити</h4>
+                    <ul id="profileSearchHistory" style="list-style:none;padding:0;margin:0;max-height:180px;overflow:auto;"></ul>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:12px 18px;margin-bottom:18px;">
+                    <h4 style="color:#f0ece4;margin:0 0 12px;font-size:14px;font-family:'Outfit',sans-serif;">Топ категорій пошуку</h4>
+                    <ul id="profileSearchCategorySummary" style="list-style:none;padding:0;margin:0;"></ul>
+                </div>
+
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:28px;">
                     <div class="kpi-card">
                         <div class="kpi-icon" style="background:rgba(201,168,76,0.12);color:#e8c97a;"><i class="fas fa-map-marked-alt"></i></div>
@@ -452,8 +580,8 @@ nearby: `
 </div>`,
 
 shopping: () => {
-    const savedCity = sessionStorage.getItem('shopping_city') || '';
-    const savedType = sessionStorage.getItem('shopping_type') || '';
+    const savedCity = safeGetStorage('session', 'shopping_city') || '';
+    const savedType = safeGetStorage('session', 'shopping_type') || '';
     return `
     <div class="shop-page">
 
@@ -690,6 +818,7 @@ function initAIChat() {
     async function handleSend() {
         const msg = input.value.trim();
         if (!msg) return;
+        if (!checkRateLimit('ai-chat')) return;
         if (Date.now() - lastTs < THROTTLE) { if (aiStatus) { aiStatus.textContent = 'Зачекайте...'; setTimeout(() => aiStatus.textContent = 'Онлайн', 2000); } return; }
         lastTs = Date.now();
         appendMsg(msg, 'user-msg');
@@ -820,6 +949,7 @@ async function initDashboard() {
     const searchInput     = document.getElementById("searchInput");
     const categoryButtons = document.querySelectorAll('.search-category');
 
+    ensureTokenIntegrity();
     updateSliderCards(defaultCities, true);
     initTiltCards();
 
@@ -888,6 +1018,8 @@ async function initDashboard() {
             clearTimeout(debounceTimer);
             if (query.length < 3) { if (query.length === 0) updateSliderCards(defaultCities, true); return; }
             debounceTimer = setTimeout(async () => {
+                // 🔧 ФІКС: rate limit тільки коли показуємо результати, не при кожній букві
+                if (!checkRateLimit('dashboard-search')) return;
                 try {
                     const response = await fetch("/api/places/autocomplete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input: query, category: currentCategoryTypes }) });
                     const data = await response.json();
@@ -902,10 +1034,10 @@ async function initDashboard() {
 const AVATAR_CACHE_KEY = 'topspots_avatar_cache';
 
 function saveAvatarToCache(url) {
-    try { sessionStorage.setItem(AVATAR_CACHE_KEY, url); } catch (_) {}
+    try { safeSetStorage('session', AVATAR_CACHE_KEY, url); } catch (_) {}
 }
 function getAvatarFromCache() {
-    try { return sessionStorage.getItem(AVATAR_CACHE_KEY); } catch (_) { return null; }
+    try { return safeGetStorage('session', AVATAR_CACHE_KEY); } catch (_) { return null; }
 }
 
 async function initProfilePage() {
@@ -1071,6 +1203,29 @@ let profileStatsInited = false;
 function initProfileStats(profile) {
     if (profileStatsInited) return;
     profileStatsInited = true;
+
+    const historyEl = document.getElementById('profileSearchHistory');
+    if (historyEl && Array.isArray(profile?.search_stats)) {
+        historyEl.innerHTML = profile.search_stats.slice(0, 20).map(entry => {
+            const date = new Date(entry.created_at).toLocaleString('uk-UA', { hour12: false });
+            return `<li style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.08);">` +
+                   `<strong>${entry.query_text}</strong> ` +
+                   `<span style="opacity:.7;font-size:11px;">[${entry.category||'універсально'} | ${entry.source} | ${entry.results_count}]
+                   </span><br><span style="opacity:.7;font-size:11px;">${date}</span></li>`;
+        }).join('');
+    }
+
+    const catEl = document.getElementById('profileSearchCategorySummary');
+    if (catEl && Array.isArray(profile?.search_summary)) {
+        catEl.innerHTML = profile.search_summary.map(entry => {
+            return `<li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.08);">` +
+                   `<span style="display:inline-block;width:130px;">${entry.category || 'Інше'}</span>` +
+                   `<span>${entry.searches} разів</span>` +
+                   `<span style="float:right;opacity:.75;">avg ${entry.avg_results}</span>` +
+                   `</li>`;
+        }).join('');
+    }
+
     const visited = profile?.places_visited || 0;
     const since   = profile?.member_since   || '—';
     const loc     = profile?.location       || '—';
@@ -1190,14 +1345,15 @@ function initProfileStats(profile) {
 
 
 async function initShoppingPage() {
-    let selectedType = sessionStorage.getItem('shopping_type') || '';
+    ensureTokenIntegrity();
+    let selectedType = safeGetStorage('session', 'shopping_type') || '';
 
     document.querySelectorAll('.shop-type-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.shop-type-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             selectedType = btn.dataset.type;
-            sessionStorage.setItem('shopping_type', selectedType);
+            safeSetStorage('session', 'shopping_type', selectedType);
         });
     });
 
@@ -1216,6 +1372,7 @@ async function initShoppingPage() {
     });
 
     document.getElementById('shopSearchBtn').addEventListener('click', () => {
+        if (!checkRateLimit('shop-search')) return;
         const city = cityInput.value.trim();
         if (!city) {
             cityInput.focus();
@@ -1224,8 +1381,8 @@ async function initShoppingPage() {
             return;
         }
         if (!selectedType) { showToast('Вибери тип магазину ☝️', 'warning'); return; }
-        sessionStorage.setItem('shopping_city', city);
-        sessionStorage.setItem('shopping_type', selectedType);
+        safeSetStorage('session', 'shopping_city', city);
+        safeSetStorage('session', 'shopping_type', selectedType);
         searchShops(city, selectedType);
     });
 
@@ -1236,7 +1393,7 @@ async function initShoppingPage() {
     loadDailyTop();
 
     // Якщо є збережені параметри — одразу шукаємо
-    const savedCity = sessionStorage.getItem('shopping_city');
+    const savedCity = safeGetStorage('session', 'shopping_city');
     if (savedCity && selectedType) searchShops(savedCity, selectedType);
 }
 
@@ -1401,6 +1558,7 @@ function buildShopCard(shop, city = '') {
 
 
 async function performSearch() {
+    if (!checkRateLimit('nearby-search')) return;
     const statusText  = document.getElementById('nearbyStatus');
     const radiusInput = document.getElementById('nearbyRadius');
     const activeChip  = document.querySelector('.chip.active');
@@ -1479,6 +1637,7 @@ function syncNearbyWithBackend(results) {
 }
 
 function initNearbyPage() {
+    ensureTokenIntegrity();
     const radiusInput = document.getElementById('nearbyRadius');
     const chips       = document.querySelectorAll('.chip');
     const startBtn    = document.getElementById('startNearbySearch');
@@ -1491,10 +1650,10 @@ function initNearbyPage() {
     }
 
     chips.forEach(chip=>{
-        chip.addEventListener('click',()=>{ if(chip.classList.contains('active'))return; chips.forEach(c=>c.classList.remove('active')); chip.classList.add('active'); performSearch(); });
+        chip.addEventListener('click',()=>{ if(chip.classList.contains('active'))return; chips.forEach(c=>c.classList.remove('active')); chip.classList.add('active'); if (!checkRateLimit('nearby-search')) return; performSearch(); });
     });
-    if(radiusInput){ radiusInput.oninput=()=>{ const v=document.getElementById('radiusVal'); if(v)v.textContent=radiusInput.value+' км'; }; radiusInput.onchange=()=>performSearch(); }
-    if(startBtn) startBtn.addEventListener('click',performSearch);
+    if(radiusInput){ radiusInput.oninput=()=>{ const v=document.getElementById('radiusVal'); if(v)v.textContent=radiusInput.value+' км'; }; radiusInput.onchange=()=>{ if (!checkRateLimit('nearby-search')) return; performSearch(); }; }
+    if(startBtn) startBtn.addEventListener('click',()=>{ if (!checkRateLimit('nearby-search')) return; performSearch(); });
     setTimeout(()=>performSearch(),1000);
 }
 
@@ -1519,6 +1678,7 @@ const bindNav = () => {
 
 const navigateTo = (key, push = true) => {
     if (!pages[key]) return;
+    ensureTokenIntegrity();
     hidePortal();
     if (key !== 'profile') profileStatsInited = false;
     
