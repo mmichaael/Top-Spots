@@ -11,12 +11,12 @@ const NodeCache = require("node-cache");
 const OpenAI = require("openai");
 const https = require('https');
 const fs = require('fs');
+const multer = require('multer');
 
  require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
-
 
 class Controller {
     pageBaseMain = path.join(__dirname, '../front-end/html/index.html');
@@ -32,7 +32,17 @@ class Controller {
         __dirname,
         '../front-end/html/reset_password.html',
     );
-
+avatarUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only JPEG/PNG/WEBP allowed'));
+        }
+    }
+});
 
     constructor() {
         this.chatCache = new NodeCache({ stdTTL: 60, checkperiod: 120 }); // 60 сек кеш
@@ -273,6 +283,139 @@ getBestPhotoData = async (place_id, name, location) => {
     }
 };
 
+getGooglePlaceDetails = async (req, res) => {
+    const place_id = req.params.id;
+    if (!place_id) {
+        return res.status(400).json({ error: 'place_id is required' });
+    }
+
+    try {
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(place_id)}&fields=name,formatted_address,geometry,rating,user_ratings_total,photos,reviews,editorial_summary&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok || data.status !== 'OK') {
+            const statusCode = response.ok ? 502 : response.status;
+            return res.status(statusCode).json({ error: data.error_message || data.status || 'Google API error' });
+        }
+
+        const result = data.result || {};
+        const photos = (result.photos || []).map((photo) => ({
+            reference: photo.photo_reference,
+            width: photo.width,
+            height: photo.height,
+            url: `/api/google/photo?photoRef=${encodeURIComponent(photo.photo_reference)}&maxheight=900`
+        }));
+
+        const normalized = {
+            place_id,
+            displayName: result.name,
+            formattedAddress: result.formatted_address,
+            location: {
+                latitude: result.geometry?.location?.lat,
+                longitude: result.geometry?.location?.lng,
+            },
+            rating: result.rating,
+            userRatingCount: result.user_ratings_total,
+            editorialSummary: {
+                text: result.editorial_summary?.overview || result.editorial_summary?.text || ''
+            },
+            photos,
+            reviews: (result.reviews || []).map((review) => ({
+                authorAttribution: { displayName: review.author_name || 'Гість' },
+                text: review.text || '',
+                rating: review.rating || 0,
+                relativePublishTimeDescription: review.relative_time_description || ''
+            }))
+        };
+
+        return res.json(normalized);
+    } catch (err) {
+        console.error('Google place detail fetch error:', err);
+        return res.status(500).json({ error: 'Unable to fetch Google place details' });
+    }
+};
+
+getGooglePhoto = async (req, res) => {
+    const { photoRef, place_id, maxwidth, maxheight } = req.query;
+    try {
+        let photoReference = photoRef;
+
+        if (!photoReference && place_id) {
+            const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(place_id)}&fields=photos&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+            const detailRes = await fetch(detailUrl);
+            const detailData = await detailRes.json();
+            photoReference = detailData.result?.photos?.[0]?.photo_reference;
+        }
+
+        if (!photoReference) {
+            return res.status(404).json({ error: 'Photo reference not found' });
+        }
+
+        const params = new URLSearchParams();
+        if (maxwidth) params.set('maxwidth', maxwidth);
+        if (maxheight) params.set('maxheight', maxheight);
+        params.set('photoreference', photoReference);
+        params.set('key', process.env.GOOGLE_API_KEY);
+
+        const googlePhotoUrl = `https://maps.googleapis.com/maps/api/place/photo?${params.toString()}`;
+        const photoRes = await fetch(googlePhotoUrl);
+
+        if (!photoRes.ok) {
+            const text = await photoRes.text();
+            console.error('Google photo proxy error:', photoRes.status, text);
+            return res.status(photoRes.status).json({ error: 'Unable to load Google photo' });
+        }
+
+        const buffer = Buffer.from(await photoRes.arrayBuffer());
+        res.set('Content-Type', photoRes.headers.get('content-type') || 'image/jpeg');
+        res.set('Cache-Control', 'public, max-age=86400');
+        return res.send(buffer);
+    } catch (err) {
+        console.error('Google photo proxy fail:', err);
+        return res.status(500).json({ error: 'Google photo proxy failed' });
+    }
+};
+
+searchGoogleNearby = async (req, res) => {
+    const { latitude, longitude, radius = 1500, types = [] } = req.body;
+    if (!latitude || !longitude) {
+        return res.status(400).json({ error: 'Latitude and longitude are required' });
+    }
+
+    try {
+        const type = Array.isArray(types) && types.length > 0 ? types[0] : 'tourist_attraction';
+        const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${encodeURIComponent(latitude)},${encodeURIComponent(longitude)}&radius=${encodeURIComponent(radius)}&type=${encodeURIComponent(type)}&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok || data.status !== 'OK') {
+            return res.status(response.ok ? 502 : response.status).json({ error: data.error_message || data.status || 'Google nearby search failed' });
+        }
+
+        const formatted = (data.results || []).map((place) => ({
+            id: place.place_id,
+            displayName: place.name,
+            formattedAddress: place.vicinity || place.formatted_address,
+            rating: place.rating || 0,
+            location: {
+                latitude: place.geometry?.location?.lat,
+                longitude: place.geometry?.location?.lng,
+            },
+            photos: (place.photos || []).map((photo) => ({
+                reference: photo.photo_reference,
+                width: photo.width,
+                height: photo.height
+            })),
+            types: place.types || []
+        }));
+
+        return res.json({ places: formatted });
+    } catch (err) {
+        console.error('Google nearby search error:', err);
+        return res.status(500).json({ error: 'Unable to fetch nearby places' });
+    }
+};
 
 placeDetails = async (req, res) => {
     const { place_id, name, photo_url } = req.body;
@@ -1551,29 +1694,13 @@ uploadAvatar = async (req, res) => {
         const email = req.email;
         if (!email) return res.status(401).json({ message: 'Unauthorized' });
         if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
- 
-        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
- 
-        // Видаляємо старий аватар
-        try {
-            const oldRow = await pool.query(`SELECT avatar_url FROM "Users" WHERE email = $1`, [email]);
-            if (oldRow.rows[0]?.avatar_url && oldRow.rows[0].avatar_url !== avatarUrl) {
-                const oldPath = path.join(__dirname, '../front-end/public', oldRow.rows[0].avatar_url);
-                if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-            }
-        } catch (fileErr) {
-            console.log(`uploadAvatar: old file remove error (non-critical): ${fileErr.message}`);
-        }
- 
-        await pool.query(`UPDATE "Users" SET avatar_url = $1 WHERE email = $2`, [avatarUrl, email]);
- 
-        console.log(`uploadAvatar: ${email} → ${avatarUrl}`);
- 
-        // ← ВАЖЛИВО: повертаємо avatar_url щоб фронт міг оновити кеш
-        return res.status(200).json({
-            message: 'Avatar uploaded',
-            avatar_url: avatarUrl   // ← цей рядок був відсутній!
-        });
+
+        const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+        await pool.query(`UPDATE "Users" SET avatar_url = $1 WHERE email = $2`, [base64, email]);
+
+        console.log(`uploadAvatar: ${email} → base64 saved`);
+        return res.status(200).json({ message: 'Avatar uploaded', avatar_url: base64 });
     } catch (err) {
         console.log(`uploadAvatar error: ${err.message}`);
         return res.status(500).json({ message: 'Server error' });
@@ -2002,6 +2129,107 @@ refreshDailyTop = async (req, res) => {
 };
 
 
+
+
+
+
+// ── Проксі для фото Google Places (вирішує CORS і 400) ───
+proxyPlacePhoto = async (req, res) => {
+    const { ref, maxw = 800 } = req.query;
+    if (!ref) return res.status(400).json({ error: 'ref required' });
+
+    // Захист від підробки параметрів
+    if (!/^[A-Za-z0-9_\-]+$/.test(ref)) {
+        return res.status(400).json({ error: 'Invalid ref' });
+    }
+
+    try {
+        const url = `https://maps.googleapis.com/maps/api/place/photo` +
+            `?maxwidth=${Math.min(parseInt(maxw) || 800, 1600)}` +
+            `&photoreference=${ref}` +
+            `&key=${process.env.GOOGLE_API_KEY}`;
+
+        const response = await fetch(url, { redirect: 'follow' });
+
+        if (!response.ok) {
+            console.error(`[PHOTO PROXY] Google error: ${response.status}`);
+            return res.status(response.status).json({ error: 'Photo not found' });
+        }
+
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // кеш 24г
+
+        const buffer = await response.arrayBuffer();
+        res.send(Buffer.from(buffer));
+
+    } catch(err) {
+        console.error('[PHOTO PROXY] error:', err.message);
+        return res.status(500).json({ error: 'Proxy error' });
+    }
+};
+
+proxyPlacePhotoV1 = async (req, res) => {
+    const { name, maxw = 800 } = req.query;
+    if (!name) return res.status(400).json({ error: 'name required' });
+
+    if (!/^places\/[A-Za-z0-9_\-.]+\/photos\/[A-Za-z0-9_\-.]+$/.test(name)) {
+        return res.status(400).json({ error: 'Invalid name format' });
+    }
+
+    try {
+        const url = `https://places.googleapis.com/v1/${name}/media` +
+            `?maxWidthPx=${Math.min(parseInt(maxw) || 800, 1600)}` +
+            `&key=${process.env.GOOGLE_API_KEY}`;
+
+        const response = await fetch(url, { redirect: 'follow' });
+
+        // ── Токен протух → беремо через старий API (photoreference не протухає) ──
+        if (response.status === 400) {
+            const placeId = name.match(/^places\/([^/]+)\//)?.[1];
+            if (!placeId) return res.status(400).json({ error: 'Photo expired' });
+
+            console.log(`[PHOTO V1] Token expired, refreshing via old API for ${placeId}`);
+
+            const detailRes = await fetch(
+                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${process.env.GOOGLE_API_KEY}`
+            );
+            const detailData = await detailRes.json();
+            const ref = detailData.result?.photos?.[0]?.photo_reference;
+            if (!ref) return res.status(404).json({ error: 'No photos' });
+
+            // Зберігаємо в БД стабільний ref — він не протухає
+            pool.query(
+                `UPDATE places SET photo_url = $1 WHERE place_id = $2`,
+                [`/api/photo?ref=${encodeURIComponent(ref)}&maxw=800`, placeId]
+            ).catch(e => console.error('[PHOTO] DB update error:', e.message));
+
+            const photoUrl = `https://maps.googleapis.com/maps/api/place/photo` +
+                `?maxwidth=800&photoreference=${ref}&key=${process.env.GOOGLE_API_KEY}`;
+
+            const photoRes = await fetch(photoUrl, { redirect: 'follow' });
+            if (!photoRes.ok) return res.status(404).json({ error: 'Photo failed' });
+
+            res.setHeader('Content-Type', photoRes.headers.get('content-type') || 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=604800');
+            return res.send(Buffer.from(await photoRes.arrayBuffer()));
+        }
+
+        if (!response.ok) {
+            console.error(`[PHOTO V1 PROXY] error: ${response.status}`);
+            return res.status(response.status).json({ error: 'Photo not found' });
+        }
+
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.send(Buffer.from(await response.arrayBuffer()));
+
+    } catch(err) {
+        console.error('[PHOTO V1 PROXY] error:', err.message);
+        return res.status(500).json({ error: 'Proxy error' });
+    }
+};
 }
 
 module.exports = Controller;

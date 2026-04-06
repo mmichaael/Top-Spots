@@ -15,13 +15,13 @@ const rateLimiter = require("./middleware/rateLimiter.js");
 
 const app = express();
 
-// 🛡️ ── SECURITY HEADERS (Helmet) ──────────────────────────────────
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
-            scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://maps.googleapis.com"],
+            scriptSrc: ["'self'", "'unsafe-eval'", "https://cdnjs.cloudflare.com", "https://maps.googleapis.com", "https://maps.gstatic.com"],
             fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
             connectSrc: [
                 "'self'",
@@ -39,13 +39,13 @@ app.use(helmet({
     hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
     noSniff: true,
     xssFilter: true,
-    frameguard: false // 🔓 Вимикаємо frameguard, щоб дозволити Google Maps вбудовувати frames
+    frameguard: false
 }));
 
-// 🛡️ ── XSS PROTECTION ──────────────────────────────────────────────
-app.use(mongoSanitize()); // санітизація схожа на SQL injection
 
-// 🛡️ ── CORS (з захистом від небезпечних запросів) ──────────────────
+app.use(mongoSanitize()); 
+
+
 app.use(cors({
     origin: process.env.NODE_ENV === "production" 
         ? ["https://your-domain.com"] 
@@ -57,6 +57,32 @@ app.use(cors({
     sameSite: "Lax"
 }));
 
+app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy',
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' " +
+            "https://maps.googleapis.com " +
+            "https://maps.gstatic.com " +
+            "https://cdnjs.cloudflare.com; " +
+        "style-src 'self' 'unsafe-inline' " +
+            "https://fonts.googleapis.com " +
+            "https://cdnjs.cloudflare.com; " +
+        "font-src 'self' " +
+            "https://fonts.gstatic.com " +
+            "https://cdnjs.cloudflare.com; " +
+        "img-src 'self' data: blob: " +
+            "https://maps.googleapis.com " +
+            "https://maps.gstatic.com " +
+            "https://places.googleapis.com " +
+            "https://lh3.googleusercontent.com " +
+            "https://streetviewpixels-pa.googleapis.com; " +
+        "connect-src 'self' " +
+            "https://maps.googleapis.com " +
+            "https://places.googleapis.com; " +
+        "frame-src https://www.google.com;"
+    );
+    next();
+});
 app.use(express.json());
 app.use(cookieParser());
 app.use(passport.initialize());

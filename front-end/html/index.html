@@ -15,7 +15,7 @@
   <div class="header__topspot">
     <div class="logo_video_header">
       <video class="logo_video" height="200px" autoplay muted playsinline loop>
-        <source src="./img/output_video1.webm" type="video/webm" />
+        <source src="/img/output_video1.webm" type="video/webm" />
         Logo don't opened
       </video>
     </div>
@@ -30,14 +30,14 @@
 
   <!-- Навігація -->
   <ul class="header_list" id="navMenu">
-    <li class="header-ul_element"><a href="">Home</a></li>
-    <li class="header-ul_element"><a href="">GeoMap</a></li>
-    <li class="header-ul_element"><a href="">Contact</a></li>
-    <li class="header-ul_element"><a href="">Attractions</a></li>
-    <li class="header-ul_element"><a href="">Hotels</a></li>
-    <li class="header-ul_element"><a href="">Restaurants</a></li>
+    <li class="header-ul_element"><button data-section="home">Головна</button></li>
+    <li class="header-ul_element"><button data-section="nearby">Місця поруч</button></li>
+    <li class="header-ul_element"><button data-section="topshops">Топ магазини</button></li>
+    <li class="header-ul_element"><button data-section="categories">Категорії</button></li>
+    <li class="header-ul_element"><button data-section="contact">Контакти</button></li>
+    <li class="header-ul_element"><button data-section="about">Про нас</button></li>
 
-    <button class="button_header" id="SignUp" onclick="window.location.href='/checkUser'">
+    <button class="button_header" id="SignUp" type="button">
       <span>Sign Up</span>
     </button>
   </ul>
@@ -48,7 +48,7 @@
       <div class="main__page">
 
                 <!-- Пошукова панель -->
-        <div class="search-wrapper">
+        <div class="search-wrapper" id="home">
           <div class="search-bar">
             <div class="search-section">
                                 <ul id="suggestionsList"></ul>
@@ -88,7 +88,7 @@
           </div>
         </div>
         
-        <div class="scroll-container-wrapper">
+        <div class="scroll-container-wrapper" id="topshops">
           <button class="scroll-button left">&#10094;</button>
           <div class="scroll-container"></div>
           <button class="scroll-button right">&#10095;</button>
@@ -144,7 +144,7 @@
 
 
 <!-- ---------------- Теми ---------------- -->
-   <div class="grid-container" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:50px;">
+   <div class="grid-container" id="categories" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:50px;">
         <div class="cat-card" data-category="restaurant" style="background:rgba(255, 255, 255, 0.055);padding:44px 20px;border-radius:36px;text-align:center;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;">
             <div style="background:rgba(255,107,74,0.12);border:1px solid rgba(255,107,74,0.2);width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px;color:#ff6b4a;transition:transform .3s ease;"><i class="fas fa-utensils"></i></div>
             <span style="font-size:17px;font-weight:700;color:#f0ece4;font-family:'Outfit',sans-serif;">Ресторани</span>
@@ -230,13 +230,14 @@
     <div class="bottom-controls">
       <div class="language-selector">
         <i class="fas fa-globe"></i>
-        <select>
-          <option>Українська</option>
-          <option>English</option>
-          <option>Deutsch</option>
+        <select id="pageLanguageSelect">
+          <option value="uk">Українська</option>
+          <option value="en">English</option>
+          <option value="de">Deutsch</option>
+          <option value="pl">Polski</option>
         </select>
       </div>
-      <button class="theme-toggle">
+      <button class="theme-toggle" id="pageThemeToggle" type="button">
         <i class="fas fa-moon"></i>
       </button>
     </div>

@@ -326,7 +326,7 @@ loadPageContent = (content) => {
     //------------------------ Sending Cookie for Log Out ----------------------------------
     logOut = async () => {
         try {
-            const sendingTokens = await fetch('http://localhost:3500/logOut', {
+            const sendingTokens = await fetch('/logOut', {
                 method: 'POST',
                 credentials: 'include', // Sending Cookie
             });

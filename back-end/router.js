@@ -36,6 +36,8 @@ router.use(basicCSRFCheck);
 router.get('/', controller.openBaseMainPage);
 
 
+router.get('/api/photo',    controller.proxyPlacePhoto);
+router.get('/api/photo/v1', controller.proxyPlacePhotoV1);
 
 // ── Profile & Settings (захищені токеном) ──────────────────
 router.get   ('/api/user/profile',         controller.checkValidityAccessToken, controller.getProfile);
@@ -59,6 +61,10 @@ router.post("/api/places/details",
     controller.checkValidityAccessToken, 
     rateLimiter.searchLimiter('place-details'),
     controller.placeDetails);
+
+router.get('/api/google/place/:id', controller.getGooglePlaceDetails);
+router.get('/api/google/photo', controller.getGooglePhoto);
+router.post('/api/google/nearby', controller.searchGoogleNearby);
 
 router.get('/api/places/:id', 
     controller.checkValidityAccessToken, 
@@ -153,11 +159,5 @@ router.get('/api/health', (req, res) => {
 });
 
 
-// Перевірка всіх зареєстрованих маршрутів
-router.stack.forEach((r) => {
-    if (r.route && r.route.path) {
-        console.log(`Маршрут зареєстровано: ${r.route.stack[0].method.toUpperCase()} ${r.route.path}`);
-    }
-});
 // ОДИН module.exports В КІНЦІ
 module.exports = router;

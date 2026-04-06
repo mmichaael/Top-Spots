@@ -152,3 +152,16 @@ regCheckVsbBtn02.addEventListener('click', () => {
     authFunctions.controllPasswordVisibility(regPasswordField02, regCheckVsbBtn02, showPassword, blockPassword);
 });
 
+const resetCodeInput = document.querySelector('.input_code');
+if (resetCodeInput) {
+    resetCodeInput.addEventListener('input', (event) => {
+        event.target.value = event.target.value.replace(/\D/g, '');
+    });
+    resetCodeInput.addEventListener('focus', (event) => {
+        event.target.placeholder = '';
+    });
+    resetCodeInput.addEventListener('blur', (event) => {
+        event.target.placeholder = 'Verification Code';
+    });
+}
+

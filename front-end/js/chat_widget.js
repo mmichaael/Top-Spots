@@ -86,8 +86,21 @@
     }
   }
 
+  async function ensureAuthForAI() {
+    if (typeof isLoggedIn === 'function') {
+      try {
+        if (await isLoggedIn()) return true;
+      } catch (err) {
+        console.warn('Auth check failed:', err);
+      }
+    }
+    if (typeof openAuthModal === 'function') openAuthModal('AI-помічник');
+    return false;
+  }
+
   // --- handle send ---
   async function handleSend() {
+    if (!await ensureAuthForAI()) return;
     const message = input.value.trim();
     if (!message) return;
     if (!canSend()) {
@@ -144,8 +157,9 @@
 
   // --- suggestions click ---
   if (suggestions) {
-    suggestions.addEventListener("click", (e) => {
+    suggestions.addEventListener("click", async (e) => {
       if (e.target.classList.contains("suggestion")) {
+        if (!await ensureAuthForAI()) return;
         input.value = e.target.textContent;
         input.focus();
         // auto send

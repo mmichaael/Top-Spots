@@ -128,6 +128,10 @@ async function requireAuth(featureName, action) {
     }
 }
 
+window.isLoggedIn = isLoggedIn;
+window.openAuthModal = openAuthModal;
+window.requireAuth = requireAuth;
+
 function guardedAction(featureName, action) {
     return async function (e) {
         e?.preventDefault?.();
@@ -146,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mountAuthGuard();
 
     // ============ КОНСТАНТИ ============
-    const NO_PHOTO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%231e293b'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%2364748b' font-size='20' font-family='sans-serif'%3EНемає фото%3C/text%3E%3C/svg%3E";
+    const NO_PHOTO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23e0f2fe;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23b3e5fc;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23grad)'/%3E%3Ctext x='50%25' y='45%25' text-anchor='middle' fill='%230374a3' font-size='48' font-family='Arial, sans-serif'%3E🏞️%3C/text%3E%3Ctext x='50%25' y='65%25' text-anchor='middle' fill='%230374a3' font-size='24' font-family='Arial, sans-serif'%3ENo Photo%3C/text%3E%3C/svg%3E";
 
     const modernPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"%3E%3Cdefs%3E%3ClinearGradient id="modernGrad" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%2310b981;stop-opacity:1" /%3E%3Cstop offset="50%25" style="stop-color:%233b82f6;stop-opacity:1" /%3E%3Cstop offset="100%25" style="stop-color:%238b5cf6;stop-opacity:1" /%3E%3C/linearGradient%3E%3Cfilter id="blur"%3E%3CfeGaussianBlur in="SourceGraphic" stdDeviation="15" /%3E%3C/filter%3E%3C/defs%3E%3Crect width="800" height="600" fill="url(%23modernGrad)" filter="url(%23blur)"/%3E%3Ccircle cx="400" cy="300" r="100" fill="white" opacity="0.15"/%3E%3Ctext x="50%25" y="48%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="100" opacity="0.6"%3E%F0%9F%93%8D%3C/text%3E%3Ctext x="50%25" y="62%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="24" opacity="0.4"%3EЗавантаження...%3C/text%3E%3C/svg%3E';
 
@@ -180,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ============ ЗМІННІ ============
     let debounceTimer;
-    let currentCategoryTypes = "(cities)";
+    let currentCategoryTypes = "(lodging)";
     let googleMapsPromise = null;
 
     // ============ ДЕФОЛТНІ МІСТА ============
@@ -195,6 +199,9 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: "Вінниця",         place_id: "ChIJpWv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/vinica.jpg",    rating: 4.7 }
     ];
 
+    // Set default active category
+    document.querySelector('.search-category[data-type="lodging"]').classList.add('active');
+
     // ============ УТИЛІТИ ============
     function truncateText(text, maxLength = 40) {
         if (!text) return '';
@@ -203,6 +210,188 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const log = (msg, data = '') => console.log(`%c[SYSTEM]: ${msg}`, 'color: #10b981; font-weight: bold', data);
+
+    const LANGUAGE_MAP = {
+        uk: {
+            home: 'Головна',
+            nearby: 'Місця поруч',
+            topshops: 'Топ магазини',
+            categories: 'Категорії',
+            contact: 'Контакти',
+            about: 'Про нас',
+            searchPlaceholder: 'Пошук місць',
+            signUp: 'Sign Up',
+            aiSuggestion1: 'Де залишитися сьогодні?',
+            aiSuggestion2: 'Найпопулярніше зараз',
+            aiWelcome: 'Привіт! Я AI-помічник Top Spots. Допоможу знайти найкращі місця!',
+            restaurant: '🍽️ Ресторани',
+            cafe: '☕ Кафе',
+            lodging: '🏨 Готелі',
+            museum: '🏛️ Музеї',
+            shopping_mall: '🛍️ ТЦ',
+            park: '🌳 Парки',
+            beach: '🏖️ Пляжі',
+            resort: '⛷️ Курорти'
+        },
+        en: {
+            home: 'Home',
+            nearby: 'Nearby',
+            topshops: 'Top Shops',
+            categories: 'Categories',
+            contact: 'Contact',
+            about: 'About',
+            searchPlaceholder: 'Search places',
+            signUp: 'Sign Up',
+            aiSuggestion1: 'Where to stay today?',
+            aiSuggestion2: 'Most popular now',
+            aiWelcome: 'Hi! I am the Top Spots AI assistant. I will help you find great places!',
+            restaurant: '🍽️ Restaurants',
+            cafe: '☕ Cafes',
+            lodging: '🏨 Hotels',
+            museum: '🏛️ Museums',
+            shopping_mall: '🛍️ Shopping Malls',
+            park: '🌳 Parks',
+            beach: '🏖️ Beaches',
+            resort: '⛷️ Resorts'
+        },
+        de: {
+            home: 'Startseite',
+            nearby: 'In der Nähe',
+            topshops: 'Top Shops',
+            categories: 'Kategorien',
+            contact: 'Kontakt',
+            about: 'Über uns',
+            searchPlaceholder: 'Orte suchen',
+            signUp: 'Registrieren',
+            aiSuggestion1: 'Wo soll ich heute bleiben?',
+            aiSuggestion2: 'Aktuell beliebt',
+            aiWelcome: 'Hallo! Ich bin der Top Spots AI-Assistent. Ich helfe dir, tolle Orte zu finden!',
+            restaurant: '🍽️ Restaurants',
+            cafe: '☕ Cafés',
+            lodging: '🏨 Hotels',
+            museum: '🏛️ Museen',
+            shopping_mall: '🛍️ Einkaufszentren',
+            park: '🌳 Parks',
+            beach: '🏖️ Strände',
+            resort: '⛷️ Resorts'
+        },
+        pl: {
+            home: 'Główna',
+            nearby: 'W pobliżu',
+            topshops: 'Top sklepy',
+            categories: 'Kategorie',
+            contact: 'Kontakt',
+            about: 'O nas',
+            searchPlaceholder: 'Szukaj miejsc',
+            signUp: 'Zarejestruj się',
+            aiSuggestion1: 'Gdzie się zatrzymać dziś?',
+            aiSuggestion2: 'Najpopularniejsze teraz',
+            aiWelcome: 'Cześć! Jestem asystentem AI Top Spots. Pomogę znaleźć świetne miejsca!',
+            restaurant: '🍽️ Restauracje',
+            cafe: '☕ Kawiarnie',
+            lodging: '🏨 Hotele',
+            museum: '🏛️ Muzea',
+            shopping_mall: '🛍️ Centra handlowe',
+            park: '🌳 Parki',
+            beach: '🏖️ Plażę',
+            resort: '⛷️ Ośrodki'
+        }
+    };
+
+    function getSavedLanguage() {
+        return localStorage.getItem('topspots_locale') || 'uk';
+    }
+
+    function setSavedLanguage(locale) {
+        localStorage.setItem('topspots_locale', locale);
+        applyLanguage(locale);
+    }
+
+    function applyLanguage(locale) {
+        const dict = LANGUAGE_MAP[locale] || LANGUAGE_MAP.uk;
+        document.querySelectorAll('#navMenu button[data-section]').forEach(btn => {
+            const section = btn.getAttribute('data-section');
+            if (dict[section]) btn.textContent = dict[section];
+        });
+        const selector = document.getElementById('pageLanguageSelect');
+        if (selector) selector.value = locale;
+        if (searchInput) searchInput.placeholder = dict.searchPlaceholder;
+        const signupBtn = document.getElementById('SignUp');
+        if (signupBtn) signupBtn.textContent = dict.signUp;
+        document.querySelectorAll('.suggestion').forEach((btn, idx) => {
+            btn.textContent = idx === 0 ? dict.aiSuggestion1 : dict.aiSuggestion2;
+        });
+        const aiWelcome = document.getElementById('aiWelcomeText');
+        if (aiWelcome) aiWelcome.textContent = dict.aiWelcome;
+        // Translate categories
+        document.querySelectorAll('.search-category').forEach(span => {
+            const type = span.getAttribute('data-type');
+            if (dict[type]) span.textContent = dict[type];
+        });
+    }
+
+    function applyTheme(theme) {
+        const active = theme === 'light';
+        document.body.classList.toggle('light-theme', active);
+        localStorage.setItem('topspots_theme', theme);
+        document.querySelectorAll('#pageThemeToggle, #themeToggle').forEach(btn => {
+            if (btn) btn.innerHTML = active ? '🌞' : '🌙';
+        });
+        const lightStyles = `
+            body.light-theme { background: #f5f7fb !important; color: #111827 !important; }
+            body.light-theme .main__header, body.light-theme .search-bar, body.light-theme .scroll-container-wrapper, body.light-theme .ai-chat-card, body.light-theme .cat-card, body.light-theme .city-card, body.light-theme .main-footer, body.light-theme .footer-bottom-modern { background: rgba(255,255,255,0.92) !important; color: #111827 !important; border-color: rgba(15,23,42,0.08) !important; }
+            body.light-theme .button_header, body.light-theme .btn.primary, body.light-theme .search-button, body.light-theme .theme-toggle, body.light-theme .header_list a { background: #1d4ed8 !important; color: #fff !important; }
+            body.light-theme .search-category, body.light-theme .cat-card, body.light-theme .header-list a, body.light-theme .footer-column h4 { color: #111827 !important; }
+            body.light-theme .header_list { background: rgba(255,255,255,0.96) !important; }
+        `;
+        let styleEl = document.getElementById('topspots-light-theme-overrides');
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'topspots-light-theme-overrides';
+            document.head.appendChild(styleEl);
+        }
+        styleEl.textContent = active ? lightStyles : '';
+    }
+
+    function initLanguageControls() {
+        const selector = document.getElementById('pageLanguageSelect');
+        if (selector) {
+            selector.addEventListener('change', () => setSavedLanguage(selector.value));
+        }
+    }
+
+    function initThemeControls() {
+        document.querySelectorAll('#pageThemeToggle, #themeToggle').forEach(btn => {
+            btn?.addEventListener('click', () => {
+                const nextTheme = document.body.classList.contains('light-theme') ? 'dark' : 'light';
+                applyTheme(nextTheme);
+            });
+        });
+    }
+
+    function initNavAnchors() {
+        document.querySelectorAll('#navMenu a').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const target = document.querySelector(a.hash);
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    }
+
+    const savedTheme = localStorage.getItem('topspots_theme') || 'dark';
+    applyTheme(savedTheme);
+    initThemeControls();
+    initLanguageControls();
+    applyLanguage(getSavedLanguage());
+    initNavAnchors();
+
+    const signupBtn = document.getElementById('SignUp');
+    if (signupBtn) {
+        signupBtn.addEventListener('click', () => {
+            window.location.href = AUTH_URL + '?mode=register';
+        });
+    }
 
     // ============ GOOGLE MAPS API ============
     async function loadGoogleMapsAPI() {
@@ -242,21 +431,10 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadGoogleMapsAPI();
             const { Place } = await google.maps.importLibrary("places");
             const place = new Place({ id: placeId, requestedLanguage: 'uk' });
-            await place.fetchFields({ fields: ["displayName", "formattedAddress", "photos", "types"] });
+            await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
             const cityName = place.displayName?.text || place.displayName || "Місто";
             const searchQuery = fullAddress || place.formattedAddress || cityName;
-            log(`🏙️ Шукаю точне фото для: ${searchQuery}`);
-            const { places } = await Place.searchByText({
-                textQuery: `пам'ятки та краєвиди ${searchQuery}`,
-                maxResultCount: 1,
-                fields: ["photos"]
-            });
-            let photoUrl = null;
-            if (places && places.length > 0 && places[0].photos?.length > 0) {
-                photoUrl = places[0].photos[0].getURI({ maxWidth: 1200 });
-            } else if (place.photos?.length > 0) {
-                photoUrl = place.photos[0].getURI({ maxWidth: 1200 });
-            }
+            const photoUrl = `/api/google/photo?place_id=${encodeURIComponent(placeId)}&maxwidth=1200`;
             return { place_id: placeId, name: cityName, photo_url: photoUrl, description: searchQuery };
         } catch (err) {
             return null;
@@ -387,6 +565,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateSliderCards(searchResults, false);
                 });
             }
+        });
+    });
+
+    // Nav menu buttons
+    document.querySelectorAll('#navMenu button[data-section]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            openAuthModal('navigation');
+            navMenu.classList.remove('active');
         });
     });
 

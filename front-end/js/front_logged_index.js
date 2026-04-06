@@ -1,6 +1,74 @@
 import { mainPageFunctionsHandler, profileFunctionsHandler } from "./functions.js";
 const mainPageFunctions = new mainPageFunctionsHandler();
 const profileFn = new profileFunctionsHandler();
+
+const LOGGED_LANGUAGE_MAP = {
+    uk: { dashboard: 'Головна', nearby: 'Місця поруч', shopping: 'Шопінг', settings: 'Налаштування', profile: 'Профіль', logout: 'Вийти' },
+    en: { dashboard: 'Dashboard', nearby: 'Nearby', shopping: 'Shopping', settings: 'Settings', profile: 'Profile', logout: 'Sign out' },
+    de: { dashboard: 'Startseite', nearby: 'In der Nähe', shopping: 'Einkaufen', settings: 'Einstellungen', profile: 'Profil', logout: 'Abmelden' },
+    pl: { dashboard: 'Pulpit', nearby: 'W pobliżu', shopping: 'Zakupy', settings: 'Ustawienia', profile: 'Profil', logout: 'Wyloguj' }
+};
+
+function getSavedLoggedLanguage() {
+    return localStorage.getItem('topspots_locale') || 'uk';
+}
+
+function setSavedLoggedLanguage(locale) {
+    localStorage.setItem('topspots_locale', locale);
+    applyLoggedLanguage(locale);
+}
+
+function applyLoggedLanguage(locale) {
+    const dict = LOGGED_LANGUAGE_MAP[locale] || LOGGED_LANGUAGE_MAP.uk;
+    document.querySelectorAll('[data-page]').forEach(btn => {
+        const key = btn.getAttribute('data-page');
+        if (!dict[key]) return;
+        const icon = btn.querySelector('i');
+        if (icon) {
+            btn.innerHTML = icon.outerHTML + ' ' + dict[key];
+        } else {
+            btn.textContent = dict[key];
+        }
+    });
+    const selector = document.getElementById('loggedLanguageSelect');
+    if (selector) selector.value = locale;
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> ${dict.logout}`;
+    }
+}
+
+function applyLoggedTheme(theme) {
+    const isLight = theme === 'light';
+    document.body.classList.toggle('light-theme', isLight);
+    const themeButton = document.getElementById('loggedThemeToggle');
+    if (themeButton) themeButton.innerHTML = isLight ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    localStorage.setItem('topspots_theme_logged', theme);
+    let style = document.getElementById('topspots-logged-theme-overrides');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'topspots-logged-theme-overrides';
+        document.head.appendChild(style);
+    }
+    style.textContent = isLight ? `
+        body.light-theme { background:#f5f7fb; color:#111827; }
+        body.light-theme .header, body.light-theme .dashboard-wrapper, body.light-theme .profile-card, body.light-theme .settings-hero, body.light-theme .shop-page, body.light-theme .shop-card, body.light-theme .action-box, body.light-theme .footer-bottom-modern { background: rgba(255,255,255,0.96) !important; color:#111827 !important; border-color: rgba(15,23,42,0.08) !important; }
+        body.light-theme .nav-item, body.light-theme .mobile-nav-item { color:#111827 !important; }
+        body.light-theme .logout-icon, body.light-theme .shop-search-btn, body.light-theme .action-btn { background:#1d4ed8 !important; color:#fff !important; }
+    ` : '';
+}
+
+function initLoggedLanguageThemeControls() {
+    const selector = document.getElementById('loggedLanguageSelect');
+    if (selector) selector.addEventListener('change', () => setSavedLoggedLanguage(selector.value));
+    document.getElementById('loggedThemeToggle')?.addEventListener('click', () => {
+        const next = document.body.classList.contains('light-theme') ? 'dark' : 'light';
+        applyLoggedTheme(next);
+    });
+    applyLoggedLanguage(getSavedLoggedLanguage());
+    applyLoggedTheme(localStorage.getItem('topspots_theme_logged') || 'dark');
+}
+
 function showToast(msg, type = 'info') {
     let toast = document.querySelector('.shop-toast');
     if (!toast) {
@@ -13,6 +81,18 @@ function showToast(msg, type = 'info') {
     requestAnimationFrame(() => toast.classList.add('show'));
     setTimeout(() => toast.classList.remove('show'), 2800);
 }
+
+function attachImageErrorHandlers(root) {
+    if (!root) return;
+    root.querySelectorAll('img').forEach(img => {
+        img.addEventListener('error', () => {
+            if (img.dataset.fallbackApplied) return;
+            img.dataset.fallbackApplied = '1';
+            img.src = SHOP_NO_PHOTO;
+        });
+    });
+}
+
 const SHOP_NO_PHOTO = `data:image/svg+xml,${encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">' +
     '<rect width="100%" height="100%" fill="#0e1425"/>' +
@@ -340,9 +420,9 @@ dashboard: `
     </div>
 
     <div class="scroll-container-wrapper">
-        <button class="scroll-button left" id="scrollLeft">&#10094;</button>
+        <button class="scroll-button left" id="scrollLeft" aria-label="Назад">&#10094;</button>
         <div class="scroll-container" id="cityContainer"></div>
-        <button class="scroll-button right" id="scrollRight">&#10095;</button>
+        <button class="scroll-button right" id="scrollRight" aria-label="Вперед">&#10095;</button>
         <div class="progress-bar-container">
             <div class="progress-line-track"><div class="progress-line-thumb" id="scrollThumb"></div></div>
         </div>
@@ -447,20 +527,17 @@ profile: `
                         <div>
                             <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#6b6560;display:block;margin-bottom:8px;">Ім'я</label>
                             <input type="text" id="editUsername" maxlength="50" placeholder="Твоє ім'я"
-                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;box-sizing:border-box;"
-                                onfocus="this.style.borderColor='rgba(201,168,76,.5)'" onblur="this.style.borderColor='rgba(201,168,76,.15)'">
+                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;box-sizing:border-box;">
                         </div>
                         <div>
                             <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#6b6560;display:block;margin-bottom:8px;">Місто</label>
                             <input type="text" id="editLocation" maxlength="100" placeholder="Наприклад: Київ, Україна"
-                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;box-sizing:border-box;"
-                                onfocus="this.style.borderColor='rgba(201,168,76,.5)'" onblur="this.style.borderColor='rgba(201,168,76,.15)'">
+                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;box-sizing:border-box;">
                         </div>
                         <div style="position:relative;">
                             <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#6b6560;display:block;margin-bottom:8px;">Про себе <span style="color:#3d3935;">(макс. 300)</span></label>
                             <textarea id="editBio" maxlength="300" rows="4" placeholder="Розкажи про себе..."
-                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;resize:vertical;box-sizing:border-box;"
-                                onfocus="this.style.borderColor='rgba(201,168,76,.5)'" onblur="this.style.borderColor='rgba(201,168,76,.15)'"></textarea>
+                                style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:14px;font-size:14px;color:#f0ece4;font-family:'Outfit',sans-serif;resize:vertical;box-sizing:border-box;"></textarea>
                             <span id="bioCounter" style="position:absolute;bottom:10px;right:14px;font-size:11px;color:#3d3935;">0/300</span>
                         </div>
                         <div id="editAnswer" style="font-size:13px;min-height:18px;"></div>
@@ -529,7 +606,7 @@ profile: `
                     </div>
                 </div>
                 <div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:22px;margin-bottom:18px;">
-                    <h4 style="color:#f0ece4;margin:0 0 18px;font-size:15px;font-family:'Outfit',sans-serif;">Топ міст</h4>
+                    <h4 style="color:#f0ece4;margin:0 0 18px;font-size:15px;font-family:'Outfit',sans-serif;">Топ запитів</h4>
                     <div id="profileCityBars"></div>
                 </div>
             </div>
@@ -687,18 +764,18 @@ settings: `
     </header>
     <div class="settings-grid">
         <section class="settings-card">
-            <div class="card-head"><div class="icon-box purple"><i class="fas fa-bell"></i></div><h3>Сповіщення</h3></div>
+            <div class="card-head"><div class="icon-box purple"><i class="fas fa-cog"></i></div><h3>Персоналізація</h3></div>
             <div class="card-body">
-                <div class="setting-item"><div class="info"><span class="label">Email сповіщення</span><span class="sub-label">Отримуйте новини про нові локації на пошту</span></div><label class="ios-switch"><input type="checkbox" id="toggle_notifications_email"><span class="ios-slider"></span></label></div>
-                <div class="setting-item"><div class="info"><span class="label">Push сповіщення</span><span class="sub-label">Миттєві повідомлення у браузері</span></div><label class="ios-switch"><input type="checkbox" id="toggle_notifications_push"><span class="ios-slider"></span></label></div>
-                <div class="setting-item"><div class="info"><span class="label">Нові місця поруч</span><span class="sub-label">Сповіщати, коли я біля цікавої пам'ятки</span></div><label class="ios-switch"><input type="checkbox" id="toggle_notifications_nearby"><span class="ios-slider"></span></label></div>
+                <div class="setting-item"><div class="info"><span class="label">Зберігати історію пошуків</span><span class="sub-label">Швидко повертайся до останніх запитів</span></div><label class="ios-switch"><input type="checkbox" id="toggle_notifications_email"><span class="ios-slider"></span></label></div>
+                <div class="setting-item"><div class="info"><span class="label">Показ топ-локацій</span><span class="sub-label">Відображати найпопулярніші місця на дашборді</span></div><label class="ios-switch"><input type="checkbox" id="toggle_notifications_push"><span class="ios-slider"></span></label></div>
+                <div class="setting-item"><div class="info"><span class="label">Автовідображення поруч</span><span class="sub-label">Підгортати місця поруч під час перегляду карти</span></div><label class="ios-switch"><input type="checkbox" id="toggle_notifications_nearby"><span class="ios-slider"></span></label></div>
             </div>
         </section>
         <section class="settings-card">
-            <div class="card-head"><div class="icon-box blue"><i class="fas fa-user-shield"></i></div><h3>Конфіденційність</h3></div>
+            <div class="card-head"><div class="icon-box blue"><i class="fas fa-map-marker-alt"></i></div><h3>Конфіденційність</h3></div>
             <div class="card-body">
-                <div class="setting-item"><div class="info"><span class="label">Публічний профіль</span><span class="sub-label">Дозволити іншим бачити мій профіль</span></div><label class="ios-switch"><input type="checkbox" id="toggle_privacy_public"><span class="ios-slider"></span></label></div>
-                <div class="setting-item"><div class="info"><span class="label">Показувати локацію</span><span class="sub-label">Ваше місцезнаходження для пошуку поруч</span></div><label class="ios-switch"><input type="checkbox" id="toggle_privacy_location"><span class="ios-slider"></span></label></div>
+                <div class="setting-item"><div class="info"><span class="label">Зберігати обрані місця</span><span class="sub-label">Автоматично зберігати місця, які ти переглядаєш</span></div><label class="ios-switch"><input type="checkbox" id="toggle_privacy_public"><span class="ios-slider"></span></label></div>
+                <div class="setting-item"><div class="info"><span class="label">Поділитися локацією</span><span class="sub-label">Використовувати ваше місцезнаходження для пошуку поруч</span></div><label class="ios-switch"><input type="checkbox" id="toggle_privacy_location"><span class="ios-slider"></span></label></div>
             </div>
         </section>
         <section class="settings-card full-width">
@@ -709,17 +786,7 @@ settings: `
                 <div class="action-box"><div class="action-text"><h4>Завантажити дані</h4><p>Отримай копію профілю у форматі JSON</p></div><button class="action-btn secondary" id="downloadDataBtn"><i class="fas fa-download"></i></button></div>
                 <div class="action-box danger-zone"><div class="action-text"><h4 class="text-danger">Видалити акаунт</h4><p>Це призведе до незворотного видалення даних</p></div><button class="action-btn danger" id="deleteAccountBtn">Видалити</button></div>
             </div>
-            <!-- ВИЙТИ З АКАУНТУ -->
-            <div style="margin-top:24px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06);">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-                    <div><h4 style="color:#f0ece4;margin:0 0 4px;">Вийти з акаунту</h4><p style="color:#6b6560;font-size:13px;margin:0;">Завершити поточну сесію</p></div>
-                    <button id="logoutBtn" style="padding:11px 24px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:14px;color:#f87171;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .25s;"
-                        onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
-                        <i class="fas fa-sign-out-alt"></i> Вийти
-                    </button>
-                </div>
-            </div>
-            <form id="changePasswordForm" style="display:none;margin-top:28px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06);" onsubmit="return false;">
+            <form id="changePasswordForm" style="display:none;margin-top:28px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06);">
                 <h4 style="color:#f0ece4;margin-bottom:6px;" id="passwordFormTitle">Змінити пароль</h4>
                 <p id="passwordFormHint" style="font-size:12px;color:#6b6560;margin-bottom:16px;min-height:16px;"></p>
                 <div style="display:flex;flex-direction:column;gap:10px;max-width:420px;">
@@ -858,7 +925,7 @@ function initAIChat() {
 // ============================================================
 let googleMapsPromise = null;
 const modernPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600"%3E%3Cdefs%3E%3ClinearGradient id="g" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%23090d18"%3E%3C/stop%3E%3Cstop offset="100%25" style="stop-color:%230e1425"%3E%3C/stop%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="800" height="600" fill="url(%23g)"%3E%3C/rect%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" fill="%23c9a84c" font-family="sans-serif" font-size="80" opacity="0.3"%3E%F0%9F%93%8D%3C/text%3E%3C/svg%3E';
-let currentCategoryTypes = "(cities)";
+let currentCategoryTypes = "restaurant";
 let debounceTimer;
 
 const defaultCities = [
@@ -898,15 +965,15 @@ async function getPlaceDataViaSDK(placeId, fullAddress = "") {
         await loadGoogleMapsAPI();
         const { Place } = await google.maps.importLibrary("places");
         const place = new Place({ id: placeId, requestedLanguage: 'uk' });
-        await place.fetchFields({ fields: ["displayName", "formattedAddress", "photos"] });
+        await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
         const name  = place.displayName?.text || place.displayName || "Місце";
         const query = fullAddress || place.formattedAddress || name;
-        const { places } = await Place.searchByText({ textQuery: `пам'ятки та краєвиди ${query}`, maxResultCount: 1, fields: ["photos"] });
-        let photoUrl = null;
-        if (places?.[0]?.photos?.[0]) photoUrl = places[0].photos[0].getURI({ maxWidth: 1200 });
-        else if (place.photos?.[0])   photoUrl = place.photos[0].getURI({ maxWidth: 1200 });
-        return { place_id: placeId, name, photo_url: photoUrl };
-    } catch (err) { console.error("SDK Error:", err); return null; }
+        const photoUrl = `/api/google/photo?place_id=${encodeURIComponent(placeId)}&maxwidth=1200`;
+        return { place_id: placeId, name, photo_url: photoUrl, description: query };
+    } catch (err) {
+        console.error("SDK Error:", err);
+        return null;
+    }
 }
 
 async function updateSliderCards(list, isInitial = false) {
@@ -926,17 +993,55 @@ async function updateSliderCards(list, isInitial = false) {
                 <div class="city-rating">⭐ ${item.rating || '4.5'}</div>
                 <button class="map-button">Детальніше</button>
             </div>`;
+        const image = card.querySelector(".city-image");
+        image.onerror = () => { image.src = SHOP_NO_PHOTO; };
         card.querySelector(".city-name").textContent = name.length > 40 ? name.substring(0, 37) + "..." : name;
         card.onclick = () => { window.location.href = `/html/city_page.html?placeId=${item.place_id}&name=${encodeURIComponent(name)}`; };
         container.appendChild(card);
         if (isInitial && (item.photo || item.photo_url)) {
-            card.querySelector(".city-image").src = item.photo || item.photo_url;
+            image.src = item.photo || item.photo_url;
         } else {
             getPlaceDataViaSDK(item.place_id, item.description || name).then(data => {
-                if (data?.photo_url) card.querySelector(".city-image").src = data.photo_url;
-            });
+                if (data?.photo_url) image.src = data.photo_url;
+            }).catch(() => { image.src = SHOP_NO_PHOTO; });
         }
     }
+    syncScrollProgress();
+}
+
+function syncScrollProgress() {
+    const container = document.getElementById("cityContainer");
+    const thumb = document.getElementById("scrollThumb");
+    if (!container || !thumb) return;
+    const maxScroll = container.scrollWidth - container.clientWidth;
+    if (maxScroll <= 0) {
+        thumb.style.width = '100%';
+        thumb.style.transform = 'translateX(0)';
+        return;
+    }
+    const visibleRatio = Math.min(1, Math.max(0.12, container.clientWidth / container.scrollWidth));
+    const thumbPct = Math.max(12, Math.min(70, visibleRatio * 100));
+    const positionPct = (container.scrollLeft / maxScroll) * (100 - thumbPct);
+    thumb.style.width = `${thumbPct}%`;
+    thumb.style.transform = `translateX(${positionPct}%)`;
+}
+
+function hideNativeScrollbars() {
+    if (document.getElementById('topspots-hide-scrollbar-style')) return;
+    const style = document.createElement('style');
+    style.id = 'topspots-hide-scrollbar-style';
+    style.textContent = `
+        .scroll-container.hide-scrollbar {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .scroll-container.hide-scrollbar::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 async function initDashboard() {
@@ -948,6 +1053,8 @@ async function initDashboard() {
     }
     const searchInput     = document.getElementById("searchInput");
     const categoryButtons = document.querySelectorAll('.search-category');
+    const defaultCategoryButton = document.querySelector('.search-category[data-type="restaurant"]');
+    if (defaultCategoryButton) defaultCategoryButton.classList.add('active');
 
     ensureTokenIntegrity();
     updateSliderCards(defaultCities, true);
@@ -956,6 +1063,11 @@ async function initDashboard() {
     const scrollLeftBtn  = document.getElementById("scrollLeft");
     const scrollRightBtn = document.getElementById("scrollRight");
     const cityContainer  = document.getElementById("cityContainer");
+
+    if (cityContainer) {
+        cityContainer.classList.add('hide-scrollbar');
+        hideNativeScrollbars();
+    }
 
     if (scrollLeftBtn && cityContainer) {
         scrollLeftBtn.addEventListener("click", (e) => {
@@ -975,14 +1087,9 @@ async function initDashboard() {
     }
 
     if (cityContainer) {
-        cityContainer.addEventListener("scroll", () => {
-            const thumb = document.getElementById("scrollThumb");
-            if (!thumb) return;
-            const maxScroll = cityContainer.scrollWidth - cityContainer.clientWidth;
-            const pct = maxScroll > 0 ? (cityContainer.scrollLeft / maxScroll) * 70 : 0;
-            thumb.style.transform = `translateX(${pct}px)`;
-        });
+        cityContainer.addEventListener("scroll", syncScrollProgress);
     }
+    window.addEventListener('resize', syncScrollProgress);
 
     // Категорії → Nearby з вибраною категорією
     document.querySelectorAll('.cat-card').forEach(card => {
@@ -1059,12 +1166,21 @@ async function initProfilePage() {
     function applyAvatar(url) {
         const img  = document.getElementById('avatarImg');
         const icon = document.getElementById('avatarIcon');
-        if (img && icon && url) {
-            img.src = url;
-            img.style.display = 'block';
-            icon.style.display = 'none';
-            saveAvatarToCache(url);
+        if (!img || !icon) return;
+        if (!url) {
+            img.style.display = 'none';
+            icon.style.display = 'block';
+            return;
         }
+        img.onerror = () => {
+            img.style.display = 'none';
+            icon.style.display = 'block';
+            img.removeAttribute('src');
+        };
+        img.src = url;
+        img.style.display = 'block';
+        icon.style.display = 'none';
+        saveAvatarToCache(url);
     }
 
     // Спочатку перевіряємо кеш (миттєво), потім профіль з сервера
@@ -1204,142 +1320,303 @@ function initProfileStats(profile) {
     if (profileStatsInited) return;
     profileStatsInited = true;
 
+    const searchRows = Array.isArray(profile?.search_stats) ? profile.search_stats : [];
+    const categoryRows = Array.isArray(profile?.search_summary) ? profile.search_summary : [];
+
+    // ── Пошукова історія ──
     const historyEl = document.getElementById('profileSearchHistory');
-    if (historyEl && Array.isArray(profile?.search_stats)) {
-        historyEl.innerHTML = profile.search_stats.slice(0, 20).map(entry => {
-            const date = new Date(entry.created_at).toLocaleString('uk-UA', { hour12: false });
-            return `<li style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.08);">` +
-                   `<strong>${entry.query_text}</strong> ` +
-                   `<span style="opacity:.7;font-size:11px;">[${entry.category||'універсально'} | ${entry.source} | ${entry.results_count}]
-                   </span><br><span style="opacity:.7;font-size:11px;">${date}</span></li>`;
-        }).join('');
+    if (historyEl) {
+        if (!searchRows.length) {
+            historyEl.innerHTML = '<li style="padding:12px 0;color:#a8a199;font-size:13px;">Немає даних пошукової історії</li>';
+        } else {
+            historyEl.innerHTML = searchRows.slice(0, 20).map(entry => {
+                const date = entry.created_at ? new Date(entry.created_at).toLocaleString('uk-UA', { hour12: false }) : '—';
+                const category = entry.category || 'Універсально';
+                const source = entry.source === 'google' ? '🌐 Google' : '💾 База';
+                const results = entry.results_count != null ? entry.results_count : '—';
+                return `<li style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <strong style="color:#f0ece4;">${entry.query_text || 'Запит'}</strong><br>
+                    <span style="opacity:.75;font-size:12px;">${category} · ${source} · ${results} результатів</span><br>
+                    <span style="opacity:.65;font-size:11px;">${date}</span>
+                </li>`;
+            }).join('');
+        }
     }
 
+    // ── Топ категорій ──
     const catEl = document.getElementById('profileSearchCategorySummary');
-    if (catEl && Array.isArray(profile?.search_summary)) {
-        catEl.innerHTML = profile.search_summary.map(entry => {
-            return `<li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.08);">` +
-                   `<span style="display:inline-block;width:130px;">${entry.category || 'Інше'}</span>` +
-                   `<span>${entry.searches} разів</span>` +
-                   `<span style="float:right;opacity:.75;">avg ${entry.avg_results}</span>` +
-                   `</li>`;
-        }).join('');
+    if (catEl) {
+        if (!categoryRows.length) {
+            catEl.innerHTML = '<li style="padding:12px 0;color:#a8a199;font-size:13px;">Немає даних категорій</li>';
+        } else {
+            catEl.innerHTML = categoryRows.map(entry => {
+                const count = Number(entry.searches || 0);
+                const avg = entry.avg_results != null ? Number(entry.avg_results).toFixed(1) : '—';
+                return `<li style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;gap:12px;">
+                    <span style="color:#f0ece4;">${entry.category || 'Інше'}</span>
+                    <span style="color:#a8a199;">${count} разів</span>
+                    <span style="color:#6b6560;font-size:11px;">avg ${avg}</span>
+                </li>`;
+            }).join('');
+        }
     }
 
+    // ── KPI блоки ──
+    const totalSearches = categoryRows.reduce((sum, item) => sum + Number(item.searches || 0), 0);
     const visited = profile?.places_visited || 0;
-    const since   = profile?.member_since   || '—';
-    const loc     = profile?.location       || '—';
-    const setEl   = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    const since = profile?.member_since || '—';
+    const locationText = profile?.location || '—';
 
+    const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+
+    // Відвідано з анімацією
     const visitedEl = document.getElementById('statsVisited');
-    if (visitedEl && visited > 0) {
-        let step = 0;
-        const iv = setInterval(() => { step++; visitedEl.textContent = Math.min(Math.round(visited * step / 40), visited); if (step >= 40) clearInterval(iv); }, 20);
-    } else if (visitedEl) { visitedEl.textContent = visited; }
+    if (visitedEl) {
+        if (visited > 0) {
+            let step = 0;
+            const iv = setInterval(() => {
+                step++;
+                visitedEl.textContent = Math.min(Math.round(visited * step / 40), visited);
+                if (step >= 40) clearInterval(iv);
+            }, 20);
+        } else {
+            visitedEl.textContent = '0';
+        }
+    }
 
-    setEl('statsMemberSince', since);
-    setEl('statsLocation', loc.length > 14 ? loc.split(',')[0] : loc);
-    setEl('statsRating', '4.8');
+    setText('statsMemberSince', since);
+    setText('statsLocation', locationText.length > 14 ? locationText.split(',')[0] : locationText);
+
+    // Рейтинг — реальний на основі активності
+    let ratingText = '—';
+    if (totalSearches > 0) {
+        // Базовий рейтинг 3.5, росте з активністю, макс 5.0
+        const raw = 3.5 + Math.min(1.5, totalSearches * 0.05);
+        ratingText = raw.toFixed(1);
+    }
+    setText('statsRating', ratingText);
+
     const donutTotalEl = document.getElementById('donutTotal');
-    if (donutTotalEl) donutTotalEl.textContent = visited || 0;
+    if (donutTotalEl) donutTotalEl.textContent = totalSearches;
+
+    // ── Бар-чарт: реальні роки з даних ──
+    const countByYearMonth = {};
+    const months = ['С','Л','Б','К','Т','Ч','Л','С','В','Ж','Л','Г'];
+
+    searchRows.forEach(entry => {
+        if (!entry.created_at) return;
+        const date = new Date(entry.created_at);
+        if (isNaN(date)) return;
+        const year = String(date.getFullYear());
+        const monthIndex = date.getMonth();
+        if (!countByYearMonth[year]) countByYearMonth[year] = Array(12).fill(0);
+        countByYearMonth[year][monthIndex] += 1;
+    });
+
+    // Сортуємо роки від нового до старого
+    const availableYears = Object.keys(countByYearMonth).sort((a, b) => b - a);
+
+    // Якщо немає даних — додаємо поточний рік
+    if (!availableYears.length) {
+        const currentYear = String(new Date().getFullYear());
+        countByYearMonth[currentYear] = Array(12).fill(0);
+        availableYears.push(currentYear);
+    }
 
     const barCanvas = document.getElementById('profileBarChart');
     if (barCanvas) {
         const ctx = barCanvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
-        const W = barCanvas.offsetWidth || 400, H = 160;
-        barCanvas.width = W * dpr; barCanvas.height = H * dpr;
+        const W = barCanvas.offsetWidth || 400;
+        const H = 160;
+        barCanvas.width = W * dpr;
+        barCanvas.height = H * dpr;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
-        const barData = { '2024':[8,12,7,15,18,22,14,19,11,16,9,5], '2023':[4,6,10,8,13,16,20,11,9,7,5,3] };
-        const months = ['С','Л','Б','К','Т','Ч','Л','С','В','Ж','Л','Г'];
-        function drawBar(data) {
-            const max = Math.max(...data)*1.15;
-            const pL=32,pR=12,pT=14,pB=28,cW=W-pL-pR,cH=H-pT-pB;
-            const bW=(cW/data.length)*0.55, gap=(cW/data.length)*0.45;
-            const t0=performance.now();
+
+        const drawBar = data => {
+            const max = Math.max(...data, 1) * 1.15;
+            const pL = 32, pR = 12, pT = 14, pB = 28;
+            const cW = W - pL - pR;
+            const cH = H - pT - pB;
+            const bW = (cW / data.length) * 0.55;
+            const gap = (cW / data.length) * 0.45;
+            const t0 = performance.now();
+
             function frame(now) {
-                const p=Math.min((now-t0)/800,1), e=1-Math.pow(1-p,3);
-                ctx.clearRect(0,0,W,H);
-                ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=1;
-                for(let g=0;g<=4;g++){const y=pT+cH-(g/4)*cH;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(W-pR,y);ctx.stroke();}
-                data.forEach((v,i)=>{
-                    const x=pL+i*(cW/data.length)+gap/2, bH=(v/max)*cH*e, y=pT+cH-bH;
-                    const gr=ctx.createLinearGradient(x,y,x,pT+cH);
-                    gr.addColorStop(0,'#c9a84c'); gr.addColorStop(1,'rgba(201,168,76,0.1)');
-                    ctx.fillStyle=gr;
-                    const r=Math.min(4,bW/2);
-                    ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+bW-r,y);ctx.quadraticCurveTo(x+bW,y,x+bW,y+r);ctx.lineTo(x+bW,pT+cH);ctx.lineTo(x,pT+cH);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.fill();
-                    ctx.fillStyle='rgba(168,161,153,0.5)';ctx.font='10px Outfit,sans-serif';ctx.textAlign='center';
-                    ctx.fillText(months[i],x+bW/2,H-6);
+                const progress = Math.min((now - t0) / 800, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                ctx.clearRect(0, 0, W, H);
+                ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+                ctx.lineWidth = 1;
+                for (let g = 0; g <= 4; g++) {
+                    const y = pT + cH - (g / 4) * cH;
+                    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
+                }
+                data.forEach((value, i) => {
+                    const x = pL + i * (cW / data.length) + gap / 2;
+                    const bH = (value / max) * cH * ease;
+                    const y = pT + cH - bH;
+                    const gradient = ctx.createLinearGradient(x, y, x, pT + cH);
+                    gradient.addColorStop(0, '#c9a84c');
+                    gradient.addColorStop(1, 'rgba(201,168,76,0.1)');
+                    ctx.fillStyle = gradient;
+                    const r = Math.min(4, bW / 2);
+                    ctx.beginPath();
+                    ctx.moveTo(x + r, y);
+                    ctx.lineTo(x + bW - r, y);
+                    ctx.quadraticCurveTo(x + bW, y, x + bW, y + r);
+                    ctx.lineTo(x + bW, pT + cH);
+                    ctx.lineTo(x, pT + cH);
+                    ctx.lineTo(x, y + r);
+                    ctx.quadraticCurveTo(x, y, x + r, y);
+                    ctx.fill();
+
+                    // Показуємо число над баром якщо > 0
+                    if (value > 0) {
+                        ctx.fillStyle = 'rgba(201,168,76,0.8)';
+                        ctx.font = '9px Outfit, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(value, x + bW / 2, y - 4);
+                    }
+
+                    ctx.fillStyle = 'rgba(168,161,153,0.5)';
+                    ctx.font = '10px Outfit, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(months[i], x + bW / 2, H - 6);
                 });
-                if(p<1) requestAnimationFrame(frame);
+                if (progress < 1) requestAnimationFrame(frame);
             }
             requestAnimationFrame(frame);
-        }
-        drawBar(barData['2024']);
-        document.querySelectorAll('.period-tab').forEach(t => {
-            t.addEventListener('click', () => {
-                document.querySelectorAll('.period-tab').forEach(x => x.classList.remove('active'));
-                t.classList.add('active');
-                drawBar(barData[t.dataset.period]);
+        };
+
+        // ── Оновлюємо кнопки реальними роками ──
+        const periodContainer = document.querySelector('.profile-page-wrapper [data-period]')?.parentElement;
+        if (periodContainer) {
+            periodContainer.innerHTML = availableYears.map((year, i) =>
+                `<button class="period-tab${i === 0 ? ' active' : ''}" data-period="${year}">${year}</button>`
+            ).join('');
+
+            periodContainer.querySelectorAll('.period-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    periodContainer.querySelectorAll('.period-tab').forEach(x => x.classList.remove('active'));
+                    tab.classList.add('active');
+                    drawBar(countByYearMonth[tab.dataset.period] || Array(12).fill(0));
+                });
             });
-        });
+        }
+
+        drawBar(countByYearMonth[availableYears[0]] || Array(12).fill(0));
     }
 
+    // ── Донат-чарт ──
     const donutCanvas = document.getElementById('profileDonutChart');
     if (donutCanvas) {
         const ctx = donutCanvas.getContext('2d');
-        const dpr = window.devicePixelRatio || 1, sz = 140;
-        donutCanvas.width = sz*dpr; donutCanvas.height = sz*dpr;
+        const dpr = window.devicePixelRatio || 1;
+        const sz = 140;
+        donutCanvas.width = sz * dpr;
+        donutCanvas.height = sz * dpr;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
-        const segs = [
-            { label:'Ресторани', value:38, color:'#ff6b4a' },
-            { label:'Парки',     value:24, color:'#1fd4c8' },
-            { label:'Музеї',     value:16, color:'#a78bfa' },
-            { label:'Кафе',      value:14, color:'#c9a84c' },
-            { label:'Готелі',    value:8,  color:'#e8c97a' },
-        ];
-        const total = segs.reduce((a,s)=>a+s.value,0);
-        const cx=sz/2, cy=sz/2, oR=sz/2-6, iR=sz/2-28;
-        const t0=performance.now();
+
+        const colorMap = ['#ff6b4a', '#1fd4c8', '#a78bfa', '#c9a84c', '#e8c97a'];
+        const segments = categoryRows
+            .map((entry, index) => ({
+                label: entry.category || 'Інше',
+                value: Number(entry.searches || 0),
+                color: colorMap[index % colorMap.length],
+            }))
+            .filter(seg => seg.value > 0);
+
+        const total = segments.reduce((sum, seg) => sum + seg.value, 0) || 1;
+        const cx = sz / 2, cy = sz / 2;
+        const oR = sz / 2 - 6, iR = sz / 2 - 28;
+        const t0 = performance.now();
+
         function frame(now) {
-            const p=Math.min((now-t0)/900,1), e=1-Math.pow(1-p,3);
-            ctx.clearRect(0,0,sz,sz); let sa=-Math.PI/2;
-            segs.forEach(s=>{
-                const sw=(s.value/total)*2*Math.PI*e;
-                ctx.beginPath();ctx.moveTo(cx+iR*Math.cos(sa),cy+iR*Math.sin(sa));
-                ctx.arc(cx,cy,oR,sa,sa+sw);ctx.arc(cx,cy,iR,sa+sw,sa,true);
-                ctx.closePath();ctx.fillStyle=s.color;ctx.fill(); sa+=sw;
-            });
-            if(p<1) requestAnimationFrame(frame);
+            const progress = Math.min((now - t0) / 900, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            ctx.clearRect(0, 0, sz, sz);
+
+            if (!segments.length) {
+                // Порожнє коло якщо немає даних
+                ctx.beginPath();
+                ctx.arc(cx, cy, oR, 0, 2 * Math.PI);
+                ctx.arc(cx, cy, iR, 0, 2 * Math.PI, true);
+                ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                ctx.fill();
+            } else {
+                let startAngle = -Math.PI / 2;
+                segments.forEach(seg => {
+                    const slice = (seg.value / total) * 2 * Math.PI * eased;
+                    ctx.beginPath();
+                    ctx.moveTo(cx + iR * Math.cos(startAngle), cy + iR * Math.sin(startAngle));
+                    ctx.arc(cx, cy, oR, startAngle, startAngle + slice);
+                    ctx.arc(cx, cy, iR, startAngle + slice, startAngle, true);
+                    ctx.closePath();
+                    ctx.fillStyle = seg.color;
+                    ctx.fill();
+                    startAngle += slice;
+                });
+            }
+            if (progress < 1) requestAnimationFrame(frame);
         }
         requestAnimationFrame(frame);
-        const leg = document.getElementById('profileDonutLegend');
-        if (leg) {
-            leg.innerHTML='';
-            segs.forEach(s=>{
-                const d=document.createElement('div');
-                d.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;';
-                d.innerHTML=`<span style="width:10px;height:10px;border-radius:3px;background:${s.color};flex-shrink:0;"></span><span style="font-size:12px;color:#a8a199;flex:1;">${s.label}</span><span style="font-size:12px;color:#f0ece4;font-weight:600;">${s.value}%</span>`;
-                leg.appendChild(d);
-            });
+
+        const legend = document.getElementById('profileDonutLegend');
+        if (legend) {
+            if (!segments.length) {
+                legend.innerHTML = '<div style="color:#a8a199;font-size:13px;">Немає статистики категорій</div>';
+            } else {
+                legend.innerHTML = segments.map(seg =>
+                    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <span style="width:10px;height:10px;border-radius:3px;background:${seg.color};flex-shrink:0;"></span>
+                        <span style="font-size:12px;color:#a8a199;flex:1;">${seg.label}</span>
+                        <span style="font-size:12px;color:#f0ece4;font-weight:600;">${((seg.value / total) * 100).toFixed(0)}%</span>
+                    </div>`
+                ).join('');
+            }
         }
     }
 
+    // ── Топ запитів ──
     const cityEl = document.getElementById('profileCityBars');
     if (cityEl) {
-        const list=[{name:'Київ',count:47,color:'#c9a84c'},{name:'Львів',count:28,color:'#1fd4c8'},{name:'Одеса',count:19,color:'#a78bfa'},{name:'Харків',count:14,color:'#ff6b4a'},{name:'Дніпро',count:7,color:'#e8c97a'}];
-        const max=list[0].count; cityEl.innerHTML='';
-        list.forEach((c,i)=>{
-            const row=document.createElement('div');
-            row.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:10px;';
-            row.innerHTML=`<span style="width:70px;font-size:12px;color:#a8a199;flex-shrink:0;text-align:right;">${c.name}</span><div style="flex:1;background:rgba(255,255,255,0.04);border-radius:6px;height:8px;overflow:hidden;"><div style="width:0%;height:100%;border-radius:6px;background:${c.color};transition:width 0.9s ease ${i*80}ms;"></div></div><span style="width:24px;font-size:12px;color:#f0ece4;font-weight:600;">${c.count}</span>`;
-            cityEl.appendChild(row);
-            setTimeout(()=>{ row.querySelector('div > div').style.width=(c.count/max*100)+'%'; },100);
-        });
+        const queryCounts = searchRows.reduce((acc, entry) => {
+            const key = entry.query_text || 'Невідомо';
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+
+        const topQueries = Object.entries(queryCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([name, count], index) => ({
+                name, count,
+                color: ['#c9a84c', '#1fd4c8', '#a78bfa', '#ff6b4a', '#e8c97a'][index]
+            }));
+
+        if (!topQueries.length) {
+            cityEl.innerHTML = '<div style="color:#a8a199;font-size:13px;padding:12px 0;">Поки що немає найактивніших запитів.</div>';
+        } else {
+            const maxCount = topQueries[0].count || 1;
+            cityEl.innerHTML = '';
+            topQueries.forEach((item, i) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px;';
+                row.innerHTML =
+                    `<span style="width:70px;font-size:12px;color:#a8a199;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.name}">${item.name}</span>` +
+                    `<div style="flex:1;background:rgba(255,255,255,0.04);border-radius:6px;height:8px;overflow:hidden;">
+                        <div style="width:0%;height:100%;border-radius:6px;background:${item.color};transition:width 0.9s ease ${i * 80}ms;"></div>
+                    </div>` +
+                    `<span style="width:24px;font-size:12px;color:#f0ece4;font-weight:600;">${item.count}</span>`;
+                cityEl.appendChild(row);
+                setTimeout(() => { row.querySelector('div > div').style.width = `${(item.count / maxCount) * 100}%`; }, 100);
+            });
+        }
     }
 }
-
 
 
 
@@ -1424,7 +1701,6 @@ async function loadDailyTop() {
                 <div class="daily-card-rank">${medals[i]||''}</div>
                 <div class="daily-card-img-wrap">
                     <img src="${photo}"
-                         onerror="this.onerror=null;this.src='${SHOP_NO_PHOTO}'"
                          alt="${place.name||''}"/>
                     <div class="daily-card-overlay"></div>
                     <div class="daily-card-category">${place.category||''}</div>
@@ -1443,6 +1719,7 @@ async function loadDailyTop() {
                 </div>
             </div>`;
         }).join('');
+        attachImageErrorHandlers(grid);
 
         // Таймер до наступного оновлення (рахується від updated_at в БД)
         const timer = section.querySelector('.daily-top-timer');
@@ -1496,6 +1773,7 @@ async function searchShops(city, type) {
         meta.textContent = `${data.results.length} магазинів · ${data.source === 'database' ? '📦 з кешу' : '🌐 Google'}`;
         resultsSection.style.display = 'block';
         resultsGrid.innerHTML = data.results.map(shop => buildShopCard(shop, city)).join('');
+        attachImageErrorHandlers(resultsGrid);
 
         resultsGrid.querySelectorAll('.shop-card').forEach((card, i) => {
             card.style.animationDelay = `${i * 0.07}s`;
@@ -1526,7 +1804,6 @@ function buildShopCard(shop, city = '') {
         <div class="shop-card-img-wrap">
             <img class="shop-card-img"
                  src="${photo}"
-                 onerror="this.onerror=null;this.src='${SHOP_NO_PHOTO}'"
                  loading="lazy"
                  alt="${(shop.query_name||'').replace(/"/g,'&quot;')}"/>
             <div class="shop-card-overlay"></div>
@@ -1563,59 +1840,138 @@ async function performSearch() {
     const radiusInput = document.getElementById('nearbyRadius');
     const activeChip  = document.querySelector('.chip.active');
     let category = activeChip ? activeChip.dataset.type || activeChip.innerText : 'tourist_attraction';
-    category = category.toLowerCase().replace(/\s+/g,'_');
+    category = category.toLowerCase().replace(/\s+/g, '_');
     if (!statusText) return;
     statusText.innerHTML = `<i class="fas fa-sync fa-spin"></i> Опитування локальної бази...`;
+
     try {
-        const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:8000}));
-        const {latitude,longitude} = pos.coords;
-        const radius = (radiusInput?radiusInput.value:12)*1000;
-        const dbRes = await fetch('/api/nearby/get',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({latitude,longitude,radius,category})});
+        const pos = await new Promise((res, rej) =>
+            navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 })
+        );
+        const { latitude, longitude } = pos.coords;
+        const radius = (radiusInput ? radiusInput.value : 12) * 1000;
+
+        const dbRes = await fetch('/api/nearby/get', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude, longitude, radius, category })
+        });
+
         if (dbRes.ok) {
             const dbData = await dbRes.json();
-            if (dbData.results&&dbData.results.length>0) { statusText.innerText=`Знайдено ${dbData.results.length} локацій (з бази)`; renderNearbyCards(dbData.results); return; }
+            if (dbData.results && dbData.results.length > 0) {
+                statusText.innerText = `Знайдено ${dbData.results.length} локацій (з бази)`;
+                // ── конвертуємо прямі Google URL → прокси ──
+                const fixed = dbData.results.map(fixPhotoUrl);
+                renderNearbyCards(fixed);
+                return;
+            }
         }
-        statusText.innerHTML=`<i class="fas fa-satellite"></i> Супутниковий пошук Google...`;
+
+        statusText.innerHTML = `<i class="fas fa-satellite"></i> Супутниковий пошук Google...`;
         await loadGoogleMapsAPI();
-        const {Place,SearchNearbyRankPreference} = await google.maps.importLibrary("places");
-        const {places} = await Place.searchNearby({
-            fields:["displayName","location","rating","photos","id","formattedAddress"],
-            locationRestriction:{center:new google.maps.LatLng(latitude,longitude),radius},
-            includedPrimaryTypes:[category], maxResultCount:20,
-            rankPreference:SearchNearbyRankPreference.POPULARITY
+        const { Place, SearchNearbyRankPreference } = await google.maps.importLibrary("places");
+        const { places } = await Place.searchNearby({
+            fields: ["displayName", "location", "rating", "photos", "id", "formattedAddress"],
+            locationRestriction: { center: new google.maps.LatLng(latitude, longitude), radius },
+            includedPrimaryTypes: [category],
+            maxResultCount: 20,
+            rankPreference: SearchNearbyRankPreference.POPULARITY
         });
-        if (places&&places.length>0) {
-            const NO_PHOTO="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%230e1425'/%3E%3C/svg%3E";
-            const results=places.map(p=>({place_id:p.id,name:p.displayName?.text||p.displayName||"Без назви",vicinity:p.formattedAddress,rating:p.rating||4.5,latitude:p.location.lat(),longitude:p.location.lng(),photo_url:p.photos?.[0]?.getURI({maxWidth:800})||NO_PHOTO,types:[category]}));
+
+        if (places && places.length > 0) {
+            const results = places.map(p => {
+                // Формуємо проксі-URL одразу при отриманні з Google
+                let photo_url = null;
+                if (p.photos?.[0]?.name) {
+                    // name виглядає як: places/ChIJ.../photos/ATCDNf...
+                    photo_url = `/api/photo/v1?name=${encodeURIComponent(p.photos[0].name)}&maxw=800`;
+                }
+                return {
+                    place_id: p.id,
+                    name: p.displayName?.text || p.displayName || 'Без назви',
+                    vicinity: p.formattedAddress,
+                    rating: p.rating || 4.5,
+                    latitude: p.location.lat(),
+                    longitude: p.location.lng(),
+                    photo_url: photo_url,
+                    types: [category]
+                };
+            });
+
             renderNearbyCards(results);
-            statusText.innerText=`Знайдено ${places.length} нових локацій`;
+            statusText.innerText = `Знайдено ${places.length} нових локацій`;
             syncNearbyWithBackend(results);
-        } else { throw new Error("ZERO_RESULTS"); }
-    } catch(err) {
-        if(statusText) statusText.innerText=err.message==="ZERO_RESULTS"?"Нічого не знайдено поруч":"Помилка доступу до геолокації";
+        } else {
+            throw new Error("ZERO_RESULTS");
+        }
+
+    } catch (err) {
+        if (statusText) statusText.innerText =
+            err.message === "ZERO_RESULTS"
+                ? "Нічого не знайдено поруч"
+                : "Помилка доступу до геолокації";
     }
 }
 
+// ── Конвертує прямі Google URL з БД → наш проксі ──────────────
+function fixPhotoUrl(place) {
+    const NO_PHOTO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%230e1425'/%3E%3C/svg%3E";
+    let url = place.photo_url;
+
+    if (!url) {
+        return { ...place, photo_url: NO_PHOTO };
+    }
+
+    // Якщо вже наш проксі — не чіпаємо
+    if (url.startsWith('/api/photo/')) {
+        return place;
+    }
+
+    // Прямий URL нового Places API: https://places.googleapis.com/v1/places/.../photos/.../media?...
+    if (url.includes('places.googleapis.com/v1/')) {
+        const match = url.match(/\/v1\/(places\/[^/]+\/photos\/[^/?]+)/);
+        if (match) {
+            return { ...place, photo_url: `/api/photo/v1?name=${encodeURIComponent(match[1])}&maxw=800` };
+        }
+    }
+
+    // Старий Places API: має photoreference=...
+    const refMatch = url.match(/[?&]photoreference=([^&]+)/);
+    if (refMatch) {
+        return { ...place, photo_url: `/api/photo?ref=${encodeURIComponent(refMatch[1])}&maxw=800` };
+    }
+
+    // Нічого не підійшло — заглушка
+    return { ...place, photo_url: NO_PHOTO };
+}
+
 function renderNearbyCards(places) {
-    const NO_PHOTO="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%230e1425'/%3E%3C/svg%3E";
-    const grid=document.getElementById('nearbyGrid'); if(!grid)return;
-    grid.innerHTML='';
-    places.forEach((p,i)=>{
-        const card=document.createElement('div'); card.className='place-card-v2';
-        const placeName = p.name || p.query_name || p.displayName || 'Без назви';
-        const rawAddr = p.vicinity || p.formatted_address || p.full_name || p.description || '';
-        let addr = rawAddr.trim();
+    const NO_PHOTO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%230e1425'/%3E%3C/svg%3E";
+    const grid = document.getElementById('nearbyGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    places.forEach((p, i) => {
+        const card = document.createElement('div');
+        card.className = 'place-card-v2';
+
+        const placeName    = p.name || p.query_name || p.displayName || 'Без назви';
+        const rawAddr      = p.vicinity || p.formatted_address || p.full_name || p.description || '';
+        let addr           = rawAddr.trim();
         if (addr.length > 55) {
-            const parts = addr.split(',').map(s => s.trim()).filter(Boolean);
+            const parts     = addr.split(',').map(s => s.trim()).filter(Boolean);
             const meaningful = parts.filter(s => !/^\d+$/.test(s) && s.toLowerCase() !== 'україна');
             addr = meaningful.slice(0, 2).join(', ');
         }
-        const displayAddr = addr || 'Адреса не вказана';
-        const rating = parseFloat(p.rating) || 0;
+        const displayAddr   = addr || 'Адреса не вказана';
+        const rating        = parseFloat(p.rating) || 0;
         const ratingDisplay = rating > 0 ? rating.toFixed(1) : '—';
-        card.innerHTML=`
+        const photoSrc      = p.photo_url || NO_PHOTO;
+
+        card.innerHTML = `
             <div class="card-img-wrapper">
-                <img src="${p.photo_url||NO_PHOTO}" class="card-main-img" loading="lazy" onerror="this.src='${NO_PHOTO}'">
+                <img src="${photoSrc}" class="card-main-img" loading="lazy">
                 <div class="card-rating-glass"><i class="fas fa-star"></i> ${ratingDisplay}</div>
             </div>
             <div class="card-info">
@@ -1623,17 +1979,32 @@ function renderNearbyCards(places) {
                 <p class="card-addr"><i class="fas fa-map-marker-alt"></i>${displayAddr}</p>
                 <button class="glow-btn" style="margin-top:auto;padding:10px 20px;font-size:13px;">Детальніше</button>
             </div>`;
+
         card.querySelector('.glow-btn').addEventListener('click', () => {
             window.location.href = `/html/city_page.html?placeId=${p.place_id}`;
         });
+
         grid.appendChild(card);
-        card.style.opacity = '0'; card.style.transform = 'translateY(16px)';
-        setTimeout(() => { card.style.transition = 'opacity 0.35s ease, transform 0.35s ease'; card.style.opacity = '1'; card.style.transform = 'translateY(0)'; }, i * 70);
+        attachImageErrorHandlers(card);
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(16px)';
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, i * 70);
     });
 }
 
 function syncNearbyWithBackend(results) {
-    fetch('/api/nearby/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({places:results})}).catch(e=>console.error("Sync error:",e));
+    // Відправляємо без photo_url — він генерується свіжим при кожному запиті
+    const toSync = results.map(({ photo_url, ...rest }) => rest);
+    
+    fetch('/api/nearby/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ places: toSync })
+    }).catch(e => console.error("Sync error:", e));
 }
 
 function initNearbyPage() {
@@ -1649,17 +2020,185 @@ function initNearbyPage() {
         window._pendingNearbyCategory = null;
     }
 
-    chips.forEach(chip=>{
-        chip.addEventListener('click',()=>{ if(chip.classList.contains('active'))return; chips.forEach(c=>c.classList.remove('active')); chip.classList.add('active'); if (!checkRateLimit('nearby-search')) return; performSearch(); });
+    chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            if (chip.classList.contains('active')) return;
+            chips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            if (!checkRateLimit('nearby-search')) return;
+            performSearch();
+        });
     });
-    if(radiusInput){ radiusInput.oninput=()=>{ const v=document.getElementById('radiusVal'); if(v)v.textContent=radiusInput.value+' км'; }; radiusInput.onchange=()=>{ if (!checkRateLimit('nearby-search')) return; performSearch(); }; }
-    if(startBtn) startBtn.addEventListener('click',()=>{ if (!checkRateLimit('nearby-search')) return; performSearch(); });
-    setTimeout(()=>performSearch(),1000);
+
+    if (radiusInput) {
+        radiusInput.oninput = () => {
+            const v = document.getElementById('radiusVal');
+            if (v) v.textContent = radiusInput.value + ' км';
+        };
+        radiusInput.onchange = () => {
+            if (!checkRateLimit('nearby-search')) return;
+            performSearch();
+        };
+    }
+
+    if (startBtn) startBtn.addEventListener('click', () => {
+        if (!checkRateLimit('nearby-search')) return;
+        performSearch();
+    });
+
+    setTimeout(() => performSearch(), 1000);
 }
 
 
 
 
+
+
+
+async function initSettingsPage() {
+    const profile = await profileFn.getProfile();
+    const settings = await profileFn.getSettings() || {};
+    const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value ?? '—'; };
+
+    setText('settingsEmail', profile?.email || '—');
+    setText('passwordFormTitle', profile?.provider === 'google' ? 'Змінити пароль / Google' : 'Змінити пароль');
+    setText('passwordFormHint', profile?.provider === 'google'
+        ? 'Google-акаунти можуть встановити новий пароль без старого.'
+        : 'Введіть поточний та новий паролі для зміни.');
+
+    const booleanToggle = (id, value) => { const el = document.getElementById(id); if (el) el.checked = !!value; };
+    booleanToggle('toggle_notifications_email', settings.notifications_email);
+    booleanToggle('toggle_notifications_push', settings.notifications_push);
+    booleanToggle('toggle_notifications_nearby', settings.notifications_nearby);
+    booleanToggle('toggle_privacy_public', settings.privacy_public);
+    booleanToggle('toggle_privacy_location', settings.privacy_location);
+
+    const updateSetting = async (key, value) => {
+        const ok = await profileFn.updateSetting(key, value);
+        if (!ok) showToast('Не вдалося зберегти налаштування', 'error');
+    };
+
+    [
+        'toggle_notifications_email',
+        'toggle_notifications_push',
+        'toggle_notifications_nearby',
+        'toggle_privacy_public',
+        'toggle_privacy_location'
+    ].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', () => {
+            const key = id.replace('toggle_', '');
+            updateSetting(key, el.checked);
+        });
+    });
+
+    const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+    const deleteConfirmBlock = document.getElementById('deleteConfirmBlock');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    if (deleteAccountBtn && deleteConfirmBlock && confirmDeleteBtn && cancelDeleteBtn) {
+        deleteAccountBtn.addEventListener('click', () => {
+            deleteConfirmBlock.style.display = 'block';
+        });
+        cancelDeleteBtn.addEventListener('click', () => {
+            deleteConfirmBlock.style.display = 'none';
+        });
+        confirmDeleteBtn.addEventListener('click', async () => {
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.textContent = 'Видаляю...';
+            await profileFn.deleteAccount();
+            confirmDeleteBtn.disabled = false;
+            confirmDeleteBtn.textContent = 'Так, видалити';
+        });
+    }
+
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    const openChangePasswordBtn = document.getElementById('openChangePasswordBtn');
+    const cancelChangePasswordBtn = document.getElementById('cancelChangePasswordBtn');
+    const confirmChangePasswordBtn = document.getElementById('confirmChangePasswordBtn');
+    const currentPasswordWrap = document.getElementById('currentPasswordWrap');
+    if (profile?.provider === 'google' && currentPasswordWrap) currentPasswordWrap.style.display = 'none';
+
+    if (openChangePasswordBtn && changePasswordForm) {
+        openChangePasswordBtn.addEventListener('click', () => {
+            changePasswordForm.style.display = 'block';
+            openChangePasswordBtn.disabled = true;
+        });
+    }
+    if (cancelChangePasswordBtn && changePasswordForm && openChangePasswordBtn) {
+        cancelChangePasswordBtn.addEventListener('click', () => {
+            changePasswordForm.style.display = 'none';
+            openChangePasswordBtn.disabled = false;
+            document.getElementById('currentPasswordInput').value = '';
+            document.getElementById('newPasswordInput').value = '';
+            document.getElementById('confirmPasswordInput').value = '';
+        });
+    }
+    if (confirmChangePasswordBtn) {
+        confirmChangePasswordBtn.addEventListener('click', async () => {
+            const currentPassword = document.getElementById('currentPasswordInput')?.value.trim();
+            const newPassword = document.getElementById('newPasswordInput')?.value.trim();
+            const confirmPassword = document.getElementById('confirmPasswordInput')?.value.trim();
+            const passwordAnswer = document.getElementById('passwordChangeAnswer');
+            if (!newPassword || newPassword.length < 8) {
+                if (passwordAnswer) passwordAnswer.textContent = 'Пароль має бути щонайменше 8 символів.';
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                if (passwordAnswer) passwordAnswer.textContent = 'Паролі не співпадають.';
+                return;
+            }
+            confirmChangePasswordBtn.disabled = true;
+            passwordAnswer.textContent = 'Збереження...';
+            const result = await profileFn.changePassword(currentPassword, newPassword);
+            confirmChangePasswordBtn.disabled = false;
+            if (result.status === 200) {
+                if (passwordAnswer) passwordAnswer.textContent = 'Пароль оновлено.';
+                changePasswordForm.style.display = 'none';
+                openChangePasswordBtn.disabled = false;
+            } else {
+                if (passwordAnswer) passwordAnswer.textContent = result.data?.message || 'Не вдалося змінити пароль.';
+            }
+        });
+    }
+
+    const downloadDataBtn = document.getElementById('downloadDataBtn');
+    if (downloadDataBtn) {
+        downloadDataBtn.addEventListener('click', async () => {
+            downloadDataBtn.disabled = true;
+            const originalText = downloadDataBtn.textContent;
+            downloadDataBtn.textContent = 'Завантаження...';
+
+            try {
+                const profileData = profile || await profileFn.getProfile();
+                const settingsData = settings || await profileFn.getSettings();
+                const payload = {
+                    exportedAt: new Date().toISOString(),
+                    profile: profileData || {},
+                    settings: settingsData || {}
+                };
+
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = `topspots-profile-${profileData?.username || 'data'}.json`;
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                URL.revokeObjectURL(url);
+                showToast('Файл підготовлено для завантаження', 'success');
+            } catch (err) {
+                console.error('Download data error:', err);
+                showToast('Не вдалось підготувати файл для завантаження', 'error');
+            } finally {
+                downloadDataBtn.disabled = false;
+                downloadDataBtn.textContent = originalText;
+            }
+        });
+    }
+}
 
 const updateActiveMenu = key => {
     document.querySelectorAll('[data-page]').forEach(el => {
@@ -1706,5 +2245,6 @@ window.onpopstate = e => navigateTo(e.state?.page || 'dashboard', false);
 document.addEventListener('DOMContentLoaded', () => {
     mountAIWidget();
     mountSuggestionsPortal();
+    initLoggedLanguageThemeControls();
     navigateTo(window.location.hash.replace('#', '') || 'dashboard', false);
 });

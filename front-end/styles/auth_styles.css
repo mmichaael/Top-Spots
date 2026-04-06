@@ -1,9 +1,4 @@
-/* ════════════════════════════════════════════════════════════
-   TOP SPOTS AUTH — Business 70% / Neon Gamer 30%
-   Fonts: Rajdhani (display) + DM Sans (body)
-   Palette: #050a14 bg | #00e5ff cyan neon | #7000ff purple neon
-            #0d1525 card | #c8d6e8 text
-════════════════════════════════════════════════════════════ */
+
 
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
 
@@ -27,6 +22,72 @@
     --r:         14px;
     --r-sm:      8px;
     --transition: 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+
+body.light-theme {
+    --bg:        #eef2f7;
+    --bg-card:   #ffffff;
+    --bg-input:  #f7fafc;
+    --cyan:      #2563eb;
+    --cyan-dim:  rgba(56,189,248,0.12);
+    --purple:    #7c3aed;
+    --purple-dim:rgba(192,132,252,0.14);
+    --accent:    #0f766e;
+    --text:      #111827;
+    --text-dim:  #475569;
+    --border:    rgba(15,23,42,0.12);
+    --border-hi: rgba(56,189,248,0.35);
+}
+
+body.light-theme .greeting_text_01 {
+    color: var(--text);
+    text-shadow: 0 0 18px rgba(56,189,248,0.10);
+}
+body.light-theme .greeting_text_02,
+body.light-theme .or_text,
+body.light-theme .Check_remember,
+body.light-theme .theme-toggle,
+body.light-theme .controls_block select,
+body.light-theme .regAndlog_input,
+body.light-theme .google-btn,
+body.light-theme .google-btn span,
+body.light-theme .logAndreg_text,
+body.light-theme .rp_header_text_01,
+body.light-theme .rp_header_text_02,
+body.light-theme .reset_password_btn,
+body.light-theme .rp_footer_email,
+body.light-theme .answer_text {
+    color: var(--text);
+}
+body.light-theme .home_page_btn span,
+body.light-theme .home_page_btn {
+    color: #111827 !important;
+}
+body.light-theme .google-btn:hover {
+    color: var(--bg);
+    background: linear-gradient(135deg, var(--cyan), #0f766e);
+    border-color: rgba(15,23,42,0.18);
+}
+body.light-theme .regAndlog_input:hover {
+    background: #edf2f7;
+    border-color: rgba(15,23,42,0.18);
+}
+body.light-theme .regAndlog_input:focus {
+    background: #ffffff;
+    border-color: var(--border-hi);
+    box-shadow: 0 0 0 3px rgba(56,189,248,0.08);
+    color: var(--text);
+}
+body.light-theme .theme-toggle:hover {
+    background: var(--bg-card);
+}
+body.light-theme .main_block,
+body.light-theme .left_main_block {
+    background: var(--bg-card);
+}
+body.light-theme .block_for_answer_reg,
+body.light-theme .block_for_answer_log {
+    color: var(--text);
 }
 
 /* ── RESET ─────────────────────────────────────────────── */
@@ -142,6 +203,7 @@ html, body {
     position: relative;
     overflow: hidden;
     transition: var(--transition);
+    color: #e9f3ff !important;
 }
 .home_page_btn span {
     font-family: 'Rajdhani', sans-serif;
@@ -149,9 +211,10 @@ html, body {
     font-weight: 600;
     letter-spacing: 2.5px;
     text-transform: uppercase;
-    color: var(--text-dim);
+    color: #e9f3ff !important;
     transition: color var(--transition);
-    position: relative; z-index: 1;
+    position: relative;
+    z-index: 1;
 }
 .home_page_btn::before {
     content: '';
@@ -164,6 +227,52 @@ html, body {
 .home_page_btn:hover { border-color: var(--border-hi); }
 .home_page_btn:hover::before { opacity: 1; }
 .home_page_btn:hover span { color: var(--cyan); }
+
+.controls_block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.controls_block select {
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 6px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.controls_block select:hover {
+    border-color: var(--border-hi);
+}
+
+.controls_block select:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 2px var(--cyan-dim);
+}
+
+.theme-toggle {
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    width: 40px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.theme-toggle:hover {
+    border-color: var(--border-hi);
+    background: var(--bg-card);
+}
 
 /* ── FORM CONTAINER ────────────────────────────────────── */
 .main_block_for_all {

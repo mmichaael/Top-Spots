@@ -66,7 +66,7 @@ async function performSearch() {
                 rating: p.rating || 4.5,
                 latitude: p.location.lat(),
                 longitude: p.location.lng(),
-                photo_url: p.photos?.[0]?.getURI({ maxWidth: 800 }) || NO_PHOTO_SVG,
+                photo_url: `/api/google/photo?place_id=${encodeURIComponent(p.id)}&maxwidth=800`,
                 types: [category] // ← ФІКС
             }));
 
@@ -97,7 +97,7 @@ function renderNearbyCards(places) {
 
         card.innerHTML = `
             <div class="card-img-wrapper">
-                <img src="${p.photo_url || NO_PHOTO_SVG}" class="card-main-img" onerror="this.src='${NO_PHOTO_SVG}'">
+                <img src="${p.photo_url || NO_PHOTO_SVG}" class="card-main-img">
                 <div class="card-rating-glass">
                     <i class="fas fa-star"></i> <span>${p.rating}</span>
                 </div>
@@ -105,13 +105,22 @@ function renderNearbyCards(places) {
             <div class="card-info">
                 <h4 class="card-title">${displayName}</h4>
                 <p class="card-addr">${displayAddr}</p>
-                <button class="card-btn" style="margin-top:12px;padding:10px 20px;background:linear-gradient(135deg,#7c3aed,#c026d3);color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;width:100%;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Детальніше</button>
+                <button class="card-btn" style="margin-top:12px;padding:10px 20px;background:linear-gradient(135deg,#7c3aed,#c026d3);color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;width:100%;transition:opacity 0.2s;">Детальніше</button>
             </div>
         `;
 
-        card.querySelector('.card-btn').onclick = () => {
-            window.location.href = `/html/city_page.html?placeId=${p.place_id}`;
-        };
+        const img = card.querySelector('img');
+        if (img) {
+            img.addEventListener('error', () => { img.src = NO_PHOTO_SVG; });
+        }
+        const btn = card.querySelector('.card-btn');
+        if (btn) {
+            btn.addEventListener('mouseover', () => { btn.style.opacity = '0.85'; });
+            btn.addEventListener('mouseout', () => { btn.style.opacity = '1'; });
+            btn.addEventListener('click', () => {
+                window.location.href = `/html/city_page.html?placeId=${p.place_id}`;
+            });
+        }
 
         grid.appendChild(card);
         setTimeout(() => card.classList.add('visible'), i * 60);

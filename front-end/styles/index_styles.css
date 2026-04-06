@@ -167,7 +167,10 @@ body::before {
   display:flex; align-items:center; gap:4px;
 }
 
-.header-ul_element a {
+.header-ul_element a,
+.header-ul_element button {
+  all: unset;
+  display:inline-flex;
   position:relative;
   font-size:14px; font-weight:500;
   color:var(--t2);
@@ -175,10 +178,14 @@ body::before {
   border-radius:var(--r1);
   letter-spacing:.6px;
   transition:color .3s;
+  cursor:pointer;
+  user-select:none;
 }
-.header-ul_element a:hover { color:var(--t1); }
+.header-ul_element a:hover,
+.header-ul_element button:hover { color:var(--t1); }
 
-.header-ul_element a::after {
+.header-ul_element a::after,
+.header-ul_element button::after {
   content:'';
   position:absolute;
   bottom:5px; left:15px; right:15px;
@@ -187,7 +194,12 @@ body::before {
   transform:scaleX(0); transform-origin:left;
   transition:transform .4s var(--spring);
 }
-.header-ul_element a:hover::after { transform:scaleX(1); }
+.header-ul_element a:hover::after,
+.header-ul_element button:hover::after { transform:scaleX(1); }
+
+.header-ul_element button:focus {
+  outline:none;
+}
 
 .button_header {
   height:36px; padding:0 20px;

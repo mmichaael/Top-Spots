@@ -16,14 +16,46 @@ document.addEventListener("DOMContentLoaded", () => {
     const nearbySection = document.getElementById("nearby-section");
 
     /* ── КОНФІГ ──────────────────────────────────────────────── */
-    const apiKey  = "AIzaSyDQ6nB5ryXqJX58_A421J6Oqw1cbl6g6qk";
+    const PHOTO_PROXY = '/api/photo/v1';
     const params  = new URLSearchParams(window.location.search); // ← ФІХ #params
     const placeId = params.get("placeId");
+    const initialName = params.get("name") ? decodeURIComponent(params.get("name")) : null;
 
     let slides = [], dots = [], slideIdx = 0, autoTimer = null;
     let photoUrls = [];
 
-    if (!placeId) { placeNameEl.textContent = "Місце не вказано 😢"; return; }
+    const getPhotoUrl = (photo, maxHeight = 900) => {
+        if (!photo) return 'https://placehold.co/800x600/111827/8b5cf6?text=%F0%9F%93%8D';
+        if (typeof photo === 'string') {
+            if (photo.startsWith('http')) return photo;
+            if (photo.startsWith('places/')) return `${PHOTO_PROXY}?name=${encodeURIComponent(photo)}&maxw=${maxHeight}`;
+            return `/api/photo?ref=${encodeURIComponent(photo)}&maxw=${maxHeight}`;
+        }
+        if (photo.reference) return `/api/photo?ref=${encodeURIComponent(photo.reference)}&maxw=${maxHeight}`;
+        if (photo.name) return `${PHOTO_PROXY}?name=${encodeURIComponent(photo.name)}&maxw=${maxHeight}`;
+        return 'https://placehold.co/800x600/111827/8b5cf6?text=%F0%9F%93%8D';
+    };
+
+    let embedApiKey = null;
+    async function getMapsEmbedKey() {
+        if (embedApiKey) return embedApiKey;
+        const res = await fetch('/api/google-maps-key');
+        if (!res.ok) throw new Error('Не вдалося завантажити ключ Google Maps');
+        const data = await res.json();
+        embedApiKey = data.key;
+        return embedApiKey;
+    }
+
+    if (!placeId) {
+        placeNameEl.textContent = "Місце не вказано 😢";
+        document.title = "Місце не знайдено";
+        return;
+    }
+
+    if (initialName && placeNameEl) {
+        placeNameEl.textContent = initialName;
+        document.title = initialName;
+    }
 
     /* ── #6: Кнопка "Назад" ── */
     const backBtn = document.createElement('a');
@@ -117,14 +149,11 @@ backBtn.href = '/new-main';
     ═══════════════════════════════════════════════════════════ */
     async function loadFromGoogle(id) {
         try {
-            const res = await fetch(
-                `https://places.googleapis.com/v1/places/${id}?key=${apiKey}&languageCode=uk`,
-                { headers: { 'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,rating,userRatingCount,photos,reviews,editorialSummary' } }
-            );
-            if (!res.ok) throw new Error("Google API error");
+            const res = await fetch(`/api/google/place/${encodeURIComponent(id)}`);
+            if (!res.ok) throw new Error("Google proxy error");
             const p = await res.json();
 
-            const name = p.displayName?.text || "Без назви";
+            const name = p.displayName || "Без назви";
             placeNameEl.textContent = name;
             placeNameEl.style.animation = "gradShift 5s ease infinite";
 
@@ -137,7 +166,10 @@ backBtn.href = '/new-main';
 
             if (p.photos?.length)  renderPhotos(p.photos);
             if (p.reviews?.length) renderReviewsWithFilter(p.reviews);
-            if (p.location) { renderMap(p.location.latitude, p.location.longitude); searchNearby(p.location); }
+            if (p.location) {
+                await renderMap(p.location.latitude, p.location.longitude);
+                searchNearby(p.location);
+            }
             syncData(p, name);
             initRevealObserver();
 
@@ -160,7 +192,7 @@ backBtn.href = '/new-main';
         photoSlider.classList.remove("hidden");
 
         photos.slice(0, 10).forEach((ph, i) => {
-            const url = `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=900&key=${apiKey}`;
+            const url = ph.url || getPhotoUrl(ph, 900);
             photoUrls.push(url);
             const slide = document.createElement("div");
             slide.className = "slide" + (i === 0 ? " active" : "");
@@ -268,7 +300,7 @@ backBtn.href = '/new-main';
             const name   = r.authorAttribution?.displayName || "Гість";
             const letter = name[0]?.toUpperCase() || "?";
             const stars  = Math.round(r.rating || 0);
-            const text   = r.text?.text || "Без тексту";
+            const text   = typeof r.text === 'string' ? r.text : r.text?.text || "Без тексту";
             const date   = r.relativePublishTimeDescription || "";
             const card   = document.createElement("div");
             card.className = "review-card";
@@ -281,12 +313,14 @@ backBtn.href = '/new-main';
                 </div>
                 <p class="rv-body">${escHtml(text)}</p>
                 <div class="rv-foot">
-                    <button class="rv-like" onclick="toggleLike(this)">
+                    <button class="rv-like">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
                         Корисно <span class="lc">0</span>
                     </button>
                 </div>`;
             reviewsTrack.appendChild(card);
+            const likeBtn = card.querySelector('.rv-like');
+            if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(likeBtn));
         });
 
         bindArrows(reviewsTrack, "#reviews-section .arrow-prev", "#reviews-section .arrow-next", reviewsSection);
@@ -297,26 +331,32 @@ backBtn.href = '/new-main';
     ═══════════════════════════════════════════════════════════ */
     async function searchNearby(loc) {
         try {
-            const res = await fetch(`https://places.googleapis.com/v1/places:searchNearby?key=${apiKey}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.photos,places.formattedAddress,places.types" },
+            const res = await fetch('/api/google/nearby', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    includedTypes: ["tourist_attraction","park","museum","restaurant"],
-                    maxResultCount: 9,
-                    locationRestriction: { circle: { center: { latitude: loc.latitude, longitude: loc.longitude }, radius: 1500 } }
+                    latitude: loc.latitude,
+                    longitude: loc.longitude,
+                    radius: 1500,
+                    types: ['tourist_attraction', 'park', 'museum', 'restaurant']
                 })
             });
             const data = await res.json();
             if (!data.places) return;
             nearbySection.classList.remove("hidden");
             nearbyList.innerHTML = data.places.filter(p => p.id !== placeId).map((p, i) => {
-                const name   = p.displayName?.text || "Місце";
+                const name   = p.displayName || "Місце";
                 const addr   = p.formattedAddress || "Поряд з вами";
                 const rating = p.rating ? `⭐ ${p.rating}` : "—";
                 const type   = (p.types?.[0] || "місце").replace(/_/g," ");
-                const photo  = p.photos?.[0] ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?maxHeightPx=500&key=${apiKey}` : `https://placehold.co/400x300/111827/8b5cf6?text=%F0%9F%93%8D`;
-                return `<a class="nearby-card" href="city_page.html?placeId=${p.id}" style="animation-delay:${i*.07}s"><div class="nc-img-wrap"><img class="nc-img" src="${photo}" alt="${escHtml(name)}" loading="lazy" onerror="this.src='https://placehold.co/400x300/111827/8b5cf6?text=📍'"><div class="nc-overlay"></div><span class="nc-type">${type}</span><span class="nc-rating">${rating}</span></div><div class="nc-body"><h3 class="nc-title">${escHtml(name)}</h3><p class="nc-addr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${escHtml(addr)}</p><div class="nc-cta">Детальніше <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div></div></a>`;
+                const photo  = p.photos?.[0] ? getPhotoUrl(p.photos[0], 500) : 'https://placehold.co/400x300/111827/8b5cf6?text=%F0%9F%93%8D';
+                return `<a class="nearby-card" href="city_page.html?placeId=${p.id}" style="animation-delay:${i*.07}s"><div class="nc-img-wrap"><img class="nc-img" src="${photo}" alt="${escHtml(name)}" loading="lazy"><div class="nc-overlay"></div><span class="nc-type">${type}</span><span class="nc-rating">${rating}</span></div><div class="nc-body"><h3 class="nc-title">${escHtml(name)}</h3><p class="nc-addr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${escHtml(addr)}</p><div class="nc-cta">Детальніше <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div></div></a>`;
             }).join('');
+            nearbyList.querySelectorAll('img').forEach(img => {
+                img.addEventListener('error', () => {
+                    img.src = 'https://placehold.co/400x300/111827/8b5cf6?text=📍';
+                });
+            });
             bindArrows(nearbyList, "#nearby-section .arrow-prev", "#nearby-section .arrow-next", nearbySection);
         } catch (e) { console.error("Nearby error:", e); }
     }
@@ -334,8 +374,14 @@ backBtn.href = '/new-main';
     }
 
     /* ── КАРТА ── */
-    function renderMap(lat, lng) {
-        mapEl.innerHTML = `<iframe src="https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=place_id:${placeId}&language=uk" width="100%" height="100%" frameborder="0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`;
+    async function renderMap(lat, lng) {
+        try {
+            const key = await getMapsEmbedKey();
+            mapEl.innerHTML = `<iframe src="https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(key)}&q=place_id:${encodeURIComponent(placeId)}&language=uk" width="100%" height="100%" frameborder="0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`;
+        } catch (err) {
+            console.error('Map embed error:', err);
+            mapEl.innerHTML = '<div class="map-error">Не вдалося завантажити карту</div>';
+        }
     }
 
     /* ── REVEAL ── */
@@ -348,8 +394,20 @@ backBtn.href = '/new-main';
     function escHtml(str) { return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
     async function syncData(place, name) {
-        const photo = place.photos?.[0] ? `https://places.googleapis.com/v1/${place.photos[0].name}/media?maxHeightPx=800&key=${apiKey}` : null;
-        await fetch('/api/places/details', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ place_id:place.id, name, photo_url:photo, description:place.editorialSummary?.text||place.formattedAddress, rating:place.rating, latitude:place.location?.latitude, longitude:place.location?.longitude }) }).catch(()=>{});
+        const photo = place.photos?.[0] ? getPhotoUrl(place.photos[0].name, 800) : null;
+        await fetch('/api/places/details', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                place_id: place.id,
+                name,
+                photo_url: photo,
+                description: place.editorialSummary?.text || place.formattedAddress,
+                rating: place.rating,
+                latitude: place.location?.latitude,
+                longitude: place.location?.longitude
+            })
+        }).catch(() => {});
     }
 
     init();

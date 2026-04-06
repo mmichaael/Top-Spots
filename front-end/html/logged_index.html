@@ -19,7 +19,7 @@
             <!-- ЛОГОТИП -->
             <div class="brand">
                 <video class="logo_box" height="200px" autoplay muted playsinline loop>
-                    <source src="./img/output_video1.webm" type="video/webm" />
+                    <source src="/img/output_video1.webm" type="video/webm" />
                     Logo don't opened
                 </video>
             </div>
@@ -130,13 +130,14 @@
             <div class="bottom-controls">
                 <div class="language-selector">
                     <i class="fas fa-globe"></i>
-                    <select>
-                        <option>Українська</option>
-                        <option>English</option>
-                        <option>Deutsch</option>
+                    <select id="loggedLanguageSelect">
+                        <option value="uk">Українська</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                        <option value="pl">Polski</option>
                     </select>
                 </div>
-                <button class="theme-toggle"><i class="fas fa-moon"></i></button>
+                <button class="theme-toggle" id="loggedThemeToggle" type="button"><i class="fas fa-moon"></i></button>
             </div>
             <p class="copyright">© 2026 Top Spots. Всі права захищені.</p>
         </div>

@@ -1,6 +1,228 @@
 import {authFunctionsHandler} from "./functions.js"
 const Functions = new authFunctionsHandler()
 
+const AUTH_TRANSLATIONS = {
+    uk: {
+        greetingRegister: 'Створіть акаунт',
+        greetingRegisterSub: 'Почніть свою подорож',
+        greetingLogin: 'Увійдіть до акаунту',
+        greetingLoginSub: 'Продовжуйте свою подорож',
+        googleSignUp: 'Реєстрація через Google',
+        googleSignIn: 'Увійти через Google',
+        orText: 'Або',
+        placeholderName: 'Імʼя',
+        placeholderEmail: 'Email',
+        placeholderPassword: 'Пароль',
+        remember: 'Запам’ятати мене',
+        register: 'Зареєструватися',
+        login: 'Увійти',
+        openLogIn: 'Увійти',
+        openRegister: 'Зареєструватися',
+        alreadyHave: 'Вже є акаунт?',
+        dontHave: 'Ще немає акаунту?',
+        forgotPassword: 'Забули пароль?',
+        resetPassword: 'Скинути',
+        returnToLogin: 'Повернутися до входу',
+        resetHeader: 'Забули пароль?',
+        resetSub: 'Введіть email для скидання',
+        resetEmail: 'Введіть свій email',
+        confirm: 'Підтвердити',
+        home: 'Головна'
+    },
+    en: {
+        greetingRegister: 'Create an Account',
+        greetingRegisterSub: 'Start your journey',
+        greetingLogin: 'Log In to your Account',
+        greetingLoginSub: 'Continue your journey',
+        googleSignUp: 'Sign up with Google',
+        googleSignIn: 'Sign in with Google',
+        orText: 'Or',
+        placeholderName: 'Name',
+        placeholderEmail: 'Email',
+        placeholderPassword: 'Password',
+        remember: 'Remember me',
+        register: 'Register',
+        login: 'Login',
+        openLogIn: 'Log in',
+        openRegister: 'Register',
+        alreadyHave: 'Already have an account?',
+        dontHave: 'Don’t have an account yet?',
+        forgotPassword: 'Forgot your password?',
+        resetPassword: 'Reset it now',
+        returnToLogin: 'Return back to login',
+        resetHeader: 'Forgot your Password?',
+        resetSub: 'Enter your email to reset it!',
+        resetEmail: 'Enter your email',
+        confirm: 'Confirm',
+        home: 'Home'
+    },
+    de: {
+        greetingRegister: 'Erstelle ein Konto',
+        greetingRegisterSub: 'Beginne deine Reise',
+        greetingLogin: 'Melde dich an',
+        greetingLoginSub: 'Setze deine Reise fort',
+        googleSignUp: 'Mit Google registrieren',
+        googleSignIn: 'Mit Google anmelden',
+        orText: 'Oder',
+        placeholderName: 'Name',
+        placeholderEmail: 'E-Mail',
+        placeholderPassword: 'Passwort',
+        remember: 'Angemeldet bleiben',
+        register: 'Registrieren',
+        login: 'Anmelden',
+        openLogIn: 'Anmelden',
+        openRegister: 'Registrieren',
+        alreadyHave: 'Hast du bereits ein Konto?',
+        dontHave: 'Noch kein Konto?',
+        forgotPassword: 'Passwort vergessen?',
+        resetPassword: 'Zurücksetzen',
+        returnToLogin: 'Zurück zum Login',
+        resetHeader: 'Passwort vergessen?',
+        resetSub: 'Gib deine E-Mail ein, um es zurückzusetzen',
+        resetEmail: 'Gib deine E-Mail ein',
+        confirm: 'Bestätigen',
+        home: 'Startseite'
+    },
+    pl: {
+        greetingRegister: 'Utwórz konto',
+        greetingRegisterSub: 'Rozpocznij swoją podróż',
+        greetingLogin: 'Zaloguj się',
+        greetingLoginSub: 'Kontynuuj swoją podróż',
+        googleSignUp: 'Zarejestruj się przez Google',
+        googleSignIn: 'Zaloguj się przez Google',
+        orText: 'Lub',
+        placeholderName: 'Imię',
+        placeholderEmail: 'Email',
+        placeholderPassword: 'Hasło',
+        remember: 'Zapamiętaj mnie',
+        register: 'Zarejestruj się',
+        login: 'Zaloguj się',
+        openLogIn: 'Zaloguj się',
+        openRegister: 'Zarejestruj się',
+        alreadyHave: 'Masz już konto?',
+        dontHave: 'Nie masz jeszcze konta?',
+        forgotPassword: 'Zapomniałeś hasła?',
+        resetPassword: 'Zresetuj',
+        returnToLogin: 'Powrót do logowania',
+        resetHeader: 'Zapomniałeś hasła?',
+        resetSub: 'Wpisz swój e-mail, aby zresetować',
+        resetEmail: 'Wpisz swój e-mail',
+        confirm: 'Potwierdź',
+        home: 'Strona główna'
+    }
+}
+
+function getSavedAuthLanguage() {
+    return localStorage.getItem('topspots_locale') || 'en';
+}
+
+function applyAuthLanguage(locale) {
+    const dict = AUTH_TRANSLATIONS[locale] || AUTH_TRANSLATIONS.en;
+    const languageSelect = document.getElementById('authLanguageSelect');
+    if (languageSelect) languageSelect.value = locale;
+
+    const greetings = document.querySelectorAll('.greeting_text_01');
+    if (greetings[0]) greetings[0].textContent = dict.greetingRegister;
+    if (greetings[1]) greetings[1].textContent = dict.greetingLogin;
+
+    const subtitles = document.querySelectorAll('.greeting_text_02');
+    if (subtitles[0]) subtitles[0].textContent = dict.greetingRegisterSub;
+    if (subtitles[1]) subtitles[1].textContent = dict.greetingLoginSub;
+
+    const googleRegister = document.querySelector('#registratioBlock .google-btn span');
+    const googleLogin = document.querySelector('#loginBlock .google-btn span');
+    if (googleRegister) googleRegister.textContent = dict.googleSignUp;
+    if (googleLogin) googleLogin.textContent = dict.googleSignIn;
+
+    document.querySelectorAll('.or_text').forEach(el => el.textContent = dict.orText);
+    document.querySelectorAll('input[name="username"]').forEach(el => el.placeholder = dict.placeholderName);
+    document.querySelectorAll('input[name="email"]').forEach(el => el.placeholder = dict.placeholderEmail);
+    document.querySelectorAll('input[type="password"]').forEach(el => el.placeholder = dict.placeholderPassword);
+
+    document.querySelectorAll('.Check_remember').forEach(label => {
+        if (label.lastChild) label.lastChild.textContent = ` ${dict.remember}`;
+    });
+
+    const registerBtn = document.querySelector('#register_btn span');
+    const loginBtn = document.querySelector('#login_btn span');
+    if (registerBtn) registerBtn.textContent = dict.register;
+    if (loginBtn) loginBtn.textContent = dict.login;
+
+    const openLogInBtn = document.getElementById('openLogIn');
+    const openRegisterBtn = document.getElementById('openRegister');
+    if (openLogInBtn) openLogInBtn.textContent = dict.openLogIn;
+    if (openRegisterBtn) openRegisterBtn.textContent = dict.openRegister;
+
+    const alreadyText = document.querySelector('#registratioBlock .logAndreg_text');
+    if (alreadyText) {
+        const button = alreadyText.querySelector('#openLogIn');
+        if (button) button.textContent = dict.openLogIn;
+        const textNode = Array.from(alreadyText.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+        if (textNode) textNode.textContent = `${dict.alreadyHave} `;
+    }
+    const dontHaveText = document.querySelector('#loginBlock .logAndreg_text');
+    if (dontHaveText) {
+        const button = dontHaveText.querySelector('#openRegister');
+        if (button) button.textContent = dict.openRegister;
+        const textNode = Array.from(dontHaveText.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+        if (textNode) textNode.textContent = `${dict.dontHave} `;
+    }
+
+    const resetTitle = document.querySelector('.text_reset_password');
+    if (resetTitle) {
+        const button = resetTitle.querySelector('#resetPassword');
+        if (button) button.textContent = dict.resetPassword;
+        const textNode = Array.from(resetTitle.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+        if (textNode) textNode.textContent = `${dict.forgotPassword} `;
+    }
+
+    const resetHeader = document.querySelector('.rp_header_text_01');
+    const resetSub = document.querySelector('.rp_header_text_02');
+    if (resetHeader) resetHeader.textContent = dict.resetHeader;
+    if (resetSub) resetSub.textContent = dict.resetSub;
+
+    const resetEmailInput = document.querySelector('.rp_footer_email');
+    if (resetEmailInput) resetEmailInput.placeholder = dict.resetEmail;
+
+    const confirmBtn = document.getElementById('confirmResentPasswordBtn');
+    if (confirmBtn) confirmBtn.textContent = dict.confirm;
+
+    const returnBtn = document.getElementById('returnBtn');
+    if (returnBtn) returnBtn.textContent = dict.returnToLogin;
+
+    const homeBtn = document.getElementById('homePageBtn');
+    if (homeBtn) homeBtn.textContent = dict.home;
+}
+
+function applyAuthTheme(isLight) {
+    document.body.classList.toggle('light-theme', isLight);
+    const themeToggle = document.getElementById('authThemeToggle');
+    if (themeToggle) themeToggle.textContent = isLight ? '🌞' : '🌙';
+    localStorage.setItem('topspots_theme', isLight ? 'light' : 'dark');
+}
+
+function initAuthControls() {
+    const languageSelect = document.getElementById('authLanguageSelect');
+    if (languageSelect) {
+        languageSelect.value = getSavedAuthLanguage();
+        languageSelect.addEventListener('change', () => {
+            const locale = languageSelect.value;
+            localStorage.setItem('topspots_locale', locale);
+            applyAuthLanguage(locale);
+        });
+    }
+
+    const themeToggle = document.getElementById('authThemeToggle');
+    const savedTheme = localStorage.getItem('topspots_theme') || 'dark';
+    applyAuthTheme(savedTheme === 'light');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const isLight = !document.body.classList.contains('light-theme');
+            applyAuthTheme(isLight);
+        });
+    }
+    applyAuthLanguage(getSavedAuthLanguage());
+}
 
 //---------------LOG IN--------------------------------------------
 const loginForm = document.getElementById('Login_form')
@@ -158,6 +380,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
         loginBlock.classList.replace('invalidRegLogForm', 'validRegLogForm');
     })
+
+    const homePageBtn = document.getElementById('homePageBtn');
+    if (homePageBtn) {
+        homePageBtn.addEventListener('click', () => {
+            window.location.href = '/';
+        });
+    }
 })
 //------------------------------------ Right Side Change Photo-----------------------------------------------
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -199,6 +428,11 @@ logCheckVsbBtn.addEventListener('click', () => {
     const showPassword = "url('../img/opened-Eyes.png')";
     const blockPassword = "url('../img/closed-Eyes.png')";
     Functions.controllPasswordVisibility(logpasswordField, logCheckVsbBtn, showPassword, blockPassword);
+});
+
+// Language and theme handling
+document.addEventListener('DOMContentLoaded', () => {
+    initAuthControls();
 });
 
 
