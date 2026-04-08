@@ -32,7 +32,8 @@ app.use(helmet({
                 "https://www.googleapis.com"
             ],
             imgSrc: ["'self'", "data:", "https:"],
-            frameSrc: ["'self'", "https://www.google.com", "https://maps.google.com"] // 🔓 Дозволяємо Google Maps frames
+            frameSrc: ["'self'", "https://www.google.com", "https://maps.google.com"] 
+            //  Дозволяємо Google Maps frames
         }
     },
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
@@ -40,7 +41,7 @@ app.use(helmet({
     noSniff: true,
     xssFilter: true,
     frameguard: false
-}));
+}));    
 
 
 app.use(mongoSanitize()); 
@@ -112,10 +113,10 @@ app.get("/city_page.html", (req, res) => {
     res.sendFile(path.join(__dirname, "../front-end/html/city_page.html"));
 });
 
-// 🛡️ ── ГЛОБАЛЬНІ ERROR HANDLERS ──────────────────────────────────
+//  ── ГЛОБАЛЬНІ ERROR HANDLERS ──────────────────────────────────
 // 404 Handler
 app.use((req, res) => {
-    console.warn(`⚠️ 404: ${req.method} ${req.path}`);
+    console.warn(` 404: ${req.method} ${req.path}`);
     res.status(404).json({
         success: false,
         message: 'Маршрут не знайдено',
@@ -129,7 +130,7 @@ app.use((err, req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || 'Внутрішня pomилка сервера';
     
-    console.error(`❌ [${status}] ${message}`, {
+    console.error(` [${status}] ${message}`, {
         method: req.method,
         path: req.path,
         ip: req.ip,
@@ -151,14 +152,14 @@ const PORT = process.env.PORT || 3500;
 const HOST = process.env.HOST || "localhost";
 
 app.listen(PORT, async () => {
-    console.log(`\n🚀 Server running at http://${HOST}:${PORT}\n`);
+    console.log(`\n Server running at http://${HOST}:${PORT}\n`);
     
     // ── Rate Limiter Status ──
-    console.log('🛡️  Rate Limiter initialized:');
-    console.log(`   • Search endpoints: 7 requests/60 seconds per user`);
-    console.log(`   • Global limit: 100 requests/600 seconds per user`);
-    console.log(`   • IP block threshold: 30 violations/60 seconds`);
-    console.log(`   • IP block duration: 1 hour`);
+    console.log('  Rate Limiter initialized:');
+    console.log(`    Search endpoints: 7 requests/60 seconds per user`);
+    console.log(`    Global limit: 100 requests/600 seconds per user`);
+    console.log(`   IP block threshold: 30 violations/60 seconds`);
+    console.log(`   IP block duration: 1 hour`);
     console.log('');
 
     //  Cron
