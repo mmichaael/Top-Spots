@@ -318,9 +318,9 @@ loadPageContent = (content) => {
     if (container) {
         container.innerHTML = content;
         window.scrollTo(0, 0);
-        console.log("✅ Контент успішно вставлено в #main-page-content");
+        console.log("Контент успішно вставлено в #main-page-content");
     } else {
-        console.error("❌ КРИТИЧНА ПОМИЛКА: Елемент <main id='main-page-content'> не знайдено в HTML!");
+        console.error("КРИТИЧНА ПОМИЛКА: Елемент <main id='main-page-content'> не знайдено в HTML!");
     }
 }
     //------------------------ Sending Cookie for Log Out ----------------------------------

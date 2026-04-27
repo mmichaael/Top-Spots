@@ -12,117 +12,412 @@ const OpenAI = require("openai");
 const https = require('https');
 const fs = require('fs');
 const multer = require('multer');
+const { LRUCache } = require('lru-cache'); 
+
 
  require('dotenv').config({ path: path.resolve(__dirname, './privateInf.env') });
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
+           
 
-class Controller {
-    pageBaseMain = path.join(__dirname, '../front-end/html/index.html');
-    pageFullMain = path.join(__dirname, '../front-end/html/logged_index.html');
-    pageError = path.join(__dirname, '../front-end/html/error.html');
-    pageAuth = path.join(__dirname, '../front-end/html/authentication.html');
-    pageEmailConfirmation = path.join(
-        __dirname,
-        '../front-end/html/email_confirmation.html',
-    );
-    pageResetPasswordEnterPage = path.join(
 
-        __dirname,
-        '../front-end/html/reset_password.html',
-    );
-avatarUpload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 2 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        if (['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Only JPEG/PNG/WEBP allowed'));
+ const GroqClient = {
+    apiKey:  process.env.GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1/chat/completions',
+    async chat(systemPrompt, userMessage) {
+        if (!this.apiKey) throw new Error('GROQ_API_KEY not set');
+        const r = await axios.post(this.baseURL, {
+            model: 'mixtral-8x7b-32768',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user',   content: userMessage  },
+            ],
+            temperature: 0.55,
+            max_tokens:  300,
+        }, { headers: { 'Authorization': `Bearer ${this.apiKey}` } });
+        return r.data.choices[0].message.content;
+    }
+};
+ 
+const TogetherAIClient = {
+    apiKey:  process.env.TOGETHER_AI_API_KEY,
+    baseURL: 'https://api.together.xyz/v1/chat/completions',
+    async chat(systemPrompt, userMessage) {
+        if (!this.apiKey) throw new Error('TOGETHER_AI_API_KEY not set');
+        const r = await axios.post(this.baseURL, {
+            model: 'mistralai/Mistral-7B-Instruct-v0.1',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user',   content: userMessage  },
+            ],
+            temperature: 0.55,
+            max_tokens:  300,
+        }, { headers: { 'Authorization': `Bearer ${this.apiKey}` } });
+        return r.data.choices[0].message.content;
+    }
+};
+ 
+const HuggingFaceClient = {
+    apiKey:  process.env.HUGGINGFACE_API_KEY,
+    baseURL: 'https://api-inference.huggingface.co/models',
+    async chat(systemPrompt, userMessage) {
+        if (!this.apiKey) throw new Error('HUGGINGFACE_API_KEY not set');
+        const modelId = 'mistralai/Mistral-7B-Instruct-v0.1';
+        const r = await axios.post(`${this.baseURL}/${modelId}`, {
+            inputs: `${systemPrompt}\n\nUser: ${userMessage}\n\nAssistant:`,
+            parameters: { max_new_tokens: 300, temperature: 0.55, top_p: 0.95 }
+        }, { headers: { 'Authorization': `Bearer ${this.apiKey}` } });
+        if (Array.isArray(r.data) && r.data[0]?.generated_text) {
+            let text = r.data[0].generated_text;
+            const idx = text.indexOf('Assistant:');
+            if (idx !== -1) text = text.slice(idx + 10);
+            return text.trim();
+        }
+        throw new Error('Unexpected HF response format');
+    }
+};
+ 
+// ── Ліміти (free tier) ───────────────────────────────────────
+const _aiLimits = {
+    openai:      100,
+    groq:        1400,
+    together:    200,
+    huggingface: 500,
+};
+ 
+// ── Перевірка ліміту з БД ────────────────────────────────────
+
+async function _aiAvailable(provider) {
+    try {
+        // Якщо reset_at вже минув — скидаємо лічильник
+        await pool.query(
+            `UPDATE "AIUsage"
+             SET count = 0, reset_at = NOW() + INTERVAL '1 day'
+             WHERE provider = $1 AND reset_at < NOW()`,
+            [provider]
+        );
+        const row = await pool.query(
+            `SELECT count FROM "AIUsage" WHERE provider = $1`,
+            [provider]
+        );
+        if (!row.rows.length) return true; // якщо запис не існує — дозволяємо
+        return row.rows[0].count < _aiLimits[provider];
+    } catch (e) {
+        console.warn(`[AI] _aiAvailable DB error (${provider}):`, e.message);
+        return true; // при помилці БД — дозволяємо спробу
+    }
+}
+ 
+// ── Збільшити лічильник в БД ─────────────────────────────────
+async function _aiTick(provider) {
+    try {
+        const result = await pool.query(
+            `UPDATE "AIUsage"
+             SET count = count + 1
+             WHERE provider = $1
+             RETURNING count`,
+            [provider]
+        );
+        const count = result.rows[0]?.count ?? '?';
+        console.log(`[AI] ${provider.toUpperCase()} used: ${count}/${_aiLimits[provider]}`);
+    } catch (e) {
+        console.warn(`[AI] _aiTick DB error (${provider}):`, e.message);
+    }
+}
+ 
+// ── Fallback ланцюг: OpenAI → Groq → Together → HuggingFace ─
+async function askAI(systemPrompt, userMessage) {
+    const providers = [
+        {
+            name: 'openai',
+            async call() {
+                const r = await openai.chat.completions.create({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user',   content: userMessage  },
+                    ],
+                    temperature: 0.55,
+                    max_tokens:  300,
+                });
+                return r.choices[0].message.content;
+            }
+        },
+        {
+            name: 'groq',
+            async call() { return GroqClient.chat(systemPrompt, userMessage); }
+        },
+        {
+            name: 'together',
+            async call() { return TogetherAIClient.chat(systemPrompt, userMessage); }
+        },
+        {
+            name: 'huggingface',
+            async call() { return HuggingFaceClient.chat(systemPrompt, userMessage); }
+        },
+    ];
+ 
+    for (const provider of providers) {
+        const available = await _aiAvailable(provider.name);
+        if (!available) {
+            console.log(`[AI] ${provider.name} — денний ліміт вичерпано, переходимо далі`);
+            continue;
+        }
+        try {
+            await _aiTick(provider.name);
+            const reply = await provider.call();
+            console.log(`[AI] ✅ ${provider.name}`);
+            return { reply, model: provider.name };
+        } catch (err) {
+            console.warn(`[AI] ❌ ${provider.name}: ${err.message}`);
+            // Продовжуємо до наступного провайдера
         }
     }
-});
+ 
+    throw new Error('ALL_PROVIDERS_FAILED');
+}
 
+class Controller {
+     pageBaseMain = path.join(__dirname, '../front-end/html/index.html');
+    pageFullMain = path.join(__dirname, '../front-end/html/logged_index.html');
+    pageError    = path.join(__dirname, '../front-end/html/error.html');
+    pageAuth     = path.join(__dirname, '../front-end/html/authentication.html');
+    pageEmailConfirmation = path.join(__dirname, '../front-end/html/email_confirmation.html');
+    pageResetPasswordEnterPage = path.join(__dirname, '../front-end/html/reset_password.html');
+ 
+  
+ 
     constructor() {
-        this.chatCache = new NodeCache({ stdTTL: 60, checkperiod: 120 }); // 60 сек кеш
+        // LRU кеш: 500 відповідей, TTL 30 хвилин
+        this.chatCache = new LRUCache({ max: 500, ttl: 1_800_000 });
     }
-
+ 
     hashToken = (token) => {
         return crypto.createHash('sha3-256').update(token).digest('hex');
     };
+ 
 
-    saveSearchStats = async (user_id, query, category, source, results_count) => {
-        if (!user_id || !query) return;
+
+geocodeReverse = async (req, res) => {
+       try {
+           const { lat, lon } = req.query;
+           if (!lat || !lon) {
+               return res.status(400).json({ error: 'Missing lat/lon' });
+           }
+           res.json({ city: 'your area', lat, lon });
+       } catch (err) {
+           res.status(500).json({ error: 'Geocode error' });
+       }
+   };
+
+
+ requireAuth = (req, res, next) => {
         try {
-            await pool.query(
-                `INSERT INTO "SearchStats" (user_id, query_text, category, source, results_count, created_at)
-                 VALUES ($1, $2, $3, $4, $5, NOW())`,
-                [user_id, query, category || null, source || 'unknown', results_count || 0],
+            // Попробуй из cookies (основной способ)
+            const accessToken = req.cookies.accessToken;
+            
+            // Если в cookies нет, попробуй из Authorization header
+            const headerToken = (() => {
+                const header = req.headers.authorization || '';
+                return header.startsWith('Bearer ') ? header.slice(7) : null;
+            })();
+            
+            const token = accessToken || headerToken;
+            
+            if (!token) {
+                console.log('[AUTH] ❌ No token found (cookies or header)');
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+ 
+            jwt.verify(
+                token,
+                process.env.ACCESSJWTTOKEN,
+                (err, decoded) => {
+                    if (err) {
+                        console.log('[AUTH] ❌ Token verification failed:', err.message);
+                        return res.status(401).json({ error: 'Invalid or expired token' });
+                    }
+                    
+          
+                    req.user = decoded;
+                    req.username = decoded.username;
+                    req.email = decoded.email;
+                    req.user_id = decoded.user_id || decoded.id;
+                    
+                    console.log('[AUTH] ✅ Token verified for user:', decoded.username || decoded.email);
+                    next();
+                }
             );
         } catch (err) {
-            console.warn(`SearchStats insert failed: ${err.message}`);
+            console.error('[AUTH] Exception during token verification:', err.message);
+            return res.status(500).json({ error: 'Server error' });
         }
     };
-
+ 
+ 
+ 
+    _buildSystemPrompt(searchHistory = [], context = {}) {
+        const { userCity, recentMessages } = context;
+ 
+        // Персоналізована геолокація
+        const locationLine = userCity
+            ? `\nUser's current city: ${userCity}. Prioritise recommendations in or near ${userCity}.`
+            : '';
+ 
+        // Остання пошукова активність
+        const searchLine = searchHistory.length
+            ? `\nUser's recent searches on Top-Spots: ${searchHistory.map(h => `"${h.query_text}" (${h.category || 'general'})`).join('; ')}.`
+            : '';
+ 
+        // Контекст попередніх повідомлень чату
+        const contextLine = recentMessages
+            ? `\n\nConversation so far:\n${recentMessages}`
+            : '';
+ 
+        return `You are a friendly, knowledgeable travel concierge for Top-Spots — a premium tourism platform.
+${locationLine}${searchLine}
+ 
+PERSONALITY RULES (follow strictly):
+- Use 1–2 relevant emojis per message to feel alive and warm (not robotic)
+- NEVER start with "Hi!", "Hello!", "Привіт!" or any greeting — the user already knows you
+- Continue naturally from the conversation context, as if you remember everything
+- Be concise: max 3 short paragraphs
+- If the user mentions food/drink preferences, remember and reference them
+- If you know the user's city, give specific local recommendations
+- Always end with one concrete actionable suggestion
+- Reply in the same language as the user's message
+- Never mention that you have search history or location data${contextLine}`;
+    }
+ 
 chatAssistant = async (req, res) => {
         try {
-            const { message } = req.body;
-
-            if (!message) {
-                console.log("Message not provided");
-                return res.status(400).json({
-                    error: "Введи повідомлення",
-                });
+            const { message, context = {} } = req.body;
+            if (!message?.trim()) {
+                return res.status(400).json({ error: 'Введи повідомлення' });
             }
 
-            // --- CHECK CACHE ---
-            const cached = this.chatCache.get(message);
-            if (cached) {
-                console.log("Chat cache HIT");
-                return res.status(200).json({ reply: cached });
+            const userId   = req.user?.id || req.user?.user_id || null;
+            const rawKey   = `${userId || 'anon'}::${message.trim().toLowerCase()}`;
+            const cacheKey = crypto.createHash('md5').update(rawKey).digest('hex');
+ 
+            // ── 1. DB Cache ───────────────────────────────────
+            const hasContext = !!context?.recentMessages;
+            if (!hasContext) {
+                try {
+                    const dbRow = await pool.query(
+                        `SELECT reply, model FROM "ChatCache" WHERE cache_key = $1 LIMIT 1`,
+                        [cacheKey]
+                    );
+                    if (dbRow.rows.length) {
+                        console.log('[AI] DB cache HIT');
+                        pool.query(
+                            `UPDATE "ChatCache" SET hits = hits + 1 WHERE cache_key = $1`,
+                            [cacheKey]
+                        ).catch(() => {});
+                        return res.status(200).json({
+                            reply:  dbRow.rows[0].reply,
+                            model:  dbRow.rows[0].model,
+                            cached: true,
+                        });
+                    }
+                } catch (e) {
+                    console.warn('[AI] DB cache error:', e.message);
+                }
+ 
+                // ── 2. LRU ────────────────────────────────────
+                const lruHit = this.chatCache.get(cacheKey);
+                if (lruHit) {
+                    console.log('[AI] LRU HIT');
+                    return res.status(200).json({ ...lruHit, cached: true });
+                }
             }
-
-            console.log("Chat cache MISS");
-
-            // --- OPENAI REQUEST ---
-            const completion = await openai.chat.completions.create({
-                model: "gpt-4o-mini",
-                messages: [
-                    {
-                        role: "system",
-                        content:
-                            "Ти — розумний чат-бот сайту Top-Spots,цей сайт про туризм в Україні.Відповідай корисно, стисло і українською."
-                    },
-                    { role: "user", content: message }
-                ],
-                temperature: 0.3,
-                max_tokens: 250
+ 
+            console.log('[AI] Cache MISS — calling AI');
+ 
+            // ── 3. Підтягуємо пошукову історію ───────────────
+            let searchHistory = [];
+            if (userId) {
+                try {
+                    const rows = await pool.query(
+                        `SELECT query_text, category FROM "SearchStats"
+                         WHERE user_id = $1
+                         ORDER BY created_at DESC LIMIT 8`,
+                        [userId]
+                    );
+                    searchHistory = rows.rows;
+                } catch (e) {
+                    console.warn('[AI] History error:', e.message);
+                }
+            }
+ 
+            const systemPrompt = this._buildSystemPrompt(searchHistory, context);
+ 
+            // ── 4. Fallback запит ─────────────────────────────
+            let result;
+            try {
+                result = await askAI(systemPrompt, message);
+            } catch (err) {
+                if (err.message === 'ALL_PROVIDERS_FAILED') {
+                    return res.status(503).json({ error: 'All AI providers unavailable. Try again later.' });
+                }
+                throw err;
+            }
+ 
+            // ── 5. Зберегти в кеш (тільки без контексту) ─────
+            if (!hasContext) {
+                this.chatCache.set(cacheKey, result);
+                pool.query(
+                    `INSERT INTO "ChatCache" (cache_key, user_id, message, reply, model)
+                     VALUES ($1, $2, $3, $4, $5)
+                     ON CONFLICT (cache_key) DO NOTHING`,
+                    [cacheKey, userId, message.trim(), result.reply, result.model]
+                ).catch(e => console.warn('[AI] DB save error:', e.message));
+            }
+ 
+            return res.status(200).json({
+                reply:  result.reply,
+                model:  result.model,
+                cached: false,
             });
-
-            const reply = completion.choices[0].message.content;
-
-            // --- SAVE TO CACHE ---
-            this.chatCache.set(message, reply);
-
-            return res.status(200).json({ reply });
-
+ 
         } catch (err) {
-            console.log("chatAssistant error:", err);
-            return res.status(500).json({
-                error: "Сталася помилка при зверненні до AI"
-            });
+            console.error('[AI] chatAssistant error:', err);
+            return res.status(500).json({ error: 'Error processing your request' });
         }
     };
+ 
 
+saveSearchStats = async (user_id, query, category, source, results_count) => {
+    // Якщо немає ID користувача або запиту — нічого не робимо
+    if (!user_id || !query) return;
 
+    try {
+        await pool.query(
+            `INSERT INTO "SearchStats" (user_id, query_text, category, source, results_count, created_at)
+             VALUES ($1, $2, $3, $4, $5, NOW())`,
+            [
+                user_id, 
+                query, 
+                category || null, 
+                source || 'unknown', 
+                results_count || 0
+            ]
+        );
+    } catch (err) {
+        // Виводимо помилку в консоль, але не кидаємо її далі, 
+        // щоб основний пошук не зупинився через статистику
+        console.warn(`[STATS ERROR] SearchStats insert failed: ${err.message}`);
+    }
+};
 
- autocompletePlaces = async (req, res) => {
-    const { input, category } = req.body;
+autocompletePlaces = async (req, res) => {
+    const { input, category, language } = req.body;
     const email = req.email || null;
     let userId = null;
+    const googleLang = (language || 'uk').toString().toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'uk';
 
-    console.log(`\x1b[36m[API CALL]\x1b[0m Input: "${input}", Cat: "${category}"`);
+    console.log(`\x1b[36m[API CALL]\x1b[0m Input: "${input}", Cat: "${category}", Lang: "${googleLang}"`);
 
     if (email) {
         const userRow = await pool.query(`SELECT user_id FROM "Users" WHERE email = $1`, [email]);
@@ -130,9 +425,20 @@ chatAssistant = async (req, res) => {
     }
 
     try {
-        // 1. Пошук у базі даних з фільтрацією по типах
+        // КРОК 1: ПОШУК У ЛОКАЛЬНІЙ БД
+        const inputLower = input.toLowerCase();
+        let dynamicLimit;
+        
+        if (inputLower.includes('район') || inputLower.includes('область') || inputLower.includes('region') || inputLower.includes('oblast')) {
+            dynamicLimit = 15;
+        } else if (input.split(' ').length === 1) {
+            dynamicLimit = 45; // місто
+        } else {
+            dynamicLimit = 55; // фраза
+        }
+
         let dbQuery = `
-            SELECT place_id, query_name AS name, full_name AS description, photo_url, rating, types 
+            SELECT place_id, full_name AS name, query_name AS description, photo_url, rating, types 
             FROM places 
             WHERE (query_name ILIKE $1 OR full_name ILIKE $1)`;
         
@@ -141,122 +447,199 @@ chatAssistant = async (req, res) => {
             dbQuery += ` AND $2 = ANY(types)`;
             params.push(category);
         }
-        dbQuery += ` LIMIT 5`;
+        dbQuery += ` ORDER BY rating DESC NULLS LAST, COALESCE(save_count, 0) DESC LIMIT ${dynamicLimit}`;
 
         const dbSearch = await pool.query(dbQuery, params);
+        const localResults = dbSearch.rows || [];
 
-        if (dbSearch.rows.length > 0) {
-            console.log(`\x1b[32m[DB HIT]\x1b[0m Знайдено ${dbSearch.rows.length} записів.`);
-            await this.saveSearchStats(userId, input, category, 'db', dbSearch.rows.length);
-            return res.status(200).json({ predictions: dbSearch.rows });
+        // Якщо знайшли достатньо результатів у БД - повертаємо їх
+        if (localResults.length >= dynamicLimit) {
+            console.log(`\x1b[32m[DB HIT]\x1b[0m Знайдено ${localResults.length} записів у БД. Повертаємо їх.`);
+            await this.saveSearchStats(userId, input, category, 'db', localResults.length);
+            return res.status(200).json({ predictions: localResults.slice(0, dynamicLimit) });
         }
 
-        await this.saveSearchStats(userId, input, category, 'db', 0);
-        // 2. Якщо в БД порожньо — запит до Google
-        console.log(`\x1b[33m[DB MISS]\x1b[0m Запит до Google API...`);
+        // КРОК 2: ЯКЩО У БД НЕДОСТАТНЬО - ЗАПИТ ДО GOOGLE
+        console.log(`\x1b[33m[DB PARTIAL]\x1b[0m Знайдено ${localResults.length} записів. Запрошуємо Google...`);
         
-        const categoryHints = {
-            'restaurant': 'ресторан', 'cafe': 'кафе', 'lodging': 'готель',
-            'museum': 'музей', 'park': 'парк', 'shopping_mall': 'торговий центр'
+        const categoryQueries = {
+            'restaurant': { uk: 'популярні ресторани', en: 'popular restaurants', de: 'beliebte Restaurants' },
+            'cafe': { uk: 'популярні кафе', en: 'popular cafes', de: 'beliebte Cafés' },
+            'lodging': { uk: 'популярні готелі', en: 'popular hotels', de: 'beliebte Hotels' },
+            'museum': { uk: 'популярні музеї', en: 'popular museums', de: 'beliebte Museen' },
+            'park': { uk: 'популярні парки', en: 'popular parks', de: 'beliebte Parks' },
+            'shopping_mall': { uk: 'популярні торгові центри', en: 'popular shopping malls', de: 'beliebte Einkaufszentren' }
         };
-        const hint = (category && category !== "(cities)") ? categoryHints[category] : "";
-        const googleInput = `${input} ${hint}`.trim();
 
-        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(googleInput)}&language=uk&components=country:ua&key=${process.env.GOOGLE_API_KEY}`;
+        const defaultQuery = {
+            uk: 'популярні туристичні локації в Європі',
+            en: 'popular tourist attractions in Europe',
+            de: 'beliebte Sehenswürdigkeiten in Europa'
+        };
+
+        const localizedCategory = category && category !== "(cities)" ? categoryQueries[category] : null;
+        const hint = localizedCategory ? (localizedCategory[googleLang] || localizedCategory.en) : "";
+        let searchPhrase = input.trim();
         
-        const response = await fetch(url);
+        if (hint) {
+            searchPhrase = searchPhrase ? `${hint} in ${searchPhrase}` : hint;
+        } else {
+            searchPhrase = searchPhrase || defaultQuery[googleLang] || defaultQuery.en;
+        }
+
+        console.log(`\x1b[36m[GOOGLE REQUEST]\x1b[0m Query: "${searchPhrase}"`);
+        
+        const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchPhrase)}&language=${encodeURIComponent(googleLang)}&key=${process.env.GOOGLE_API_KEY}`;
+        const response = await fetch(textSearchUrl);
         const data = await response.json();
 
-        const formatted = (data.predictions || []).map(p => ({
-            place_id: p.place_id,
-            name: p.structured_formatting ? p.structured_formatting.main_text : p.description,
-            description: p.description,
-            photo_url: null, // Google Autocomplete не повертає фото відразу
-            rating: 4.5
-        }));
+        let results = data.results || [];
+        let pageToken = data.next_page_token;
 
-        await this.saveSearchStats(userId, input, category, 'google', formatted.length);
-        return res.status(200).json({ predictions: formatted });
+        // Отримуємо додаткові сторінки з Google якщо потрібно
+        while (pageToken && results.length < dynamicLimit) {
+            await new Promise(resolve => setTimeout(resolve, 1400));
+            const moreUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${encodeURIComponent(pageToken)}&key=${process.env.GOOGLE_API_KEY}&language=${encodeURIComponent(googleLang)}`;
+            const moreResp = await fetch(moreUrl);
+            const moreData = await moreResp.json();
+            if (moreData.results?.length) {
+                results = results.concat(moreData.results);
+            }
+            pageToken = moreData.next_page_token;
+        }
+
+        // КРОК 3: МЕРЖ ЛОКАЛЬНИХ РЕЗУЛЬТАТІВ З GOOGLE
+        let finalResults = [...localResults];
+        
+        if (results.length > 0) {
+            const existingIds = new Set(localResults.map(item => item.place_id));
+            const newResults = results.filter(item => item.place_id && !existingIds.has(item.place_id));
+            
+            // Зберігаємо нові місця в БД
+            if (newResults.length > 0) {
+                console.log(`\x1b[32m[DB SAVE]\x1b[0m Зберігаю ${newResults.length} нових місць з Google...`);
+                
+                const toSave = newResults.map(p => ({
+                    place_id: p.place_id,
+                    name: p.name,
+                    vicinity: p.formatted_address,
+                    photo_url: p.photos?.[0]?.photo_reference 
+                        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${p.photos[0].photo_reference}&key=${process.env.GOOGLE_API_KEY}` 
+                        : null,
+                    rating: p.rating,
+                    latitude: p.geometry?.location?.lat,
+                    longitude: p.geometry?.location?.lng,
+                    types: p.types || []
+                }));
+
+                try {
+                    for (const place of toSave) {
+                        await pool.query(`
+                            INSERT INTO places (place_id, query_name, full_name, photo_url, rating, latitude, longitude, types)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            ON CONFLICT (place_id) DO UPDATE SET
+                                rating = EXCLUDED.rating,
+                                photo_url = EXCLUDED.photo_url,
+                                latitude = EXCLUDED.latitude,
+                                longitude = EXCLUDED.longitude,
+                                types = EXCLUDED.types
+                        `, [place.place_id, input, place.name, place.photo_url, place.rating, place.latitude, place.longitude, place.types]);
+                    }
+                    console.log(`\x1b[32m[DB SAVE SUCCESS]\x1b[0m Успішно збережено ${toSave.length} місць`);
+                } catch (e) {
+                    console.log(`\x1b[31m[DB SAVE ERROR]\x1b[0m ${e.message}`);
+                }
+            }
+
+            // Додаємо нові результати до фіналу
+            const formatted = newResults.map(p => ({
+                place_id: p.place_id,
+                name: p.name || p.formatted_address || 'Місце',
+                description: p.formatted_address || p.name || '',
+                photo_url: p.photos?.[0]?.photo_reference 
+                    ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${p.photos[0].photo_reference}&key=${process.env.GOOGLE_API_KEY}` 
+                    : null,
+                rating: p.rating || 4.5
+            }));
+
+            finalResults = finalResults.concat(formatted);
+        }
+
+        // Логування фіналу
+        console.log(`\x1b[32m[RESULT]\x1b[0m Повертаємо ${finalResults.length} результатів (${localResults.length} з БД + ${finalResults.length - localResults.length} з Google)`);
+await this.saveSearchStats(userId, input, category, 'db', localResults.length);
+        return res.status(200).json({ predictions: finalResults.slice(0, dynamicLimit) });
+
     } catch (err) {
-        console.error("❌ Помилка сервера:", err);
+        console.error("Помилка сервера:", err);
         res.status(500).json({ error: "Internal Server Error" });
     }
 };
 
-saveNearbyPlaces = async (req, res) => {
-    const { places } = req.body;
-    if (!places || !Array.isArray(places)) {
-        return res.status(400).json({ error: "No places provided" });
-    }
-    try {
-        const saved = [];
-        for (const place of places) {
-            const insertQuery = `
-                INSERT INTO places (
-                    place_id, query_name, full_name, photo_url, rating, latitude, longitude, types
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                ON CONFLICT (place_id) DO UPDATE SET
-                    rating = EXCLUDED.rating,
-                    photo_url = EXCLUDED.photo_url,
-                    latitude = EXCLUDED.latitude,
-                    longitude = EXCLUDED.longitude,
-                    types = EXCLUDED.types
-                RETURNING *`;
 
-            const result = await pool.query(insertQuery, [
-                place.place_id,
-                place.name,
-                place.vicinity,
-                place.photo_url,
-                place.rating,
-                place.latitude,
-                place.longitude,
-                place.types || []
-            ]);
-            saved.push(result.rows[0]);
+
+placeDetails = async (req, res) => {
+    let { place_id, name, photo_url } = req.body || {};
+
+    if (!place_id) {
+        console.warn('[SYNC] missing place_id in request body');
+        return res.status(400).json({ success: false, error: 'place_id is required' });
+    }
+
+    console.log(`\x1b[35m[SYNC]\x1b[0m Sync attempt: ${name || place_id}`);
+    console.log(`       Photo URL: ${photo_url ? (photo_url.length > 60 ? photo_url.substring(0, 60) + '...' : photo_url) : 'EMPTY'}`);
+
+    try {
+        // Перевірити чи місце вже існує
+        const checkQuery = `SELECT place_id FROM places WHERE place_id = $1`;
+        const checkResult = await pool.query(checkQuery, [place_id]);
+
+        if (checkResult.rows.length > 0) {
+            console.log(`Place ${name || place_id} already exists in DB`);
+            return res.status(200).json({ success: true, message: 'Place already exists', place_id });
         }
-        return res.status(200).json({ success: true, count: saved.length });
-    } catch (err) {
-        console.error("DB Save Error:", err.message);
-        return res.status(500).json({ error: "Server error" });
-    }
-};
 
-getNearbyPlaces = async (req, res) => {
-    const { latitude, longitude, radius = 5000, category } = req.body;
-    try {
-        let cacheQuery = `
-            SELECT * FROM places
-            WHERE (6371 * acos(cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2)) + sin(radians($1)) * sin(radians(latitude)))) <= $3
-            AND photo_url IS NOT NULL
+        // Insert new place
+        const insertQuery = `
+            INSERT INTO places (place_id, query_name, full_name, photo_url, rating)
+            VALUES ($1, $2, $3, $4, 4.5)
+            ON CONFLICT(place_id) DO UPDATE SET photo_url = $4
+            RETURNING place_id, query_name, full_name
         `;
-        const params = [latitude, longitude, radius / 1000];
 
-        if (category) {
-            cacheQuery += ` AND $4 = ANY(types)`;
-            params.push(category);
-        }
+        const result = await pool.query(insertQuery, [place_id, name || null, name || null, photo_url || null]);
 
-        cacheQuery += ` ORDER BY rating DESC NULLS LAST LIMIT 20`;
-
-        const { rows: cached } = await pool.query(cacheQuery, params);
-
-        if (cached.length > 0) {
-            console.log(`\x1b[32m[DB SUCCESS]\x1b[0m Віддаємо ${cached.length} місць з бази`);
-            return res.status(200).json({ results: cached, source: 'database' });
-        }
-
-        return res.status(200).json({ results: [], source: 'empty' });
+        console.log(`Saved to DB: ${name || place_id}`);
+        return res.status(200).json({ success: true, result: result.rows[0] });
     } catch (err) {
-        return res.status(500).json({ error: "Server error" });
+        console.error(`[SYNC ERROR] saving ${name || place_id}:`, err && err.stack ? err.stack : err.message || err);
+        return res.status(500).json({ success: false, error: 'Server error: could not save place details' });
     }
 };
+getPlaceDetails = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query("SELECT * FROM places WHERE place_id = $1", [id]);
+        
+        if (result.rows.length > 0) {
+            console.log(`\x1b[32m[CITY DB]\x1b[0m Дані для ${id} взяті з бази`);
+            return res.status(200).json(result.rows[0]);
+        }
+        
+        return res.status(404).json({ error: "Not found in DB" });
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+};
+
+
 
 
 getBestPhotoData = async (place_id, name, location) => {
     try {
         // А) Шукаємо через Text Search (найкраща якість)
-        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name)}&key=${process.env.GOOGLE_API_KEY}&language=uk`;
+        const lang = (location?.language || 'uk').toString().toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'uk';
+        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name)}&key=${process.env.GOOGLE_API_KEY}&language=${encodeURIComponent(lang)}`;
         const searchRes = await fetch(searchUrl);
         const searchData = await searchRes.json();
 
@@ -283,6 +666,8 @@ getBestPhotoData = async (place_id, name, location) => {
     }
 };
 
+
+
 getGooglePlaceDetails = async (req, res) => {
     const place_id = req.params.id;
     if (!place_id) {
@@ -290,7 +675,8 @@ getGooglePlaceDetails = async (req, res) => {
     }
 
     try {
-        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(place_id)}&fields=name,formatted_address,geometry,rating,user_ratings_total,photos,reviews,editorial_summary&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+        const language = (req.query.language || 'uk').toString().toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'uk';
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(place_id)}&fields=name,formatted_address,geometry,rating,user_ratings_total,photos,reviews,editorial_summary&language=${encodeURIComponent(language)}&key=${process.env.GOOGLE_API_KEY}`;
         const response = await fetch(url);
         const data = await response.json();
 
@@ -336,13 +722,15 @@ getGooglePlaceDetails = async (req, res) => {
     }
 };
 
+
 getGooglePhoto = async (req, res) => {
     const { photoRef, place_id, maxwidth, maxheight } = req.query;
     try {
         let photoReference = photoRef;
 
         if (!photoReference && place_id) {
-            const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(place_id)}&fields=photos&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+            const lang = (req.query.language || 'uk').toString().toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'uk';
+            const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(place_id)}&fields=photos&language=${encodeURIComponent(lang)}&key=${process.env.GOOGLE_API_KEY}`;
             const detailRes = await fetch(detailUrl);
             const detailData = await detailRes.json();
             photoReference = detailData.result?.photos?.[0]?.photo_reference;
@@ -377,104 +765,8 @@ getGooglePhoto = async (req, res) => {
     }
 };
 
-searchGoogleNearby = async (req, res) => {
-    const { latitude, longitude, radius = 1500, types = [] } = req.body;
-    if (!latitude || !longitude) {
-        return res.status(400).json({ error: 'Latitude and longitude are required' });
-    }
 
-    try {
-        const type = Array.isArray(types) && types.length > 0 ? types[0] : 'tourist_attraction';
-        const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${encodeURIComponent(latitude)},${encodeURIComponent(longitude)}&radius=${encodeURIComponent(radius)}&type=${encodeURIComponent(type)}&language=uk&key=${process.env.GOOGLE_API_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
 
-        if (!response.ok || data.status !== 'OK') {
-            return res.status(response.ok ? 502 : response.status).json({ error: data.error_message || data.status || 'Google nearby search failed' });
-        }
-
-        const formatted = (data.results || []).map((place) => ({
-            id: place.place_id,
-            displayName: place.name,
-            formattedAddress: place.vicinity || place.formatted_address,
-            rating: place.rating || 0,
-            location: {
-                latitude: place.geometry?.location?.lat,
-                longitude: place.geometry?.location?.lng,
-            },
-            photos: (place.photos || []).map((photo) => ({
-                reference: photo.photo_reference,
-                width: photo.width,
-                height: photo.height
-            })),
-            types: place.types || []
-        }));
-
-        return res.json({ places: formatted });
-    } catch (err) {
-        console.error('Google nearby search error:', err);
-        return res.status(500).json({ error: 'Unable to fetch nearby places' });
-    }
-};
-
-placeDetails = async (req, res) => {
-    const { place_id, name, photo_url } = req.body;
-    
-    console.log(`\x1b[35m[SYNC]\x1b[0m Спроба синхронізації: ${name}`);
-    console.log(`       Photo URL прийшов: ${photo_url ? photo_url.substring(0, 50) + '...' : 'ПУСТО'}`);
-
-    try {
-        // Перевірити чи місце вже існує
-        const checkQuery = `SELECT place_id FROM places WHERE place_id = $1`;
-        const checkResult = await pool.query(checkQuery, [place_id]);
-        
-        if (checkResult.rows.length > 0) {
-            // Місце вже існує, повернути його
-            console.log(`✅ Місце ${name} вже у БД`);
-            return res.status(200).json({ 
-                success: true, 
-                message: 'Place already exists',
-                place_id: place_id 
-            });
-        }
-        
-        // Додати нове місце
-        const insertQuery = `
-            INSERT INTO places (place_id, query_name, full_name, photo_url, rating)
-            VALUES ($1, $2, $3, $4, 4.5)
-            ON CONFLICT(place_id) DO UPDATE SET photo_url = $4
-            RETURNING place_id, query_name, full_name
-        `;
-        const result = await pool.query(insertQuery, [place_id, name, name, photo_url || null]);
-        
-        console.log(`✅ Успішно збережено в БД: ${name}`);
-        res.status(200).json({ 
-            success: true, 
-            result: result.rows[0] 
-        });
-    } catch (err) {
-        console.log(`🔴 Помилка при збереженні ${name}:`, err.message);
-        res.status(500).json({ 
-            success: false,
-            error: "Server error: could not save place details"
-        });
-    }
-}
-getPlaceDetails = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await pool.query("SELECT * FROM places WHERE place_id = $1", [id]);
-        
-        if (result.rows.length > 0) {
-            console.log(`\x1b[32m[CITY DB]\x1b[0m Дані для ${id} взяті з бази`);
-            return res.status(200).json(result.rows[0]);
-        }
-        
-        return res.status(404).json({ error: "Not found in DB" });
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
-    }
-};
 
 // Допоміжна функція для витягування регіону
 extractRegion = (description) => {
@@ -486,6 +778,19 @@ extractRegion = (description) => {
     return null;
 };
 
+
+
+  avatarUpload = multer({
+        storage: multer.memoryStorage(),
+        limits: { fileSize: 2 * 1024 * 1024 },
+        fileFilter: (req, file, cb) => {
+            if (['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+                cb(null, true);
+            } else {
+                cb(new Error('Only JPEG/PNG/WEBP allowed'));
+            }
+        }
+    });
     //Open Main page
     openBaseMainPage = (req, res) => {
         try {
@@ -671,7 +976,7 @@ sendingEmail = async (to, subject, htmlEmailContent) => {
 
         console.log(`\x1b[36m[EMAIL]\x1b[0m Перевірка з'єднання...`);
         await transporter.verify();
-        console.log(`\x1b[32m[EMAIL]\x1b[0m ✅ З'єднання успішне!`);
+        console.log(`\x1b[32m[EMAIL]\x1b[0m З'єднання успішне!`);
 
         const info = await transporter.sendMail({
             from: `"Top Spots" <${process.env.EMAILSENDER}>`,
@@ -680,7 +985,7 @@ sendingEmail = async (to, subject, htmlEmailContent) => {
             html: htmlEmailContent,
         });
 
-        console.log(`\x1b[32m[EMAIL]\x1b[0m ✅ Відправлено! ID: ${info.messageId}`);
+        console.log(`\x1b[32m[EMAIL]\x1b[0m Відправлено! ID: ${info.messageId}`);
         console.log(`\x1b[32m[EMAIL]\x1b[0m Response: ${info.response}`);
         return true;
     } catch (err) {
@@ -1536,6 +1841,7 @@ sendingEmail = async (to, subject, htmlEmailContent) => {
             return res.status(400).json();
         }
 
+        const lang = (req.query.language || 'uk').toString().toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'uk';
         const searchingInApi = await axios.get(
             'https://maps.googleapis.com/maps/api/place/autocomplete/json',
             {
@@ -1543,8 +1849,7 @@ sendingEmail = async (to, subject, htmlEmailContent) => {
                     input: query,
                     key: process.env.GOOGLE_API_KEY,
                     types: 'establishment',
-                    language: 'uk',
-                    components: 'country:ua',
+                    language: lang,
                 },
             },
         );
@@ -1917,31 +2222,36 @@ deleteUserAccount = async (req, res) => {
 
 
 
+// ─────────────────────────────────────────────────────────────
+// SHOPPING SEARCH  (global — any city worldwide)
+// ─────────────────────────────────────────────────────────────
 searchShops = async (req, res) => {
-    const { city, type } = req.body;
+    const { city, type, language = 'en' } = req.body;
     if (!city || !type) return res.status(400).json({ error: 'city and type required' });
+
+    const lang = language.toString().toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'en';
+
     try {
+        // 1. Try DB cache
         const dbResult = await pool.query(
             `SELECT * FROM places
              WHERE full_name ILIKE $1
-             AND $2 = ANY(types)
-             AND photo_url IS NOT NULL
+               AND $2 = ANY(types)
+               AND photo_url IS NOT NULL
              ORDER BY save_count DESC NULLS LAST, rating DESC NULLS LAST
-             LIMIT 8`,
+             LIMIT 10`,
             [`%${city}%`, type]
         );
 
-        if (dbResult.rows.length >= 3) {
+        if (dbResult.rows.length >= 5) {
             const ids = dbResult.rows.map(r => r.place_id);
-            await pool.query(
-                `UPDATE places SET view_count = view_count + 1 WHERE place_id = ANY($1)`,
-                [ids]
-            );
-            console.log(`[SHOPPING] DB hit: ${dbResult.rows.length} для ${city}/${type}`);
+            await pool.query(`UPDATE places SET view_count = view_count + 1 WHERE place_id = ANY($1)`, [ids]);
+            console.log(`[SHOPPING] DB hit: ${dbResult.rows.length} for ${city}/${type}`);
             return res.status(200).json({ results: dbResult.rows, source: 'database' });
         }
 
-        console.log(`[SHOPPING] DB miss → Google для ${city}/${type}`);
+        // 2. Google Text Search (global)
+        console.log(`[SHOPPING] DB miss → Google for ${city}/${type}`);
         const typeMap = {
             supermarket: 'supermarket', clothing: 'clothing_store',
             electronics: 'electronics_store', pharmacy: 'pharmacy',
@@ -1950,24 +2260,36 @@ searchShops = async (req, res) => {
             building_materials: 'hardware_store', market: 'grocery_or_supermarket'
         };
         const googleType = typeMap[type] || type;
-        const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(type + ' ' + city)}&type=${googleType}&language=uk&key=${process.env.GOOGLE_API_KEY}`;
+        const url = `https://maps.googleapis.com/maps/api/place/textsearch/json` +
+            `?query=${encodeURIComponent(type + ' in ' + city)}` +
+            `&type=${googleType}` +
+            `&language=${encodeURIComponent(lang)}` +
+            `&key=${process.env.GOOGLE_API_KEY}`;
 
         const response = await fetch(url);
         const data = await response.json();
-        if (!data.results?.length) return res.status(200).json({ results: [], source: 'empty' });
+
+        if (data.status === 'ZERO_RESULTS' || !data.results?.length) {
+            return res.status(200).json({ results: [], source: 'empty' });
+        }
+
+        if (data.status !== 'OK') {
+            console.error(`[SHOPPING] Google error: ${data.status} — ${data.error_message}`);
+            return res.status(502).json({ error: data.status, details: data.error_message });
+        }
 
         const saved = [];
-        for (const place of data.results.slice(0, 8)) {
+        for (const place of data.results.slice(0, 50)) {
             const photoUrl = place.photos?.[0]
-                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${place.photos[0].photo_reference}&key=${process.env.GOOGLE_API_KEY}`
+                ? `/api/google/photo?photoRef=${encodeURIComponent(place.photos[0].photo_reference)}&maxheight=800`
                 : null;
             const inserted = await pool.query(
                 `INSERT INTO places (place_id, query_name, full_name, photo_url, rating, latitude, longitude, types, city)
                  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
                  ON CONFLICT (place_id) DO UPDATE SET
-                    rating = EXCLUDED.rating,
+                    rating    = EXCLUDED.rating,
                     photo_url = COALESCE(EXCLUDED.photo_url, places.photo_url),
-                    city = COALESCE(EXCLUDED.city, places.city)
+                    city      = COALESCE(EXCLUDED.city, places.city)
                  RETURNING *`,
                 [
                     place.place_id, place.name, place.formatted_address,
@@ -1980,256 +2302,448 @@ searchShops = async (req, res) => {
             if (inserted.rows[0]) saved.push(inserted.rows[0]);
         }
         return res.status(200).json({ results: saved, source: 'google' });
+
     } catch (err) {
         console.error(`[SHOPPING] error: ${err.message}`);
         return res.status(500).json({ error: 'Server error' });
     }
 };
-
-
-// ── Отримати топ дня ──────────────────────────────────────
 getDailyTop = async (req, res) => {
     try {
-        const result = await pool.query(
-            `SELECT * FROM "DailyTop" ORDER BY rating DESC LIMIT 3`
-        );
-        return res.status(200).json({ top: result.rows });
-    } catch(err) {
-        console.error('[DAILYTOP] getDailyTop error:', err.message);
-        return res.status(500).json({ error: 'Server error' });
+        const { latitude, longitude } = req.body;
+        console.log('[Daily Top] Request with coords:', latitude, longitude);
+
+        let cityName = null;
+
+        // ── Получить город по геолокации ──────────────────────────
+        if (latitude && longitude) {
+            try {
+                const cityRow = await pool.query(
+                    `SELECT city FROM places
+                     WHERE latitude IS NOT NULL
+                       AND longitude IS NOT NULL
+                       AND city IS NOT NULL
+                     ORDER BY (
+                         6371 * acos(
+                             cos(radians($1)) * cos(radians(latitude::float)) *
+                             cos(radians(longitude::float) - radians($2)) +
+                             sin(radians($1)) * sin(radians(latitude::float))
+                         )
+                     ) ASC LIMIT 1`,
+                    [latitude, longitude]
+                );
+                cityName = cityRow.rows[0]?.city || null;
+                console.log('[Daily Top] Found city:', cityName);
+            } catch (err) {
+                console.warn('[Daily Top] Could not determine city:', err.message);
+            }
+        }
+
+
+        const query = `
+            SELECT 
+                place_id, name, address, photo_url,
+                rating, reviews, city
+            FROM "DailyTop"
+            ORDER BY rating DESC
+            LIMIT 12`;
+
+        console.log('[Daily Top] Query params: []');
+        const result = await pool.query(query);
+        console.log('[Daily Top] ✓ Found', result.rows.length, 'places');
+
+        // Если данные есть, возвращаем с городом из гео
+        if (result.rows.length > 0) {
+            return res.status(200).json({ 
+                top: result.rows, 
+                city: cityName || result.rows[0]?.city || 'Top Stores' 
+            });
+        }
+
+        // Fallback: если DailyTop пусто, берём из places
+        console.log('[Daily Top] DailyTop is empty, trying places table...');
+        const fallbackQuery = `
+            SELECT 
+                place_id, query_name as name, full_name as address, photo_url,
+                rating, city
+            FROM places
+            WHERE photo_url IS NOT NULL
+              AND rating >= 4.0
+            ORDER BY (COALESCE(save_count, 0) * 0.3 + rating * 0.7) DESC
+            LIMIT 12`;
+
+        const fallbackResult = await pool.query(fallbackQuery);
+        console.log('[Daily Top] Fallback found', fallbackResult.rows.length, 'places');
+        
+        return res.status(200).json({ 
+            top: fallbackResult.rows, 
+            city: cityName || 'Top Stores' 
+        });
+
+    } catch (err) {
+        console.error('[Daily Top] ❌ Error:', err.message);
+        return res.status(500).json({ error: 'Failed to load daily top' });
     }
 };
 
-// ── Внутрішня логіка оновлення (викликається cron'ом) ─────
+// ── _doRefreshDailyTop ─────────────────────────────────────────
 _doRefreshDailyTop = async () => {
-    const categories = [
-        { key: 'shopping_mall',  label: 'ТЦ',          googleType: 'shopping_mall'   },
-        { key: 'supermarket',    label: 'Супермаркет',  googleType: 'supermarket'     },
-        { key: 'clothing_store', label: 'Одяг',         googleType: 'clothing_store'  },
-        { key: 'electronics',    label: 'Електроніка',  googleType: 'electronics_store'},
-        { key: 'pharmacy',       label: 'Аптека',       googleType: 'pharmacy'        },
-    ];
+    console.log('[DAILYTOP] Starting refresh...');
+    
+    try {
 
-    // Перемішуємо щоразу щоб топ був різним
-    const shuffled = categories.sort(() => Math.random() - 0.5).slice(0, 3);
-    const results  = [];
+        const query = `
+            SELECT 
+                place_id, query_name, full_name, photo_url,
+                rating, reviews, city
+            FROM places
+            WHERE photo_url IS NOT NULL
+              AND rating >= 4.0
+            ORDER BY (COALESCE(save_count, 0) * 0.3 + rating * 0.7) DESC
+            LIMIT 12`;
 
-    for (const cat of shuffled) {
-        // 1. Шукаємо в нашій БД places (найкращі за рейтингом і популярністю)
-        const dbRes = await pool.query(
-            `SELECT * FROM places
-             WHERE $1 = ANY(types)
-             AND photo_url IS NOT NULL
-             AND rating >= 4.0
-             ORDER BY (COALESCE(save_count,0) * 0.4 + COALESCE(rating,0) * 0.6) DESC
-             LIMIT 1`,
-            [cat.key]
-        );
+        const result = await pool.query(query);
+        console.log('[DAILYTOP] Found', result.rows.length, 'places');
 
-        if (dbRes.rows.length > 0) {
-            const p = dbRes.rows[0];
-            results.push({
-                place_id:  p.place_id,
-                name:      p.query_name,
-                address:   p.full_name,
-                photo_url: p.photo_url,
-                rating:    p.rating,
-                category:  cat.label,
-            });
-            console.log(`[DAILYTOP] БД hit: ${p.query_name} (${cat.label})`);
-            continue;
+        if (result.rows.length === 0) {
+            console.log('[DAILYTOP] No results to update');
+            return;
         }
 
-        // 2. Якщо в БД немає — йдемо в Google
-        console.log(`[DAILYTOP] БД miss → Google (${cat.label})`);
+
         try {
-            const url = `https://maps.googleapis.com/maps/api/place/textsearch/json` +
-                `?query=топ+${encodeURIComponent(cat.label)}+Україна` +
-                `&type=${cat.googleType}` +
-                `&language=uk` +
-                `&key=${process.env.GOOGLE_API_KEY}`;
-
-            const resp = await fetch(url);
-            const data = await resp.json();
-
-            if (!data.results?.length) continue;
-
-            // Скор: рейтинг * log(відгуки) — найпопулярніше
-            const best = data.results
-                .filter(p => p.rating >= 4.0 && (p.user_ratings_total || 0) >= 50)
-                .sort((a, b) =>
-                    (b.rating * Math.log((b.user_ratings_total || 1) + 1)) -
-                    (a.rating * Math.log((a.user_ratings_total || 1) + 1))
-                )[0];
-
-            if (!best) continue;
-
-            const photoUrl = best.photos?.[0]
-                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200` +
-                  `&photoreference=${best.photos[0].photo_reference}` +
-                  `&key=${process.env.GOOGLE_API_KEY}`
-                : null;
-
-            // Зберігаємо в places щоб наступного разу взяти з БД
-            await pool.query(
-                `INSERT INTO places (place_id, query_name, full_name, photo_url, rating, latitude, longitude, types)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-                 ON CONFLICT (place_id) DO UPDATE SET
-                    rating    = EXCLUDED.rating,
-                    photo_url = COALESCE(EXCLUDED.photo_url, places.photo_url)`,
-                [
-                    best.place_id, best.name, best.formatted_address,
-                    photoUrl, best.rating,
-                    best.geometry?.location?.lat,
-                    best.geometry?.location?.lng,
-                    [cat.key]
-                ]
-            );
-
-            results.push({
-                place_id:  best.place_id,
-                name:      best.name,
-                address:   best.formatted_address,
-                photo_url: photoUrl,
-                rating:    best.rating,
-                category:  cat.label,
-            });
-
-        } catch(gErr) {
-            console.error(`[DAILYTOP] Google error (${cat.label}):`, gErr.message);
+            await pool.query(`DELETE FROM "DailyTop"`);
+            console.log('[DAILYTOP] Cleared DailyTop table');
+        } catch (err) {
+            console.warn('[DAILYTOP] Could not clear DailyTop:', err.message);
         }
+        
+        for (const place of result.rows) {
+            try {
+                await pool.query(
+                    `INSERT INTO "DailyTop" 
+                     (place_id, name, address, photo_url, rating, reviews, city, updated_at)
+                     VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())`,
+                    [place.place_id, place.query_name, place.full_name, place.photo_url, place.rating, place.reviews, place.city]
+                );
+            } catch (err) {
+                console.warn('[DAILYTOP] Could not insert', place.place_id, ':', err.message);
+            }
+        }
+        
+        console.log(`[DAILYTOP] ✓ Successfully updated ${result.rows.length} top stores`);
+    } catch (err) {
+        console.error('[DAILYTOP] Error:', err.message);
     }
-
-    if (!results.length) {
-        console.log('[DAILYTOP] Немає результатів для оновлення');
-        return;
-    }
-
-    // Очищаємо стару таблицю і вставляємо нову
-    await pool.query(`DELETE FROM "DailyTop"`);
-    for (const place of results) {
-        await pool.query(
-            `INSERT INTO "DailyTop" (place_id, name, address, photo_url, rating, category, updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6,NOW())`,
-            [place.place_id, place.name, place.address, place.photo_url, place.rating, place.category]
-        );
-    }
-    console.log(`[DAILYTOP] ✅ Оновлено ${results.length} топових місць`);
 };
 
-// ── Ручне оновлення через API (для тесту) ─────────────────
 refreshDailyTop = async (req, res) => {
     try {
         await this._doRefreshDailyTop();
-        return res.status(200).json({ ok: true, message: 'DailyTop оновлено' });
-    } catch(err) {
+        return res.status(200).json({ ok: true, message: 'DailyTop updated successfully' });
+    } catch (err) {
         console.error('[DAILYTOP] refresh error:', err.message);
-        return res.status(500).json({ error: 'Server error' });
+        return res.status(500).json({ error: 'Server error: ' + err.message });
     }
 };
 
-
-
-
-
-
-// ── Проксі для фото Google Places (вирішує CORS і 400) ───
-proxyPlacePhoto = async (req, res) => {
-    const { ref, maxw = 800 } = req.query;
-    if (!ref) return res.status(400).json({ error: 'ref required' });
-
-    // Захист від підробки параметрів
-    if (!/^[A-Za-z0-9_\-]+$/.test(ref)) {
-        return res.status(400).json({ error: 'Invalid ref' });
+// ── refreshDailyTop endpoint ───────────────────────────────────
+refreshDailyTop = async (req, res) => {
+    try {
+        await this._doRefreshDailyTop();
+        return res.status(200).json({ ok: true, message: 'DailyTop updated successfully' });
+    } catch (err) {
+        console.error('[DAILYTOP] refresh error:', err.message);
+        return res.status(500).json({ error: 'Server error: ' + err.message });
     }
+};
+
+// ── refreshDailyTop endpoint ───────────────────────────────────
+refreshDailyTop = async (req, res) => {
+    try {
+        await this._doRefreshDailyTop();
+        return res.status(200).json({ ok: true, message: 'DailyTop updated successfully' });
+    } catch (err) {
+        console.error('[DAILYTOP] refresh error:', err.message);
+        return res.status(500).json({ error: 'Server error: ' + err.message });
+    }
+};
+// ── refreshDailyTop endpoint ───────────────────────────────────
+refreshDailyTop = async (req, res) => {
+    try {
+        await this._doRefreshDailyTop();
+        return res.status(200).json({ ok: true, message: 'DailyTop updated successfully' });
+    } catch (err) {
+        console.error('[DAILYTOP] refresh error:', err.message);
+        return res.status(500).json({ error: 'Server error: ' + err.message });
+    }
+};
+
+// ─────────────────────────────────────────────────────────────
+// PHOTO PROXIES (unchanged — kept stable)
+// ─────────────────────────────────────────────────────────────
+proxyPlacePhoto = async (req, res) => {
+    const { photoRef, ref, maxheight = 800, maxw = 800 } = req.query;
+    const reference = photoRef || ref;
+    if (!reference) return res.status(400).json({ error: 'photoRef required' });
+    if (!/^[A-Za-z0-9_\-]+$/.test(reference)) return res.status(400).json({ error: 'Invalid ref' });
 
     try {
+        const maxSize = Math.min(parseInt(maxheight || maxw) || 800, 1600);
         const url = `https://maps.googleapis.com/maps/api/place/photo` +
-            `?maxwidth=${Math.min(parseInt(maxw) || 800, 1600)}` +
-            `&photoreference=${ref}` +
-            `&key=${process.env.GOOGLE_API_KEY}`;
+            `?maxheight=${maxSize}&photoreference=${reference}&key=${process.env.GOOGLE_API_KEY}`;
 
         const response = await fetch(url, { redirect: 'follow' });
+        if (!response.ok) return res.status(response.status).json({ error: 'Photo not found' });
 
-        if (!response.ok) {
-            console.error(`[PHOTO PROXY] Google error: ${response.status}`);
-            return res.status(response.status).json({ error: 'Photo not found' });
-        }
+        res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.send(Buffer.from(await response.arrayBuffer()));
 
-        const contentType = response.headers.get('content-type') || 'image/jpeg';
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', 'public, max-age=86400'); // кеш 24г
-
-        const buffer = await response.arrayBuffer();
-        res.send(Buffer.from(buffer));
-
-    } catch(err) {
+    } catch (err) {
         console.error('[PHOTO PROXY] error:', err.message);
         return res.status(500).json({ error: 'Proxy error' });
     }
 };
 
 proxyPlacePhotoV1 = async (req, res) => {
-    const { name, maxw = 800 } = req.query;
-    if (!name) return res.status(400).json({ error: 'name required' });
+    const { name, maxw = 800, url } = req.query;
 
-    if (!/^places\/[A-Za-z0-9_\-.]+\/photos\/[A-Za-z0-9_\-.]+$/.test(name)) {
-        return res.status(400).json({ error: 'Invalid name format' });
-    }
+    // Accept either a v1-style `name` or an absolute `url` parameter.
+    if (!name && !url) return res.status(400).json({ error: 'name or url required' });
 
     try {
-        const url = `https://places.googleapis.com/v1/${name}/media` +
-            `?maxWidthPx=${Math.min(parseInt(maxw) || 800, 1600)}` +
-            `&key=${process.env.GOOGLE_API_KEY}`;
+        if (url) {
+            // Basic validation: must be https and reasonable length
+            try {
+                const parsed = new URL(url);
+                if (parsed.protocol !== 'https:') return res.status(400).json({ error: 'Only https URLs allowed' });
+            } catch (e) {
+                return res.status(400).json({ error: 'Invalid url' });
+            }
 
-        const response = await fetch(url, { redirect: 'follow' });
+            const fetchRes = await fetch(url, { redirect: 'follow' });
+            if (!fetchRes.ok) {
+                const text = await fetchRes.text().catch(() => '');
+                console.error('[PHOTO V1 PROXY] fetch failed:', fetchRes.status, text.slice(0, 200));
+                return res.status(fetchRes.status).json({ error: 'Unable to fetch image' });
+            }
 
-        // ── Токен протух → беремо через старий API (photoreference не протухає) ──
+            res.setHeader('Content-Type', fetchRes.headers.get('content-type') || 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.send(Buffer.from(await fetchRes.arrayBuffer()));
+        }
+
+        // existing name-based behavior
+        if (!/^places\/[A-Za-z0-9_\-.]+\/photos\/[A-Za-z0-9_\-.]+$/.test(name)) {
+            return res.status(400).json({ error: 'Invalid name format' });
+        }
+
+        const urlV1 = `https://places.googleapis.com/v1/${name}/media` +
+            `?maxWidthPx=${Math.min(parseInt(maxw) || 800, 1600)}&key=${process.env.GOOGLE_API_KEY}`;
+
+        const response = await fetch(urlV1, { redirect: 'follow' });
+
         if (response.status === 400) {
             const placeId = name.match(/^places\/([^/]+)\//)?.[1];
             if (!placeId) return res.status(400).json({ error: 'Photo expired' });
-
-            console.log(`[PHOTO V1] Token expired, refreshing via old API for ${placeId}`);
-
-            const detailRes = await fetch(
-                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${process.env.GOOGLE_API_KEY}`
-            );
-            const detailData = await detailRes.json();
-            const ref = detailData.result?.photos?.[0]?.photo_reference;
+            const detailRes = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${process.env.GOOGLE_API_KEY}`);
+            const detail = await detailRes.json();
+            const ref = detail.result?.photos?.[0]?.photo_reference;
             if (!ref) return res.status(404).json({ error: 'No photos' });
-
-            // Зберігаємо в БД стабільний ref — він не протухає
-            pool.query(
-                `UPDATE places SET photo_url = $1 WHERE place_id = $2`,
-                [`/api/photo?ref=${encodeURIComponent(ref)}&maxw=800`, placeId]
-            ).catch(e => console.error('[PHOTO] DB update error:', e.message));
-
-            const photoUrl = `https://maps.googleapis.com/maps/api/place/photo` +
-                `?maxwidth=800&photoreference=${ref}&key=${process.env.GOOGLE_API_KEY}`;
-
-            const photoRes = await fetch(photoUrl, { redirect: 'follow' });
+            pool.query(`UPDATE places SET photo_url = $1 WHERE place_id = $2`, [`/api/google/photo?photoRef=${encodeURIComponent(ref)}&maxheight=800`, placeId]).catch(() => {});
+            const photoRes = await fetch(`https://maps.googleapis.com/maps/api/place/photo?maxheight=800&photoreference=${ref}&key=${process.env.GOOGLE_API_KEY}`, { redirect: 'follow' });
             if (!photoRes.ok) return res.status(404).json({ error: 'Photo failed' });
-
             res.setHeader('Content-Type', photoRes.headers.get('content-type') || 'image/jpeg');
             res.setHeader('Cache-Control', 'public, max-age=604800');
             return res.send(Buffer.from(await photoRes.arrayBuffer()));
         }
 
-        if (!response.ok) {
-            console.error(`[PHOTO V1 PROXY] error: ${response.status}`);
-            return res.status(response.status).json({ error: 'Photo not found' });
-        }
-
-        const contentType = response.headers.get('content-type') || 'image/jpeg';
-        res.setHeader('Content-Type', contentType);
+        if (!response.ok) return res.status(response.status).json({ error: 'Photo not found' });
+        res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
         res.setHeader('Cache-Control', 'public, max-age=86400');
         res.send(Buffer.from(await response.arrayBuffer()));
 
-    } catch(err) {
-        console.error('[PHOTO V1 PROXY] error:', err.message);
+    } catch (err) {
+        console.error('[PHOTO V1 PROXY] error:', err && err.stack ? err.stack : err.message || err);
         return res.status(500).json({ error: 'Proxy error' });
     }
+};
+
+// ─────────────────────────────────────────────────────────────
+// NEARBY 
+// ─────────────────────────────────────────────────────────────
+
+searchGoogleNearby = async (req, res) => {
+    const { latitude, longitude, radius = 1500, types = [], language = 'en' } = req.body;
+
+    if (latitude == null || longitude == null) {
+        return res.status(400).json({ error: 'Latitude and longitude are required' });
+    }
+
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    const rad = parseInt(radius) || 1500;
+
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return res.status(400).json({ error: 'Invalid coordinates' });
+    }
+
+    const lang = language.toString().toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'en';
+    const type = Array.isArray(types) && types.length > 0
+        ? types[0].toLowerCase().replace(/\s+/g, '_')
+        : 'tourist_attraction';
+
+    console.log(`[NEARBY] ${lat}, ${lng}, ${rad}m, type: ${type}, lang: ${lang}`);
+
+    try {
+        const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json` +
+            `?location=${lat},${lng}` +
+            `&radius=${rad}` +
+            `&type=${encodeURIComponent(type)}` +
+            `&language=${encodeURIComponent(lang)}` +
+            `&key=${process.env.GOOGLE_API_KEY}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status === 'ZERO_RESULTS') {
+            return res.status(200).json({ places: [], message: 'No places found' });
+        }
+        if (data.status !== 'OK') {
+            console.error(`[NEARBY] API error: ${data.status} — ${data.error_message}`);
+            return res.status(502).json({ error: data.status, details: data.error_message });
+        }
+
+        const formatted = (data.results || []).map(place => ({
+            id:                place.place_id,
+            place_id:          place.place_id,
+            name:              place.name,
+            displayName:       place.name,
+            vicinity:          place.vicinity || place.formatted_address || '',
+            formatted_address: place.vicinity || place.formatted_address || '',
+            rating:            place.rating || 0,
+            latitude:          place.geometry?.location?.lat,
+            longitude:         place.geometry?.location?.lng,
+            photo_url:         place.photos?.[0]?.photo_reference
+                ? `/api/google/photo?photoRef=${encodeURIComponent(place.photos[0].photo_reference)}&maxheight=800`
+                : null,
+            types:             place.types || [],
+            opening_hours:     place.opening_hours || null,
+        }));
+
+        console.log(`[NEARBY] Found ${formatted.length} places`);
+        return res.json({ places: formatted });
+
+    } catch (err) {
+        console.error(`[NEARBY] Server error: ${err.message}`);
+        return res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+getNearbyPlaces = async (req, res) => {
+    const { latitude, longitude, radius = 5000, category } = req.body;
+    if (latitude == null || longitude == null) return res.status(400).json({ error: 'Coordinates required' });
+
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    const rad = parseInt(radius) || 5000;
+    if (isNaN(lat) || isNaN(lng)) return res.status(400).json({ error: 'Invalid coordinates' });
+
+    try {
+        let q = `
+            SELECT place_id, query_name, full_name, photo_url, rating, latitude, longitude, types,
+                (6371 * acos(
+                    LEAST(1.0, cos(radians($1)) * cos(radians(latitude)) *
+                    cos(radians(longitude) - radians($2)) +
+                    sin(radians($1)) * sin(radians(latitude)))
+                )) AS distance_km
+            FROM places
+            WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND photo_url IS NOT NULL
+              AND (6371 * acos(
+                    LEAST(1.0, cos(radians($1)) * cos(radians(latitude)) *
+                    cos(radians(longitude) - radians($2)) +
+                    sin(radians($1)) * sin(radians(latitude))
+                    )
+                )) <= $3`;
+
+        const params = [lat, lng, rad / 1000];
+
+        if (category && category !== 'all') {
+            // FIX: types is text[] — use = ANY() instead of @> jsonb
+            q += ` AND $4 = ANY(types)`;
+            params.push(category.toLowerCase().replace(/\s+/g, '_'));
+        }
+
+        q += ` ORDER BY rating DESC NULLS LAST, distance_km ASC LIMIT 60`;
+
+        const { rows } = await pool.query(q, params);
+        if (!rows.length) return res.status(200).json({ results: [], source: 'empty' });
+
+        const formatted = rows.map(p => ({
+            place_id:          p.place_id,
+            name:              p.query_name,
+            vicinity:          p.full_name,
+            formatted_address: p.full_name,
+            rating:            p.rating,
+            latitude:          p.latitude,
+            longitude:         p.longitude,
+            photo_url:         p.photo_url,
+            distance_km:       parseFloat(p.distance_km).toFixed(2),
+            types:             p.types,
+        }));
+
+        console.log(`[NEARBY CACHE] ${formatted.length} places found`);
+        return res.status(200).json({ results: formatted, source: 'database' });
+
+    } catch (err) {
+        console.error(`[NEARBY CACHE] ${err.message}`);
+        return res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+saveNearbyPlaces = async (req, res) => {
+    const { places } = req.body;
+    if (!places?.length) return res.status(400).json({ error: 'No places provided' });
+
+    let ok = 0, fail = 0;
+    for (const place of places) {
+        try {
+            // FIX: types must be text[] not JSON string
+            const typesArr = Array.isArray(place.types)
+                ? place.types.map(t => String(t))
+                : [];
+
+            await pool.query(
+                `INSERT INTO places (place_id, query_name, full_name, photo_url, rating, latitude, longitude, types)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+                 ON CONFLICT (place_id) DO UPDATE SET
+                    rating    = EXCLUDED.rating,
+                    photo_url = COALESCE(EXCLUDED.photo_url, places.photo_url),
+                    latitude  = EXCLUDED.latitude,
+                    longitude = EXCLUDED.longitude,
+                    types     = EXCLUDED.types`,
+                [
+                    place.place_id || place.id,
+                    place.name || 'Unknown',
+                    place.vicinity || place.formatted_address || place.name || 'Unknown',
+                    place.photo_url || null,
+                    place.rating || 0,
+                    place.latitude || null,
+                    place.longitude || null,
+                    typesArr   // pass as JS array — pg driver maps to text[]
+                ]
+            );
+            ok++;
+        } catch (e) {
+            fail++;
+            console.error(`[SAVE NEARBY] ${place.name}: ${e.message}`);
+        }
+    }
+
+    console.log(`[NEARBY SAVE] ${ok} saved, ${fail} failed`);
+    return res.status(200).json({ success: true, saved: ok, failed: fail });
 };
 }
 
 module.exports = Controller;
+    

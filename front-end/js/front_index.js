@@ -21,15 +21,15 @@ async function isLoggedIn() {
 
 function mountAuthGuard() {
     if (document.getElementById('ag-backdrop')) return;
-    const el = document.createElement('div');
-    el.innerHTML = `
-    <div id="ag-backdrop">
-      <div id="ag-modal" role="dialog" aria-modal="true">
-        <div class="ag-particles">
-          <span></span><span></span><span></span>
-          <span></span><span></span><span></span>
-        </div>
-        <button class="ag-close" id="ag-close" aria-label="Закрити">
+        const el = document.createElement('div');
+        el.innerHTML = `
+        <div id="ag-backdrop">
+            <div id="ag-modal" role="dialog" aria-modal="true">
+                <div class="ag-particles">
+                    <span></span><span></span><span></span>
+                    <span></span><span></span><span></span>
+                </div>
+                <button class="ag-close" id="ag-close" aria-label="Close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M18 6L6 18M6 6l12 12"/>
           </svg>
@@ -38,48 +38,48 @@ function mountAuthGuard() {
           <div class="ag-icon-ring"></div>
           <div class="ag-icon-inner">🔐</div>
         </div>
-        <p class="ag-eyebrow">Top Spots</p>
-        <h2 class="ag-title">Потрібен акаунт</h2>
-        <p class="ag-desc">
-          Щоб скористатися
-          <strong id="ag-feature">цим функціоналом</strong>,
-          потрібно зареєструватись або увійти.
-        </p>
+                <p class="ag-eyebrow">Top Spots</p>
+                <h2 class="ag-title">Account required</h2>
+                <p class="ag-desc">
+                    To use
+                    <strong id="ag-feature">this feature</strong>,
+                    please register or sign in.
+                </p>
         <div class="ag-perks">
           <div class="ag-perk">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
               <circle cx="12" cy="10" r="3"/>
-            </svg>Пошук місць
+                        </svg>Place search
           </div>
           <div class="ag-perk">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>Улюблені
+                        </svg>Favorites
           </div>
           <div class="ag-perk">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3"/>
               <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
-            </svg>Поряд з вами
+                        </svg>Nearby
           </div>
           <div class="ag-perk">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="3" width="20" height="14" rx="2"/>
               <path d="M8 21h8M12 17v4"/>
-            </svg>AI-помічник
+                        </svg>AI assistant
           </div>
         </div>
         <div class="ag-actions">
-          <button class="ag-btn-reg" id="ag-reg-btn">
-            <span>Зареєструватись</span>
+                    <button class="ag-btn-reg" id="ag-reg-btn">
+                        <span>Register</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </button>
-          <button class="ag-btn-login" id="ag-login-btn">Вже є акаунт? Увійти</button>
+                    <button class="ag-btn-login" id="ag-login-btn">Already have an account? Sign in</button>
         </div>
-        <button class="ag-dismiss" id="ag-dismiss">Може пізніше</button>
+                <button class="ag-dismiss" id="ag-dismiss">Maybe later</button>
       </div>
     </div>`;
     document.body.appendChild(el.firstElementChild);
@@ -141,18 +141,18 @@ function guardedAction(featureName, action) {
 }
 
 // ============================================================
-// ОСНОВНИЙ КОД ПУБЛІЧНОЇ СТОРІНКИ
+// PUBLIC PAGE MAIN CODE
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM повністю завантажено. Система готова.");
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log("DOM fully loaded. System ready.");
 
     // 🔧 ФІКС: монтуємо модаль одразу для швидшої роботи
     mountAuthGuard();
 
     // ============ КОНСТАНТИ ============
-    const NO_PHOTO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23e0f2fe;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23b3e5fc;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23grad)'/%3E%3Ctext x='50%25' y='45%25' text-anchor='middle' fill='%230374a3' font-size='48' font-family='Arial, sans-serif'%3E🏞️%3C/text%3E%3Ctext x='50%25' y='65%25' text-anchor='middle' fill='%230374a3' font-size='24' font-family='Arial, sans-serif'%3ENo Photo%3C/text%3E%3C/svg%3E";
+    const NO_PHOTO_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23e0f2fe;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23b3e5fc;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23grad)'/%3E%3Ctext x='50%25' y='45%25' text-anchor='middle' fill='%230374a3' font-size='48' font-family='Arial, sans-serif'%3E🏞️%3C/text%3E%3Ctext x='50%25' y='65%25' text-anchor='middle' fill='%230374a3' font-size='24' font-family='Arial, sans-serif'%3ELoading...%3C/text%3E%3C/svg%3E";
 
-    const modernPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"%3E%3Cdefs%3E%3ClinearGradient id="modernGrad" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%2310b981;stop-opacity:1" /%3E%3Cstop offset="50%25" style="stop-color:%233b82f6;stop-opacity:1" /%3E%3Cstop offset="100%25" style="stop-color:%238b5cf6;stop-opacity:1" /%3E%3C/linearGradient%3E%3Cfilter id="blur"%3E%3CfeGaussianBlur in="SourceGraphic" stdDeviation="15" /%3E%3C/filter%3E%3C/defs%3E%3Crect width="800" height="600" fill="url(%23modernGrad)" filter="url(%23blur)"/%3E%3Ccircle cx="400" cy="300" r="100" fill="white" opacity="0.15"/%3E%3Ctext x="50%25" y="48%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="100" opacity="0.6"%3E%F0%9F%93%8D%3C/text%3E%3Ctext x="50%25" y="62%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="24" opacity="0.4"%3EЗавантаження...%3C/text%3E%3C/svg%3E';
+    const modernPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"%3E%3Cdefs%3E%3ClinearGradient id="modernGrad" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%2310b981;stop-opacity:1" /%3E%3Cstop offset="50%25" style="stop-color:%233b82f6;stop-opacity:1" /%3E%3Cstop offset="100%25" style="stop-color:%238b5cf6;stop-opacity:1" /%3E%3C/linearGradient%3E%3Cfilter id="blur"%3E%3CfeGaussianBlur in="SourceGraphic" stdDeviation="15" /%3E%3C/filter%3E%3C/defs%3E%3Crect width="800" height="600" fill="url(%23modernGrad)" filter="url(%23blur)"/%3E%3Ccircle cx="400" cy="300" r="100" fill="white" opacity="0.15"/%3E%3Ctext x="50%25" y="48%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="100" opacity="0.6"%3E%F0%9F%93%8D%3C/text%3E%3Ctext x="50%25" y="62%25" text-anchor="middle" fill="white" font-family="system-ui" font-size="24" opacity="0.4"%3ELoading...%3C/text%3E%3C/svg%3E';
 
     // ============ ЕЛЕМЕНТИ DOM ============
     const searchInput        = document.getElementById("searchInput");
@@ -189,14 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ============ ДЕФОЛТНІ МІСТА ============
     const cities = [
-        { name: "Київ",            place_id: "ChIJBUVa4U7P1EAR_kYBF9IxSXY", photo: "../img/def-sity_img/kyiv.jpg",        rating: 4.9 },
-        { name: "Одеса",           place_id: "ChIJ8_S_In_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/odesa.jpg",       rating: 4.8 },
-        { name: "Львів",           place_id: "ChIJay7_In_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/lviv.jpg",        rating: 4.9 },
-        { name: "Харків",          place_id: "ChIJ9Wv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/harkiv.jpg",     rating: 4.7 },
-        { name: "Дніпро",          place_id: "ChIJ76v_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/dnepr.jpg",      rating: 4.6 },
-        { name: "Івано-Франківськ",place_id: "ChIJ_6t_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/iv-fr.jpg",     rating: 4.8 },
-        { name: "Запоріжжя",       place_id: "ChIJsWv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/zaporoshe.jpg", rating: 4.5 },
-        { name: "Вінниця",         place_id: "ChIJpWv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/vinica.jpg",    rating: 4.7 }
+        { name: "Kyiv",            place_id: "ChIJBUVa4U7P1EAR_kYBF9IxSXY", photo: "../img/def-sity_img/kyiv.jpg",        rating: 4.9 },
+        { name: "Odesa",           place_id: "ChIJ8_S_In_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/odesa.jpg",       rating: 4.8 },
+        { name: "Lviv",            place_id: "ChIJay7_In_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/lviv.jpg",        rating: 4.9 },
+        { name: "Kharkiv",         place_id: "ChIJ9Wv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/harkiv.jpg",     rating: 4.7 },
+        { name: "Dnipro",          place_id: "ChIJ76v_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/dnepr.jpg",      rating: 4.6 },
+        { name: "Ivano-Frankivsk", place_id: "ChIJ_6t_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/iv-fr.jpg",     rating: 4.8 },
+        { name: "Zaporizhzhia",    place_id: "ChIJsWv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/zaporoshe.jpg", rating: 4.5 },
+        { name: "Vinnytsia",       place_id: "ChIJpWv_Xn_0_UARsB_XIn_0_UA", photo: "../img/def-sity_img/vinica.jpg",    rating: 4.7 }
     ];
 
     // Set default active category
@@ -213,25 +213,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const LANGUAGE_MAP = {
         uk: {
-            home: 'Головна',
-            nearby: 'Місця поруч',
-            topshops: 'Топ магазини',
-            categories: 'Категорії',
-            contact: 'Контакти',
-            about: 'Про нас',
-            searchPlaceholder: 'Пошук місць',
+            home: 'Home',
+            nearby: 'Nearby',
+            topshops: 'Top Shops',
+            categories: 'Categories',
+            contact: 'Contact',
+            about: 'About',
+            searchPlaceholder: 'Search places',
             signUp: 'Sign Up',
-            aiSuggestion1: 'Де залишитися сьогодні?',
-            aiSuggestion2: 'Найпопулярніше зараз',
-            aiWelcome: 'Привіт! Я AI-помічник Top Spots. Допоможу знайти найкращі місця!',
-            restaurant: '🍽️ Ресторани',
-            cafe: '☕ Кафе',
-            lodging: '🏨 Готелі',
-            museum: '🏛️ Музеї',
-            shopping_mall: '🛍️ ТЦ',
-            park: '🌳 Парки',
-            beach: '🏖️ Пляжі',
-            resort: '⛷️ Курорти'
+            aiSuggestion1: 'Where to stay today?',
+            aiSuggestion2: 'Most popular now',
+            aiWelcome: 'Hi! I am the Top Spots AI assistant. I will help you find great places!',
+            restaurant: '🍽️ Restaurants',
+            cafe: '☕ Cafes',
+            lodging: '🏨 Hotels',
+            museum: '🏛️ Museums',
+            shopping_mall: '🛍️ Shopping Malls',
+            park: '🌳 Parks',
+            beach: '🏖️ Beaches',
+            resort: '⛷️ Resorts'
         },
         en: {
             home: 'Home',
@@ -299,7 +299,27 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function getSavedLanguage() {
-        return localStorage.getItem('topspots_locale') || 'uk';
+        return localStorage.getItem('topspots_locale') || 'en';
+    }
+
+    function getSearchLanguage() {
+        return getSavedLanguage() || 'en';
+    }
+
+    function getSearchNaturalQuery(type) {
+        const locale = getSearchLanguage();
+        const queryMap = {
+            restaurant: { uk: 'популярні ресторани', en: 'popular restaurants', de: 'beliebte Restaurants' },
+            cafe: { uk: 'популярні кафе', en: 'popular cafes', de: 'beliebte Cafés' },
+            lodging: { uk: 'популярні готелі', en: 'popular hotels', de: 'beliebte Hotels' },
+            museum: { uk: 'популярні музеї', en: 'popular museums', de: 'beliebte Museen' },
+            shopping_mall: { uk: 'популярні торгові центри', en: 'popular shopping malls', de: 'beliebte Einkaufszentren' },
+            park: { uk: 'популярні парки', en: 'popular parks', de: 'beliebte Parks' },
+            beach: { uk: 'популярні пляжі', en: 'popular beaches', de: 'beliebte Strände' },
+            resort: { uk: 'популярні курорти', en: 'popular resorts', de: 'beliebte Ferienorte' },
+            '(cities)': { uk: 'популярні туристичні локації', en: 'popular tourist attractions', de: 'beliebte Sehenswürdigkeiten' }
+        };
+        return (queryMap[type]?.[locale] || queryMap[type]?.en || `popular ${type}`);
     }
 
     function setSavedLanguage(locale) {
@@ -308,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applyLanguage(locale) {
-        const dict = LANGUAGE_MAP[locale] || LANGUAGE_MAP.uk;
+        const dict = LANGUAGE_MAP[locale] || LANGUAGE_MAP.en;
         document.querySelectorAll('#navMenu button[data-section]').forEach(btn => {
             const section = btn.getAttribute('data-section');
             if (dict[section]) btn.textContent = dict[section];
@@ -410,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const check = setInterval(() => {
                             if (window.google?.maps?.importLibrary) {
                                 clearInterval(check);
-                                log('✅ Google Maps API завантажено');
+                                log('Google Maps API завантажено');
                                 resolve(true);
                             }
                         }, 50);
@@ -430,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await loadGoogleMapsAPI();
             const { Place } = await google.maps.importLibrary("places");
-            const place = new Place({ id: placeId, requestedLanguage: 'uk' });
+            const place = new Place({ id: placeId, requestedLanguage: getSearchLanguage() });
             await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
             const cityName = place.displayName?.text || place.displayName || "Місто";
             const searchQuery = fullAddress || place.formattedAddress || cityName;
@@ -447,13 +467,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch("/api/places/autocomplete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ input: query, category: currentCategoryTypes })
+                body: JSON.stringify({
+                    input: query,
+                    category: currentCategoryTypes,
+                    language: getSearchLanguage()
+                })
             });
             const data = await response.json();
             return data.predictions || [];
         } catch (err) {
             log(`🔴 Autocomplete error: ${err.message}`);
             return [];
+        }
+    }
+
+    async function loadGlobalCards() {
+        const query = getSearchNaturalQuery(currentCategoryTypes || '(cities)');
+        const suggestions = await fetchSuggestions(query);
+        if (suggestions.length > 0) {
+            updateSliderCards(suggestions, false);
+        } else {
+            updateSliderCards(cities, true);
         }
     }
 
@@ -465,9 +499,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(placeData)
             });
-            log(`✅ Синхронізовано: ${placeData.name}`);
+            log(`Синхронізовано: ${placeData.name}`);
         } catch (err) {
-            log(`⚠️ Sync error: ${err.message}`);
+            log(`Sync error: ${err.message}`);
         }
     }
 
@@ -477,8 +511,8 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = "";
         if (indicatorsContainer) indicatorsContainer.innerHTML = "";
 
-        // 🔧 ФІКС: обмежуємо кількість карточок для швидшої загрузки
-        const maxCards = isInitial ? 8 : 12;
+        // 🔧 ФІКС: дозволяємо більше результатів для кращого вибору
+        const maxCards = 50;
         const limitedList = cityList.slice(0, maxCards);
 
         for (let i = 0; i < limitedList.length; i++) {
@@ -491,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="city-content">
                     <h3 class="city-name" title="${city.name}">${displayName}</h3>
                     <div class="city-rating">⭐ ${city.rating || '4.5'}</div>
-                    <button class="map-button">Детальніше</button>
+                    <button class="map-button">Details</button>
                 </div>
             `;
             container.appendChild(card);
@@ -549,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // ── GUARD: категорія ──
                 await requireAuth('пошук за категорією', async () => {
-                    const suggestions = await fetchSuggestions(`популярні ${type} Україна`);
+                    const suggestions = await fetchSuggestions(getSearchNaturalQuery(type));
                     suggestionsList.innerHTML = "";
                     suggestions.forEach(s => {
                         const li = document.createElement("li");
@@ -586,7 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (query.length < 3) {
                 suggestionsList.innerHTML = "";
                 suggestionsList.classList.remove("show");
-                if (query.length === 0) updateSliderCards(cities, true);
+                if (query.length === 0) await loadGlobalCards();
                 return;
             }
 
@@ -621,14 +655,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ============ ОЧИСТИТИ ПОШУК ============
     if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
+        clearBtn.addEventListener('click', async () => {
             searchInput.value = '';
             clearBtn.style.display = 'none';
             suggestionsList.innerHTML = '';
             suggestionsList.classList.remove('show');
             categoryButtons.forEach(b => b.classList.remove('active'));
             currentCategoryTypes = "(cities)";
-            updateSliderCards(cities, true);
+            await loadGlobalCards();
         });
     }
 
@@ -754,6 +788,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============ ІНІЦІАЛІЗАЦІЯ ============
-    updateSliderCards(cities, true);
-    log('✅ front_index.js успішно ініціалізовано!');
+    await loadGlobalCards();
+    log('front_index.js успішно ініціалізовано!');
 });

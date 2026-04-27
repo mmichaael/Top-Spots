@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../styles/auth-guard.css">
     <link rel="stylesheet" href="../styles/logged_index_styles.css">
+
 </head>
 <body>
     <div class="blob blob-1"></div>
@@ -16,30 +17,30 @@
     <header class="header">
         <div class="header-container">
 
-            <!-- ЛОГОТИП -->
+            <!-- LOGO -->
             <div class="brand">
                 <video class="logo_box" height="200px" autoplay muted playsinline loop>
                     <source src="/img/output_video1.webm" type="video/webm" />
-                    Logo don't opened
+                    Logo
                 </video>
             </div>
 
-            <!-- ДЕСКТОП НАВІГАЦІЯ (> 972px) -->
+            <!-- DESKTOP NAV (> 972px) -->
             <nav class="nav-menu" id="navMenu">
-                <button class="nav-item active" data-page="dashboard"><i class="fas fa-th-large"></i> Головна</button>
-                <button class="nav-item" data-page="nearby"><i class="fas fa-heart"></i> Місця поруч</button>
-                <button class="nav-item" data-page="shopping"><i class="fas fa-shopping-bag"></i> Шопінг</button>
-                <button class="nav-item" data-page="settings"><i class="fas fa-cog"></i> Налаштування</button>
-                                <button class="nav-item" data-page="profile"><i class="far fa-user"></i> Профіль</button>
+                <button class="nav-item active" data-page="dashboard"><i class="fas fa-th-large"></i> Dashboard</button>
+                <button class="nav-item" data-page="nearby"><i class="fas fa-heart"></i> Nearby</button>
+                <button class="nav-item" data-page="shopping"><i class="fas fa-shopping-bag"></i> Shopping</button>
+                <button class="nav-item" data-page="settings"><i class="fas fa-cog"></i> Settings</button>
+                <button class="nav-item" data-page="profile"><i class="far fa-user"></i> Profile</button>
             </nav>
 
-            <!-- ПРАВА ЧАСТИНА: logout + бургер -->
+            <!-- RIGHT: logout + burger -->
             <div class="header-right">
-                <button class="logout-icon" id="headerLogoutBtn" title="Вийти">
+                <button class="logout-icon" id="headerLogoutBtn" title="Sign out">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
-                <!-- БУРГЕР (з'являється < 972px) -->
-                <button class="burger-btn" id="burgerBtn" aria-label="Меню" aria-expanded="false">
+                <!-- BURGER (< 972px) -->
+                <button class="burger-btn" id="burgerBtn" aria-label="Menu" aria-expanded="false">
                     <span></span>
                     <span></span>
                     <span></span>
@@ -48,33 +49,32 @@
 
         </div>
 
-        <!-- МОБІЛЬНЕ МЕНЮ (< 972px) -->
+        <!-- MOBILE MENU (< 972px) -->
         <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
             <nav class="mobile-nav">
-               
                 <button class="mobile-nav-item active" data-page="dashboard">
                     <i class="fas fa-th-large"></i>
-                    <span>Головна</span>
+                    <span>Dashboard</span>
                 </button>
                 <button class="mobile-nav-item" data-page="nearby">
                     <i class="fas fa-heart"></i>
-                    <span>Місця поруч</span>
+                    <span>Nearby</span>
                 </button>
-                   <button class="mobile-nav-item" data-page="shopping">
-        <i class="fas fa-shopping-bag"></i><span>Шопінг</span>
-    </button>
+                <button class="mobile-nav-item" data-page="shopping">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span>Shopping</span>
+                </button>
                 <button class="mobile-nav-item" data-page="settings">
                     <i class="fas fa-cog"></i>
-                    <span>Налаштування</span>
+                    <span>Settings</span>
                 </button>
-                 <button class="mobile-nav-item" data-page="profile">
+                <button class="mobile-nav-item" data-page="profile">
                     <i class="far fa-user"></i>
-                    <span>Профіль</span>
+                    <span>Profile</span>
                 </button>
             </nav>
         </div>
 
-        <!-- OVERLAY для закриття меню кліком поза ним -->
         <div class="mobile-overlay" id="mobileOverlay"></div>
     </header>
 
@@ -87,7 +87,7 @@
                     <img src="../img/Top Spots (3).png" alt="Logo" />
                     <span>Top Spots</span>
                 </div>
-                <p class="brand-description">Твій особистий гід по найкращим місцям міста. Відкривай, зберігай, ділися!</p>
+                <p class="brand-description">Your personal guide to the best places in the world. Discover, save, share!</p>
                 <div class="social-links-modern">
                     <a href="#"><i class="fab fa-facebook-f"></i></a>
                     <a href="#"><i class="fab fa-instagram"></i></a>
@@ -98,29 +98,29 @@
 
             <div class="footer-links-grid">
                 <div class="footer-column">
-                    <h4>Корисні посилання</h4>
+                    <h4>Useful Links</h4>
                     <ul>
-                        <li><a href="#">Про нас</a></li>
-                        <li><a href="#">Блог</a></li>
-                        <li><a href="#">Партнери</a></li>
-                        <li><a href="#">Кар'єра</a></li>
+                        <li><a href="#">About us</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Partners</a></li>
+                        <li><a href="#">Careers</a></li>
                     </ul>
                 </div>
                 <div class="footer-column">
-                    <h4>Підтримка</h4>
+                    <h4>Support</h4>
                     <ul>
-                        <li><a href="#">Допомога</a></li>
-                        <li><a href="#">Конфіденційність</a></li>
-                        <li><a href="#">Умови використання</a></li>
+                        <li><a href="#">Help</a></li>
+                        <li><a href="#">Privacy</a></li>
+                        <li><a href="#">Terms of Use</a></li>
                         <li><a href="#">FAQ</a></li>
                     </ul>
                 </div>
                 <div class="footer-column">
-                    <h4>Контакти</h4>
+                    <h4>Contact</h4>
                     <ul class="contact-info">
                         <li><i class="far fa-envelope"></i> <a href="mailto:spraizen47@gmail.com">spraizen47@gmail.com</a></li>
                         <li><i class="fas fa-phone-alt"></i> <a href="tel:+380974901774">+38 (097) 490-17-74</a></li>
-                        <li><i class="fas fa-map-marker-alt"></i> Київ / Bremen</li>
+                        <li><i class="fas fa-map-marker-alt"></i> Kyiv / Bremen</li>
                     </ul>
                 </div>
             </div>
@@ -131,19 +131,20 @@
                 <div class="language-selector">
                     <i class="fas fa-globe"></i>
                     <select id="loggedLanguageSelect">
-                        <option value="uk">Українська</option>
                         <option value="en">English</option>
+                        <option value="uk">Українська</option>
                         <option value="de">Deutsch</option>
                         <option value="pl">Polski</option>
                     </select>
                 </div>
                 <button class="theme-toggle" id="loggedThemeToggle" type="button"><i class="fas fa-moon"></i></button>
             </div>
-            <p class="copyright">© 2026 Top Spots. Всі права захищені.</p>
+            <p class="copyright">© 2026 Top Spots. All rights reserved.</p>
         </div>
     </footer>
 
     <script type="module" src="../js/front_logged_index.js"></script>
+
 
 </body>
 </html>

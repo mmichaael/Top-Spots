@@ -90,7 +90,7 @@ class RateLimiter {
         // Auto-block if violation threshold reached
         if (violation.violationCount >= this.VIOLATION_THRESHOLD) {
             violation.blockedUntil = Date.now() + this.IP_BLOCK_DURATION;
-            console.warn(`⚠️ IP BLOCKED: ${ip} (${violation.violationCount} violations in ${this.VIOLATION_CHECK_WINDOW}ms)`);
+            console.warn(`IP BLOCKED: ${ip} (${violation.violationCount} violations in ${this.VIOLATION_CHECK_WINDOW}ms)`);
         }
     }
 
@@ -161,6 +161,13 @@ class RateLimiter {
      */
     searchLimiter(endpoint) {
         return this.check(endpoint, this.SEARCH_LIMIT, this.SEARCH_WINDOW);
+    }
+
+    /**
+     * Autocomplete endpoint rate limiter (30 per minute)
+     */
+    autocompleteLimiter(endpoint) {
+        return this.check(endpoint, 30, this.SEARCH_WINDOW);
     }
 
     /**

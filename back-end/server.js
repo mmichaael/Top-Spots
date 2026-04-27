@@ -11,8 +11,7 @@ const passport   = require("passport");
 const cookieParser = require("cookie-parser");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const Controller = require("./controller.js");
-const rateLimiter = require("./middleware/rateLimiter.js");
-
+    const morgan = require('morgan');
 const app = express();
 
 
@@ -33,9 +32,9 @@ app.use(helmet({
             ],
             imgSrc: ["'self'", "data:", "https:"],
             frameSrc: ["'self'", "https://www.google.com", "https://maps.google.com"] 
-            //  Дозволяємо Google Maps frames
+
         }
-    },
+    },  
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
     hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
     noSniff: true,
@@ -113,7 +112,7 @@ app.get("/city_page.html", (req, res) => {
     res.sendFile(path.join(__dirname, "../front-end/html/city_page.html"));
 });
 
-//  ── ГЛОБАЛЬНІ ERROR HANDLERS ──────────────────────────────────
+
 // 404 Handler
 app.use((req, res) => {
     console.warn(` 404: ${req.method} ${req.path}`);
@@ -162,28 +161,37 @@ app.listen(PORT, async () => {
     console.log(`   IP block duration: 1 hour`);
     console.log('');
 
-    //  Cron
+    // ── Cron для DailyTop (щодня о 6:00 ранку) ──
     cron.schedule('0 6 * * *', async () => {
         console.log('[CRON] Оновлення DailyTop...');
-        const ctrl = new Controller();
-        await ctrl._doRefreshDailyTop();
-    });
-    try {
-        const check = await pool.query(
-            `SELECT updated_at FROM "DailyTop" ORDER BY updated_at DESC LIMIT 1`
-        );
-        const needsRefresh = check.rows.length === 0 ||
-            (Date.now() - new Date(check.rows[0].updated_at).getTime()) > 24 * 60 * 60 * 1000;
-
-        if (needsRefresh) {
-            console.log('[CRON] DailyTop застарів або порожній — оновлюємо...');
+        try {
             const ctrl = new Controller();
             await ctrl._doRefreshDailyTop();
+            console.log('[CRON] DailyTop успішно оновлено');
+        } catch (err) {
+            console.error('[CRON] DailyTop refresh error:', err.message);
+        }
+    });
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms'));
+
+    try {
+        console.log('[INIT] Перевіряємо DailyTop...');
+        const check = await pool.query(
+            `SELECT COUNT(*) as cnt FROM "DailyTop"`
+        );
+        
+        const hasData = check.rows[0]?.cnt > 0;
+        
+        if (!hasData) {
+            console.log('[INIT] DailyTop порожній — оновлюємо...');
+            const ctrl = new Controller();
+            await ctrl._doRefreshDailyTop();
+            console.log('[INIT] DailyTop готовий до роботи');
         } else {
-            console.log('[CRON] DailyTop актуальний, пропускаємо');
+            console.log(`[INIT] DailyTop актуальний (${check.rows[0].cnt} записів)`);
         }
     } catch(e) {
-        console.error('[CRON] init check error:', e.message);
+        console.error('[INIT] DailyTop check error:', e.message);
     }
 
 });
