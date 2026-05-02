@@ -20,7 +20,7 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
            
-
+const CACHE_TTL_DAYS = 7; 
 
  const GroqClient = {
     apiKey:  process.env.GROQ_API_KEY,
@@ -578,6 +578,191 @@ await this.saveSearchStats(userId, input, category, 'db', localResults.length);
 
 
 
+
+
+
+getReviews = async (req, res) => {
+    const { place_id } = req.params;
+
+       if (!place_id || !place_id.startsWith('ChIJ') || place_id.length < 10) {
+        return res.status(400).json({ error: 'Invalid place_id' });
+    }
+
+    try {
+        // ── КРОК 1: перевіряємо БД ──────────────────────────
+        const cached = await pool.query(
+            `SELECT
+                id,
+                author_display_name,
+                author_photo_uri,
+                review_text,
+                review_language_code,
+                original_text,
+                original_language_code,
+                rating,
+                publish_time,
+                relative_publish_time_desc,
+                google_review_name,
+                helpful_count,
+                fetched_at
+             FROM place_reviews
+             WHERE place_id = $1
+             ORDER BY publish_time DESC NULLS LAST`,
+            [place_id]
+        );
+
+        // Є кеш і він свіжий — повертаємо з БД
+        if (cached.rowCount > 0) {
+            const firstFetch = cached.rows[0].fetched_at;
+            const ageMs      = Date.now() - new Date(firstFetch).getTime();
+            const ageDays    = ageMs / (1000 * 60 * 60 * 24);
+
+            if (ageDays < CACHE_TTL_DAYS) {
+                console.log(`\x1b[32m[REVIEWS DB HIT]\x1b[0m place_id=${place_id}, count=${cached.rowCount}, age=${ageDays.toFixed(1)}d`);
+                return res.status(200).json({
+                    source:  'db',
+                    reviews:cached.rows.map(r => this.formatFromDb(r))
+                });
+            }
+
+            console.log(`\x1b[33m[REVIEWS STALE]\x1b[0m place_id=${place_id}, age=${ageDays.toFixed(1)}d → re-fetching Google`);
+        } else {
+            console.log(`\x1b[33m[REVIEWS MISS]\x1b[0m place_id=${place_id} → fetching from Google`);
+        }
+
+        // ── КРОК 2: запит до Google Places API (New) ─────────
+        const googleUrl =
+            `https://places.googleapis.com/v1/places/${encodeURIComponent(place_id)}` +
+            `?fields=reviews` +
+            `&key=${process.env.GOOGLE_API_KEY}`;
+
+        const googleRes  = await fetch(googleUrl);
+        const googleData = await googleRes.json();
+
+        if (!googleRes.ok || !googleData.reviews?.length) {
+            // Google нічого не дав — повертаємо кеш (навіть якщо старий) або порожній масив
+            console.log(`\x1b[31m[REVIEWS GOOGLE EMPTY]\x1b[0m place_id=${place_id}`);
+            return res.status(200).json({
+                source:  'db_stale',
+                reviews: cached.rows.map(r => this.formatFromDb(r))
+            });
+        }
+
+        const rawReviews = googleData.reviews; // масив об'єктів Review від Google
+        console.log(`\x1b[36m[REVIEWS GOOGLE]\x1b[0m place_id=${place_id}, count=${rawReviews.length}`);
+
+        // ── КРОК 3: зберігаємо в БД ──────────────────────────
+        // Видаляємо старі записи для цього місця (свіже перезаписує старе)
+        await pool.query(`DELETE FROM place_reviews WHERE place_id = $1`, [place_id]);
+
+        for (const r of rawReviews) {
+            const reviewName   = r.name || null;
+            const authorName   = r.authorAttribution?.displayName || null;
+            const authorUri    = r.authorAttribution?.uri         || null;
+            const authorPhoto  = r.authorAttribution?.photoUri    || null;
+            const reviewText   = r.text?.text           || null;
+            const reviewLang   = r.text?.languageCode   || null;
+            const origText     = r.originalText?.text         || null;
+            const origLang     = r.originalText?.languageCode || null;
+            const rating       = r.rating ? Math.round(r.rating) : null;
+            const publishTime  = r.publishTime || null;
+            const relativeTime = r.relativePublishTimeDescription || null;
+
+            await pool.query(
+                `INSERT INTO place_reviews
+                    (place_id, google_review_name, author_display_name, author_uri,
+                     author_photo_uri, review_text, review_language_code,
+                     original_text, original_language_code,
+                     rating, publish_time, relative_publish_time_desc, fetched_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+                 ON CONFLICT (google_review_name) DO UPDATE SET
+                     review_text                = EXCLUDED.review_text,
+                     review_language_code       = EXCLUDED.review_language_code,
+                     original_text              = EXCLUDED.original_text,
+                     original_language_code     = EXCLUDED.original_language_code,
+                     rating                     = EXCLUDED.rating,
+                     relative_publish_time_desc = EXCLUDED.relative_publish_time_desc,
+                     fetched_at                 = NOW()`,
+                [place_id, reviewName, authorName, authorUri,
+                 authorPhoto, reviewText, reviewLang,
+                 origText, origLang,
+                 rating, publishTime, relativeTime]
+            );
+        }
+
+        console.log(`\x1b[32m[REVIEWS SAVED]\x1b[0m Збережено ${rawReviews.length} відгуків для place_id=${place_id}`);
+
+        // ── КРОК 4: повертаємо щойно збережені відгуки ───────
+        const fresh = await pool.query(
+            `SELECT
+                id, author_display_name, author_photo_uri,
+                review_text, review_language_code,
+                original_text, original_language_code,
+                rating, publish_time, relative_publish_time_desc,
+                google_review_name, helpful_count
+             FROM place_reviews
+             WHERE place_id = $1
+             ORDER BY publish_time DESC NULLS LAST`,
+            [place_id]
+        );
+
+        return res.status(200).json({
+            source:  'google',
+            reviews: fresh.rows.map(r => this.formatFromDb(r))
+        });
+
+    } catch (err) {
+        console.error('\x1b[31m[REVIEWS ERROR]\x1b[0m', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+
+ markHelpful = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(
+            `UPDATE place_reviews
+             SET helpful_count = helpful_count + 1
+             WHERE id = $1
+             RETURNING helpful_count`,
+            [id]
+        );
+        if (!result.rowCount) return res.status(404).json({ error: 'Review not found' });
+        return res.status(200).json({ helpful_count: result.rows[0].helpful_count });
+    } catch (err) {
+        console.error('\x1b[31m[HELPFUL ERROR]\x1b[0m', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+
+// Змінити async на звичайну функцію і додати this
+formatFromDb = (row) => {  // прибрати async
+    return {
+        rating: row.rating,
+        text: {
+            text:         row.review_text         || '',
+            languageCode: row.review_language_code || ''
+        },
+        originalText: row.original_text ? {
+            text:         row.original_text,
+            languageCode: row.original_language_code || ''
+        } : null,
+        authorAttribution: {
+            displayName: row.author_display_name || 'Guest',
+            photoUri:    row.author_photo_uri    || null
+        },
+        relativePublishTimeDescription: row.relative_publish_time_desc || '',
+        publishTime: row.publish_time,
+        dbId:         row.id,
+        helpfulCount: row.helpful_count || 0,
+        googleReviewName: row.google_review_name
+    };
+}
+
+
+
 placeDetails = async (req, res) => {
     let { place_id, name, photo_url } = req.body || {};
 
@@ -670,58 +855,48 @@ getBestPhotoData = async (place_id, name, location) => {
 
 getGooglePlaceDetails = async (req, res) => {
     const place_id = req.params.id;
-    if (!place_id) {
-        return res.status(400).json({ error: 'place_id is required' });
-    }
+    if (!place_id) return res.status(400).json({ error: 'place_id is required' });
 
     try {
-        const language = (req.query.language || 'uk').toString().toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'uk';
-        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(place_id)}&fields=name,formatted_address,geometry,rating,user_ratings_total,photos,reviews,editorial_summary&language=${encodeURIComponent(language)}&key=${process.env.GOOGLE_API_KEY}`;
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(place_id)}&fields=name,formatted_address,geometry,rating,user_ratings_total,photos,editorial_summary&key=${process.env.GOOGLE_API_KEY}`;
+
         const response = await fetch(url);
         const data = await response.json();
 
-        if (!response.ok || data.status !== 'OK') {
-            const statusCode = response.ok ? 502 : response.status;
-            return res.status(statusCode).json({ error: data.error_message || data.status || 'Google API error' });
+        if (data.status !== 'OK') {
+            return res.status(502).json({ error: data.error_message || data.status });
         }
 
         const result = data.result || {};
-        const photos = (result.photos || []).map((photo) => ({
+
+        const photos = (result.photos || []).map(photo => ({
             reference: photo.photo_reference,
             width: photo.width,
             height: photo.height,
             url: `/api/google/photo?photoRef=${encodeURIComponent(photo.photo_reference)}&maxheight=900`
         }));
 
-        const normalized = {
+        return res.json({
             place_id,
             displayName: result.name,
             formattedAddress: result.formatted_address,
             location: {
-                latitude: result.geometry?.location?.lat,
+                latitude:  result.geometry?.location?.lat,
                 longitude: result.geometry?.location?.lng,
             },
-            rating: result.rating,
+            rating:          result.rating,
             userRatingCount: result.user_ratings_total,
             editorialSummary: {
                 text: result.editorial_summary?.overview || result.editorial_summary?.text || ''
             },
-            photos,
-            reviews: (result.reviews || []).map((review) => ({
-                authorAttribution: { displayName: review.author_name || 'Гість' },
-                text: review.text || '',
-                rating: review.rating || 0,
-                relativePublishTimeDescription: review.relative_time_description || ''
-            }))
-        };
+            photos
+        });
 
-        return res.json(normalized);
     } catch (err) {
         console.error('Google place detail fetch error:', err);
         return res.status(500).json({ error: 'Unable to fetch Google place details' });
     }
 };
-
 
 getGooglePhoto = async (req, res) => {
     const { photoRef, place_id, maxwidth, maxheight } = req.query;
@@ -2308,84 +2483,290 @@ searchShops = async (req, res) => {
         return res.status(500).json({ error: 'Server error' });
     }
 };
+// ── Reverse geocoding ─────────────────────────────────────────
+
+_getCityFromCoords = async (latitude, longitude) => {
+    try {
+        const geoRes = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json` +
+            `?latlng=${latitude},${longitude}&language=en&key=${process.env.GOOGLE_API_KEY}`
+        );
+        const geoData = await geoRes.json();
+        if (!geoData.results?.length) return null;
+
+        const allComponents = geoData.results.flatMap(r => r.address_components);
+        const country = allComponents.find(c => c.types.includes('country'));
+
+        const adm1 = allComponents.find(c =>
+            c.types.includes('administrative_area_level_1')
+        );
+
+        if (!adm1) return null;
+
+        // "Kyivs'ka oblast" → split → ["Kyivs'ka", "oblast"] → беремо [0] → "Kyivs'ka"
+        // Але нам треба "Kyiv" — тому прибираємо s'ka або s'kyi з кінця першого слова
+        const raw = adm1.long_name; // "Kyivs'ka oblast" або "Kyiv Oblast"
+        
+        // Беремо перше слово і чистимо суфікси
+        const firstWord = raw.split(' ')[0]; // "Kyivs'ka" або "Kyiv"
+        const cityName = firstWord
+            .replace(/[''`\u2018\u2019\u02BC]?s?['']?(ka|kyi|ska|skyi)$/i, '')
+            .trim();
+
+        console.log('[GEO] raw:', raw, '→ firstWord:', firstWord, '→ city:', cityName);
+        return cityName ? { name: cityName, country: country?.long_name || null } : null;
+
+    } catch (err) {
+        console.warn('[GEO] Geocoding failed:', err.message);
+        return null;
+    }
+};
+
+
+
+_fetchFromGoogle = async (cityName, latitude, longitude, cityId) => {
+    console.log('[Google Places] Fetching top places for:', cityName);
+    try {
+        const types = ['store', 'shopping_mall', 'supermarket', 'restaurant', 'cafe'];
+        let allPlaces = [];
+
+        for (const type of types) {
+            if (allPlaces.length >= 9) break;
+
+            const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json` +
+                `?location=${latitude},${longitude}` +
+                `&radius=10000` +
+                `&type=${type}` +
+                `&rankby=prominence` +
+                `&key=${process.env.GOOGLE_API_KEY}`;
+
+            const res  = await fetch(url);
+            const data = await res.json();
+
+            for (const p of data.results || []) {
+                if (allPlaces.length >= 9) break;
+                if (!p.photos?.length) continue;
+                if ((p.rating || 0) < 4.0) continue;
+                if (allPlaces.find(x => x.place_id === p.place_id)) continue;
+
+                const photoRef = p.photos[0].photo_reference;
+
+                // ✅ Резолвимо реальний URL фото через redirect на бекенді
+                const photoUrl = await this._resolvePhotoUrl(photoRef);
+                if (!photoUrl) continue; // якщо фото не резолвилось — пропускаємо
+
+                allPlaces.push({
+                    place_id:  p.place_id,
+                    name:      p.name,
+                    address:   p.vicinity || '',
+                    photo_url: photoUrl,
+                    rating:    p.rating || 0,
+                    score:     (p.user_ratings_total || 0) * 0.3 + (p.rating || 0) * 0.7
+                });
+            }
+        }
+
+        allPlaces.sort((a, b) => b.score - a.score);
+        allPlaces = allPlaces.slice(0, 9);
+
+        for (const place of allPlaces) {
+            await pool.query(`
+                INSERT INTO city_top (city_id, place_id, name, address, photo_url, rating, score, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                ON CONFLICT (city_id, place_id) DO UPDATE
+                    SET name       = EXCLUDED.name,
+                        address    = EXCLUDED.address,
+                        photo_url  = EXCLUDED.photo_url,
+                        rating     = EXCLUDED.rating,
+                        score      = EXCLUDED.score,
+                        updated_at = NOW()
+            `, [cityId, place.place_id, place.name, place.address, place.photo_url, place.rating, place.score]);
+        }
+
+        return allPlaces;
+    } catch (err) {
+        console.error('[Google Places] Error:', err.message);
+        return [];
+    }
+};
+
+_resolvePhotoUrl = async (photoRef) => {
+    try {
+        const googleUrl = `https://maps.googleapis.com/maps/api/place/photo` +
+            `?maxwidth=800&photoreference=${photoRef}&key=${process.env.GOOGLE_API_KEY}`;
+
+        const res = await fetch(googleUrl, { redirect: 'manual' });
+
+        if (res.status === 302 || res.status === 301) {
+            const location = res.headers.get('location');
+            if (location) {
+                console.log('[Photo] Resolved OK:', location.substring(0, 50));
+                return location;
+            }
+        }
+
+        if (res.ok) return res.url;
+
+        console.warn('[Photo] Status:', res.status, 'for ref:', photoRef.substring(0, 30));
+        return null;
+    } catch (err) {
+        console.warn('[Photo] Error:', err.message);
+        return null;
+    }
+};
+
+
+_fillCityTop = async (cityId, cityName, latitude, longitude) => {
+    console.log('[CityTop] Filling from our DB for:', cityName);
+
+    let result = await pool.query(`
+        SELECT place_id, query_name AS name, full_name AS address,
+               photo_url, rating,
+               (COALESCE(save_count, 0) * 0.3 + rating * 0.7) AS score
+        FROM places
+        WHERE photo_url IS NOT NULL 
+          AND photo_url != ''
+          AND photo_url LIKE 'http%'
+          AND rating >= 4.0
+          AND city ILIKE $1
+        ORDER BY score DESC
+        LIMIT 9
+    `, [`%${cityName}%`]);
+
+    console.log('[CityTop] By city name found:', result.rows.length);
+    result.rows.forEach(r => console.log('  photo_url:', r.photo_url?.substring(0, 60)));
+
+    if (result.rows.length < 3 && latitude && longitude) {
+        console.log('[CityTop] Not enough, trying nearby coords...');
+        const nearby = await pool.query(`
+            SELECT place_id, query_name AS name, full_name AS address,
+                   photo_url, rating,
+                   (COALESCE(save_count, 0) * 0.3 + rating * 0.7) AS score
+            FROM places
+            WHERE photo_url IS NOT NULL 
+              AND photo_url != ''
+              AND photo_url LIKE 'http%'
+              AND rating >= 4.0
+              AND latitude IS NOT NULL AND longitude IS NOT NULL
+              AND (
+                  6371 * acos(
+                      cos(radians($1)) * cos(radians(latitude::float)) *
+                      cos(radians(longitude::float) - radians($2)) +
+                      sin(radians($1)) * sin(radians(latitude::float))
+                  )
+              ) <= 50
+            ORDER BY score DESC
+            LIMIT 9
+        `, [latitude, longitude]);
+
+        console.log('[CityTop] By coords found:', nearby.rows.length);
+        nearby.rows.forEach(r => console.log('  photo_url:', r.photo_url?.substring(0, 60)));
+
+        const ids   = new Set(result.rows.map(r => r.place_id));
+        const extra = nearby.rows.filter(r => !ids.has(r.place_id));
+        result = { rows: [...result.rows, ...extra].slice(0, 9) };
+    }
+
+    console.log('[CityTop] Total to save:', result.rows.length);
+    if (!result.rows.length) return [];
+
+    for (const place of result.rows) {
+        await pool.query(`
+            INSERT INTO city_top (city_id, place_id, name, address, photo_url, rating, score, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            ON CONFLICT (city_id, place_id) DO UPDATE
+                SET name       = EXCLUDED.name,
+                    address    = EXCLUDED.address,
+                    photo_url  = EXCLUDED.photo_url,
+                    rating     = EXCLUDED.rating,
+                    score      = EXCLUDED.score,
+                    updated_at = NOW()
+        `, [cityId, place.place_id, place.name, place.address, place.photo_url, place.rating, place.score]);
+    }
+
+    return result.rows;
+};
+
+
+// ── Головний endpoint ─────────────────────────────────────────
 getDailyTop = async (req, res) => {
     try {
         const { latitude, longitude } = req.body;
         console.log('[Daily Top] Request with coords:', latitude, longitude);
 
-        let cityName = null;
-
-        // ── Получить город по геолокации ──────────────────────────
-        if (latitude && longitude) {
-            try {
-                const cityRow = await pool.query(
-                    `SELECT city FROM places
-                     WHERE latitude IS NOT NULL
-                       AND longitude IS NOT NULL
-                       AND city IS NOT NULL
-                     ORDER BY (
-                         6371 * acos(
-                             cos(radians($1)) * cos(radians(latitude::float)) *
-                             cos(radians(longitude::float) - radians($2)) +
-                             sin(radians($1)) * sin(radians(latitude::float))
-                         )
-                     ) ASC LIMIT 1`,
-                    [latitude, longitude]
-                );
-                cityName = cityRow.rows[0]?.city || null;
-                console.log('[Daily Top] Found city:', cityName);
-            } catch (err) {
-                console.warn('[Daily Top] Could not determine city:', err.message);
-            }
+        if (!latitude || !longitude) {
+            return res.status(200).json({ top: [], city: null });
         }
 
+        // 1. Отримуємо місто через Google Geocoding
+        const cityInfo = await this._getCityFromCoords(latitude, longitude);
+        if (!cityInfo) {
+            console.warn('[Daily Top] Could not detect city');
+            return res.status(200).json({ top: [], city: null });
+        }
+        console.log('[Daily Top] City detected:', cityInfo.name);
 
-        const query = `
-            SELECT 
-                place_id, name, address, photo_url,
-                rating, reviews, city
-            FROM "DailyTop"
-            ORDER BY rating DESC
-            LIMIT 12`;
+        // 2. Шукаємо місто в нашій таблиці cities
+        let cityRow = await pool.query(
+            `SELECT id FROM cities WHERE name ILIKE $1 LIMIT 1`,
+            [cityInfo.name]
+        );
 
-        console.log('[Daily Top] Query params: []');
-        const result = await pool.query(query);
-        console.log('[Daily Top] ✓ Found', result.rows.length, 'places');
+        let cityId;
 
-        // Если данные есть, возвращаем с городом из гео
-        if (result.rows.length > 0) {
-            return res.status(200).json({ 
-                top: result.rows, 
-                city: cityName || result.rows[0]?.city || 'Top Stores' 
-            });
+        if (cityRow.rows.length) {
+            // Місто є в таблиці
+            cityId = cityRow.rows[0].id;
+            console.log('[Daily Top] City found in DB, id:', cityId);
+        } else {
+            // Місто нове — додаємо в таблицю cities
+            const inserted = await pool.query(`
+                INSERT INTO cities (name, country, latitude, longitude)
+                VALUES ($1, $2, $3, $4)
+                RETURNING id
+            `, [cityInfo.name, cityInfo.country, latitude, longitude]);
+            cityId = inserted.rows[0].id;
+            console.log('[Daily Top] New city added, id:', cityId);
         }
 
-        // Fallback: если DailyTop пусто, берём из places
-        console.log('[Daily Top] DailyTop is empty, trying places table...');
-        const fallbackQuery = `
-            SELECT 
-                place_id, query_name as name, full_name as address, photo_url,
-                rating, city
-            FROM places
-            WHERE photo_url IS NOT NULL
-              AND rating >= 4.0
-            ORDER BY (COALESCE(save_count, 0) * 0.3 + rating * 0.7) DESC
-            LIMIT 12`;
+        // 3. Перевіряємо чи є вже топ для цього міста в city_top
+        const existing = await pool.query(`
+            SELECT ct.place_id, ct.name, ct.address, ct.photo_url, ct.rating, ct.score
+            FROM city_top ct
+            WHERE ct.city_id = $1
+              AND ct.updated_at > NOW() - INTERVAL '48 hours'
+            ORDER BY ct.score DESC
+            LIMIT 9
+        `, [cityId]);
 
-        const fallbackResult = await pool.query(fallbackQuery);
-        console.log('[Daily Top] Fallback found', fallbackResult.rows.length, 'places');
-        
-        return res.status(200).json({ 
-            top: fallbackResult.rows, 
-            city: cityName || 'Top Stores' 
-        });
+        if (existing.rows.length >= 3) {
+            // Є актуальні дані — повертаємо одразу
+            console.log('[Daily Top] Returning cached city_top:', existing.rows.length, 'places');
+            return res.status(200).json({ top: existing.rows, city: cityInfo.name });
+        }
+
+        // 4. Нема або застарілі — чистимо і заповнюємо з нашої бази
+        await pool.query(`DELETE FROM city_top WHERE city_id = $1`, [cityId]);
+
+        let places = await this._fillCityTop(cityId, cityInfo.name, latitude, longitude);
+
+        // 5. Якщо в нашій базі нічого нема — йдемо в Google Places API
+        if (places.length < 3) {
+            console.log('[Daily Top] Not enough in our DB, fetching from Google Places...');
+            places = await this._fetchFromGoogle(cityInfo.name, latitude, longitude, cityId);
+        }
+
+        if (!places.length) {
+            return res.status(200).json({ top: [], city: cityInfo.name });
+        }
+
+        return res.status(200).json({ top: places, city: cityInfo.name });
 
     } catch (err) {
-        console.error('[Daily Top] ❌ Error:', err.message);
+        console.error('[Daily Top] Error:', err.message);
         return res.status(500).json({ error: 'Failed to load daily top' });
     }
 };
-
 // ── _doRefreshDailyTop ─────────────────────────────────────────
 _doRefreshDailyTop = async () => {
     console.log('[DAILYTOP] Starting refresh...');
@@ -2447,27 +2828,7 @@ refreshDailyTop = async (req, res) => {
     }
 };
 
-// ── refreshDailyTop endpoint ───────────────────────────────────
-refreshDailyTop = async (req, res) => {
-    try {
-        await this._doRefreshDailyTop();
-        return res.status(200).json({ ok: true, message: 'DailyTop updated successfully' });
-    } catch (err) {
-        console.error('[DAILYTOP] refresh error:', err.message);
-        return res.status(500).json({ error: 'Server error: ' + err.message });
-    }
-};
 
-// ── refreshDailyTop endpoint ───────────────────────────────────
-refreshDailyTop = async (req, res) => {
-    try {
-        await this._doRefreshDailyTop();
-        return res.status(200).json({ ok: true, message: 'DailyTop updated successfully' });
-    } catch (err) {
-        console.error('[DAILYTOP] refresh error:', err.message);
-        return res.status(500).json({ error: 'Server error: ' + err.message });
-    }
-};
 // ── refreshDailyTop endpoint ───────────────────────────────────
 refreshDailyTop = async (req, res) => {
     try {

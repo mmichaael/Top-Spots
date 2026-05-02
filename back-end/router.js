@@ -42,6 +42,7 @@ router.get('/api/photo/v1', controller.proxyPlacePhotoV1);
 
 
 
+
 router.post('/chat/assistant',
     controller.requireAuth,           
     rateLimiter.searchLimiter('ai-chat'),  
@@ -183,6 +184,10 @@ router.post('/api/resetPassword/OpenEnterPage/deleteResetCode', controller.delet
 router.get('/api/suggestions', controller.searchingSugges);
 router.get('/api/suggestions/placeInf', controller.placeInfFromSugg);
 
+
+
+router.get('/api/reviews/:place_id', controller.getReviews);
+router.post('/api/reviews/:id/helpful', controller.markHelpful);
 
 router.get('/api/admin/rate-limiter-stats', controller.checkValidityAccessToken, (req, res) => {
 

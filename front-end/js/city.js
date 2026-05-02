@@ -29,14 +29,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* ── HELPERS ─────────────────────────────────────────────── */
 
-    /**
-     * Build a proxied photo URL.
-     * Rules:
-     *  - Already a /api/... path   → use as-is (server handles it)
-     *  - places/... (v1 name)      → /api/photo/v1?name=...
-     *  - anything else (ref string)→ /api/google/photo?photoRef=...
-     *  - null / undefined          → PLACEHOLDER
-     */
+
+     
     function buildPhotoUrl(photo, maxSize = 900) {
         if (!photo) return PLACEHOLDER;
 
@@ -196,38 +190,46 @@ document.addEventListener("DOMContentLoaded", () => {
     /* ═══════════════════════════════════════════════════════════
        GOOGLE API
     ═══════════════════════════════════════════════════════════ */
-    async function loadFromGoogle(id) {
-        try {
-            const res = await fetch(`/api/google/place/${encodeURIComponent(id)}`);
-            if (!res.ok) throw new Error("Google proxy error");
-            const p = await res.json();
+ async function loadFromGoogle(id) {
+    try {
+        const res = await fetch(`/api/google/place/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error('Google proxy error');
+        const p = await res.json();
 
-            const name = p.displayName || "Unnamed";
-            placeNameEl.textContent = name;
-            placeNameEl.style.animation = "gradShift 5s ease infinite";
+        const name = p.displayName || 'Unnamed';
+        placeNameEl.textContent = name;
+        placeNameEl.style.animation = 'gradShift 5s ease infinite';
 
-            if (addressEl) addressEl.textContent = p.editorialSummary?.text || p.formattedAddress || "";
-
-            if (p.rating) {
-                ratingEl.classList.remove("hidden");
-                ratingEl.innerHTML = `<span class="rating-stars">${starsHTML(p.rating)}</span><span class="rating-value">${p.rating}</span><span class="rating-count">(${p.userRatingCount} reviews)</span>`;
-            }
-
-            if (p.photos?.length)  renderPhotos(p.photos);
-            if (p.reviews?.length) renderReviewsWithFilter(p.reviews);
-            if (p.location) {
-                await renderMap(p.location.latitude, p.location.longitude);
-                searchNearby(p.location);
-            }
-            syncData(p, name);
-            initRevealObserver();
-
-        } catch (e) {
-            console.error("Error loading place:", e);
-            placeNameEl.textContent = "Could not find this place 😟";
+        if (addressEl) {
+            addressEl.textContent = p.editorialSummary?.text || p.formattedAddress || '';
         }
-    }
 
+        if (p.rating) {
+            ratingEl.classList.remove('hidden');
+            ratingEl.innerHTML = `
+                <span class="rating-stars">${starsHTML(p.rating)}</span>
+                <span class="rating-value">${p.rating}</span>
+                <span class="rating-count">(${p.userRatingCount} reviews)</span>`;
+        }
+
+        if (p.photos?.length) renderPhotos(p.photos);
+
+        const reviews = await fetchReviews(id);
+        if (reviews.length) renderReviewsWithFilter(reviews);
+
+        if (p.location) {
+            await renderMap(p.location.latitude, p.location.longitude);
+            searchNearby(p.location);
+        }
+
+        syncData(p, name);
+        initRevealObserver();
+
+    } catch (e) {
+        console.error('Error loading place:', e);
+        placeNameEl.textContent = 'Could not find this place 😟';
+    }
+}
     function starsHTML(rating) {
         return Array.from({ length: 5 }, (_, i) => i < Math.round(rating) ? '★' : '☆').join('');
     }
@@ -300,96 +302,380 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     function startAuto() { autoTimer = setInterval(() => goSlide(slideIdx + 1), 4800); }
 
-    /* ═══════════════════════════════════════════════════════════
-       REVIEWS WITH FILTER
-    ═══════════════════════════════════════════════════════════ */
-    let allReviews = [];
+/* ═══════════════════════════════════════════════════════════
+   REVIEWS — фронтенд
+   Відгуки тепер йдуть через /api/reviews/:place_id
+   Мова відгуку береться як є з Google (не перекладається).
+   ═══════════════════════════════════════════════════════════ */
 
-    function renderReviewsWithFilter(reviews) {
-        allReviews = reviews;
-        if (!reviews.length) return;
-        reviewsSection.classList.remove("hidden");
+let allReviews = [];
 
-        if (!document.getElementById('review-filter-bar')) {
-            const bar = document.createElement('div');
-            bar.id = 'review-filter-bar';
-            bar.style.cssText = 'display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;padding:0 4px;';
+async function fetchReviews(placeId) {
+    try {
+        console.log('[fetchReviews] Fetching for placeId:', placeId);
+        const res = await fetch(`/api/reviews/${encodeURIComponent(placeId)}`);
+        console.log('[fetchReviews] Response status:', res.status);
+        if (!res.ok) throw new Error(`Reviews API error: ${res.status}`);
+        const data = await res.json();
 
-            const cAll = reviews.length;
-            const cPos = reviews.filter(r => Math.round(r.rating || 0) >= 4).length;
-            const cNeg = reviews.filter(r => Math.round(r.rating || 0) <= 2).length;
-            const c5   = reviews.filter(r => Math.round(r.rating || 0) === 5).length;
-
-            bar.innerHTML = `
-                <span style="font-size:12px;color:#6b6560;font-family:'Outfit',sans-serif;white-space:nowrap;">Filter:</span>
-                <button class="rv-filter-btn active" data-filter="all">All (${cAll})</button>
-                <button class="rv-filter-btn" data-filter="positive">👍 Positive (${cPos})</button>
-                <button class="rv-filter-btn" data-filter="negative">👎 Negative (${cNeg})</button>
-                <button class="rv-filter-btn" data-filter="5">⭐⭐⭐⭐⭐ 5★ (${c5})</button>`;
-
-            if (!document.getElementById('rv-filter-style')) {
-                const s = document.createElement('style');
-                s.id = 'rv-filter-style';
-                s.textContent = `.rv-filter-btn{padding:6px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;color:#6b6560;font-size:12px;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s;white-space:nowrap;} .rv-filter-btn.active,.rv-filter-btn:hover{background:rgba(201,168,76,0.15);border-color:rgba(201,168,76,0.4);color:#e8c97a;}`;
-                document.head.appendChild(s);
-            }
-
-            const sectionHead = reviewsSection.querySelector('.section-head');
-            reviewsSection.insertBefore(bar, sectionHead);
-
-            bar.querySelectorAll('.rv-filter-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    bar.querySelectorAll('.rv-filter-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    applyReviewFilter(btn.dataset.filter);
-                });
-            });
-        }
-
-        applyReviewFilter('all');
-    }
-
-    function applyReviewFilter(filter) {
-        let filtered = allReviews;
-        if      (filter === 'positive') filtered = allReviews.filter(r => Math.round(r.rating || 0) >= 4);
-        else if (filter === 'negative') filtered = allReviews.filter(r => Math.round(r.rating || 0) <= 2);
-        else if (filter === '5')        filtered = allReviews.filter(r => Math.round(r.rating || 0) === 5);
-
-        reviewsTrack.innerHTML = '';
-
-        if (!filtered.length) {
-            reviewsTrack.innerHTML = `<div style="padding:40px;text-align:center;color:#6b6560;font-family:'Outfit',sans-serif;min-width:280px;"><div style="font-size:36px;margin-bottom:12px;">🔍</div><p>No reviews found for this filter</p></div>`;
-            return;
-        }
-
-        filtered.forEach((r, i) => {
-            const name   = r.authorAttribution?.displayName || "Guest";
-            const letter = name[0]?.toUpperCase() || "?";
-            const stars  = Math.round(r.rating || 0);
-            const text   = typeof r.text === 'string' ? r.text : r.text?.text || "No text";
-            const date   = r.relativePublishTimeDescription || "";
-            const card   = document.createElement("div");
-            card.className = "review-card";
-            card.style.animationDelay = `${i * 0.08}s`;
-            card.innerHTML = `
-                <div class="rv-header">
-                    <div class="review-avatar">${letter}</div>
-                    <div class="rv-meta"><span class="rv-name">${escHtml(name)}</span><span class="rv-date">${date}</span></div>
-                    <div class="rv-stars">${Array.from({length:5},(_,idx)=>`<span class="${idx<stars?'on':''}">${idx<stars?'★':'☆'}</span>`).join('')}</div>
-                </div>
-                <p class="rv-body">${escHtml(text)}</p>
-                <div class="rv-foot">
-                    <button class="rv-like">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
-                        Helpful <span class="lc">0</span>
-                    </button>
-                </div>`;
-            reviewsTrack.appendChild(card);
-            card.querySelector('.rv-like')?.addEventListener('click', function() { toggleLike(this); });
+        // ── Фільтруємо російськомовні відгуки ────────────────
+        const filtered = (data.reviews || []).filter(r => {
+            const lang = (r.language || '').toLowerCase();
+            const origLang = (r.original_language || '').toLowerCase();
+            return lang !== 'ru' && origLang !== 'ru';
         });
 
-        bindArrows(reviewsTrack, "#reviews-section .arrow-prev", "#reviews-section .arrow-next", reviewsSection);
+        console.log('[fetchReviews] Total received:', data.reviews?.length);
+        console.log('[fetchReviews] After RU filter:', filtered.length);
+        console.log('[fetchReviews] Source:', data.source);
+        console.log('[fetchReviews] First review sample:', JSON.stringify(filtered?.[0])?.substring(0, 200));
+
+        return filtered;
+    } catch (e) {
+        console.error('[fetchReviews] Error:', e);
+        return [];
     }
+}
+
+function buildReviewCard(r) {
+    const stars = Math.round(r.rating || 0);
+    const starsHtml = Array.from({ length: 5 }, (_, i) =>
+        `<span class="${i < stars ? 'on' : ''}">★</span>`
+    ).join('');
+
+    const name    = r.authorAttribution?.displayName || 'Anonymous';
+    const initial = name[0]?.toUpperCase() || '?';
+    const text    = r.text?.text || '';
+    const lang    = r.text?.languageCode || '';
+    const date    = r.relativePublishTimeDescription || '';
+    const dbId    = r.dbId || null;
+    const helpful = r.helpfulCount || 0;
+
+    const origText = r.originalText?.text || null;
+    const origLang = r.originalText?.languageCode || null;
+
+    // Текст по дефолту обрізаний до 120 символів
+    const hasMore = text.length > 120;
+    const shortText = hasMore ? text.slice(0, 120) + '…' : text;
+
+    const langBadge = lang
+        ? `<span class="rv-lang-badge">${lang.toUpperCase()}</span>`
+        : '';
+
+    // Оригінальний текст — окремий блок що розкривається
+    const hasOrig = origText && origLang && origLang !== lang;
+    const origShort = hasOrig && origText.length > 40 ? origText.slice(0, 40) + '…' : (origText || '');
+
+    const originalBlock = hasOrig ? `
+        <div class="rv-orig-wrap">
+            <button class="rv-orig-btn">
+                🌐 Original <span class="rv-orig-lang">${origLang.toUpperCase()}</span> ▾
+            </button>
+            <div class="rv-orig-text" style="display:none;">
+                <span class="rv-orig-short">${origShort}</span>
+                ${origText.length > 40 ? `
+                    <span class="rv-orig-full" style="display:none;">${origText}</span>
+                    <button class="rv-orig-more">More ▾</button>
+                ` : ''}
+            </div>
+        </div>` : '';
+
+    return `
+    <div class="review-card" role="listitem" data-db-id="${dbId || ''}">
+        <div class="rv-header">
+            <div class="review-avatar">${initial}</div>
+            <div class="rv-meta">
+                <span class="rv-name">${name}${langBadge}</span>
+                <span class="rv-date">${date}</span>
+            </div>
+            <div class="rv-stars">${starsHtml}</div>
+        </div>
+        <div class="rv-body">
+            <div class="rv-body-text">
+                <span class="rv-short">${shortText}</span>
+                ${hasMore ? `<span class="rv-full" style="display:none;">${text}</span>` : ''}
+            </div>
+            ${hasMore ? `<button class="rv-more-btn">More ▾</button>` : ''}
+            ${originalBlock}
+        </div>
+        <div class="rv-foot">
+            <button class="rv-like" data-db-id="${dbId || ''}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
+                    <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                </svg>
+                Helpful <span class="lc">${helpful}</span>
+            </button>
+        </div>
+    </div>`;
+}
+const REVIEW_LIMITS = {
+    all: 25,
+    positive: 20,
+    negative: 20,
+    5: 20
+};
+
+function applyReviewFilter(filter) {
+    const container = document.getElementById('reviews');
+    if (!container) { console.warn('[applyReviewFilter] No #reviews container'); return; }
+
+    console.log('[applyReviewFilter] Filter:', filter, '| Total reviews:', allReviews.length);
+
+    const limit = REVIEW_LIMITS[filter] || 25;
+    let filtered;
+
+    if (filter === 'positive') {
+        filtered = allReviews.filter(r => Math.round(r.rating || 0) >= 4);
+    } else if (filter === 'negative') {
+        filtered = allReviews.filter(r => Math.round(r.rating || 0) <= 2);
+    } else if (filter === '5') {
+        filtered = allReviews.filter(r => Math.round(r.rating || 0) === 5);
+    } else {
+        filtered = allReviews;
+    }
+
+    filtered = filtered.slice(0, limit);
+    console.log('[applyReviewFilter] After filter+limit:', filtered.length);
+
+    container.innerHTML = filtered.map(r => buildReviewCard(r)).join('');
+
+container.innerHTML = filtered.map(r => buildReviewCard(r)).join('');
+
+// ── More/Less для основного тексту ──
+container.querySelectorAll('.rv-more-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const body = btn.closest('.rv-body');
+        const short = body.querySelector('.rv-short');
+        const full  = body.querySelector('.rv-full');
+        if (!full) return;
+        const isExpanded = full.style.display !== 'none';
+        short.style.display = isExpanded ? 'inline' : 'none';
+        full.style.display  = isExpanded ? 'none'   : 'inline';
+        btn.textContent = isExpanded ? 'More ▾' : 'Less ▴';
+    });
+});
+
+// ── Оригінальний текст toggle ──
+container.querySelectorAll('.rv-orig-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const wrap = btn.closest('.rv-orig-wrap');
+        const textEl = wrap.querySelector('.rv-orig-text');
+        const isOpen = textEl.style.display !== 'none';
+        textEl.style.display = isOpen ? 'none' : 'block';
+        btn.innerHTML = isOpen
+            ? `🌐 Original <span class="rv-orig-lang">${btn.querySelector('.rv-orig-lang').textContent}</span> ▾`
+            : `🌐 Original <span class="rv-orig-lang">${btn.querySelector('.rv-orig-lang').textContent}</span> ▴`;
+    });
+});
+
+// ── More/Less для оригінального тексту (до 40 символів) ──
+container.querySelectorAll('.rv-orig-more').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const wrap  = btn.closest('.rv-orig-text');
+        const short = wrap.querySelector('.rv-orig-short');
+        const full  = wrap.querySelector('.rv-orig-full');
+        if (!full) return;
+        const isExpanded = full.style.display !== 'none';
+        short.style.display = isExpanded ? 'inline' : 'none';
+        full.style.display  = isExpanded ? 'none'   : 'inline';
+        btn.textContent = isExpanded ? 'More ▾' : 'Less ▴';
+    });
+});
+
+// ── Helpful ──
+container.querySelectorAll('.rv-like').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const dbId = btn.dataset.dbId;
+        if (!dbId) return;
+        btn.classList.toggle('on');
+        try {
+            const res = await fetch(`/api/reviews/${dbId}/helpful`, { method: 'POST' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const counter = btn.querySelector('.lc');
+            if (counter && data.helpful_count !== undefined) counter.textContent = data.helpful_count;
+        } catch (e) { console.error('[Helpful]', e); }
+    });
+
+const track = document.getElementById('reviews');
+const section = document.getElementById('reviews-section');
+if (track && section) {
+    bindArrows(track, '#reviews-section .arrow-prev', '#reviews-section .arrow-next', section);
+}
+});
+
+    // ── Like кнопки
+    container.querySelectorAll('.rv-like').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('on');
+        });
+    });
+}
+
+function renderReviewsWithFilter(reviews) {
+    console.log('[renderReviewsWithFilter] Called with', reviews.length, 'reviews');
+    allReviews = reviews;
+    if (!reviews.length) { console.warn('[renderReviewsWithFilter] No reviews to render'); return; }
+    reviewsSection.classList.remove('hidden');
+
+    if (!document.getElementById('review-filter-bar')) {
+        const bar = document.createElement('div');
+        bar.id = 'review-filter-bar';
+        bar.style.cssText = 'display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;padding:0 4px;';
+
+        const cAll = reviews.length;
+        const cPos = reviews.filter(r => Math.round(r.rating || 0) >= 4).length;
+        const cNeg = reviews.filter(r => Math.round(r.rating || 0) <= 2).length;
+        const c5   = reviews.filter(r => Math.round(r.rating || 0) === 5).length;
+
+        console.log('[renderReviewsWithFilter] Counts — all:', cAll, 'pos:', cPos, 'neg:', cNeg, '5★:', c5);
+
+        bar.innerHTML = `
+            <span style="font-size:12px;color:#6b6560;font-family:'Outfit',sans-serif;white-space:nowrap;">Filter:</span>
+            <button class="rv-filter-btn active" data-filter="all">All (${cAll})</button>
+            <button class="rv-filter-btn" data-filter="positive">👍 Positive (${cPos})</button>
+            <button class="rv-filter-btn" data-filter="negative">👎 Negative (${cNeg})</button>
+            <button class="rv-filter-btn" data-filter="5">⭐⭐⭐⭐⭐ 5★ (${c5})</button>`;
+
+        if (!document.getElementById('rv-filter-style')) {
+            const s = document.createElement('style');
+            s.id = 'rv-filter-style';
+            s.textContent = `
+                .rv-filter-btn {
+                    padding:6px 14px;
+                    background:rgba(255,255,255,0.04);
+                    border:1px solid rgba(255,255,255,0.08);
+                    border-radius:20px;
+                    color:#6b6560;
+                    font-size:12px;
+                    cursor:pointer;
+                    font-family:'Outfit',sans-serif;
+                    transition:all .2s;
+                    white-space:nowrap;
+                }
+                .rv-filter-btn.active,
+                .rv-filter-btn:hover {
+                    background:rgba(201,168,76,0.15);
+                    border-color:rgba(201,168,76,0.4);
+                    color:#e8c97a;
+                }
+                .rv-lang-badge {
+                    display:inline-block;
+                    padding:2px 7px;
+                    background:rgba(31,212,200,0.12);
+                    border:1px solid rgba(31,212,200,0.25);
+                    border-radius:10px;
+                    font-size:10px;
+                    color:#1fd4c8;
+                    font-family:'Outfit',sans-serif;
+                    letter-spacing:.5px;
+                    text-transform:uppercase;
+                    margin-left:6px;
+                    vertical-align:middle;
+                }
+                .rv-original-note {
+                    font-size:11px;
+                    color:#6b6560;
+                    font-style:italic;
+                    margin-top:6px;
+                    padding-top:6px;
+                    border-top:1px solid rgba(255,255,255,0.05);
+                }
+            `;
+            document.head.appendChild(s);
+        }
+
+        const sectionHead = reviewsSection.querySelector('.section-head');
+        reviewsSection.insertBefore(bar, sectionHead ? sectionHead.nextSibling : null);
+
+        bar.querySelectorAll('.rv-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                bar.querySelectorAll('.rv-filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyReviewFilter(btn.dataset.filter);
+            });
+        });
+    }
+
+    applyReviewFilter('all');
+}
+
+
+
+
+
+// ─────────────────────────────────────────────────────────────
+//  Кнопка "Helpful" — надсилаємо +1 на бекенд
+// ─────────────────────────────────────────────────────────────
+async function handleHelpfulClick(btn, dbId) {
+    // Локальний toggle (для анімації)
+    toggleLike(btn);
+
+    if (!dbId) return; // немає id — тільки візуально
+
+    try {
+        const res = await fetch(`/api/reviews/${dbId}/helpful`, { method: 'POST' });
+        if (!res.ok) return;
+        const data = await res.json();
+        // Оновлюємо лічильник з реального значення БД
+        const counter = btn.querySelector('.lc');
+        if (counter && data.helpful_count !== undefined) {
+            counter.textContent = data.helpful_count;
+        }
+    } catch (e) {
+        console.error('[handleHelpfulClick]', e);
+    }
+}
+
+
+async function loadFromGoogle(id) {
+    try {
+        const res = await fetch(`/api/google/place/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error('Google proxy error');
+        const p = await res.json();
+
+        const name = p.displayName || 'Unnamed';
+        placeNameEl.textContent = name;
+        placeNameEl.style.animation = 'gradShift 5s ease infinite';
+
+        if (addressEl) addressEl.textContent = p.editorialSummary?.text || p.formattedAddress || '';
+
+        if (p.rating) {
+            ratingEl.classList.remove('hidden');
+            ratingEl.innerHTML = `
+                <span class="rating-stars">${starsHTML(p.rating)}</span>
+                <span class="rating-value">${p.rating}</span>
+                <span class="rating-count">(${p.userRatingCount} reviews)</span>`;
+        }
+
+        if (p.photos?.length) renderPhotos(p.photos);
+
+        // ── ВІДГУКИ: тепер через наш endpoint, не p.reviews ──
+        const reviews = await fetchReviews(id);
+        if (reviews.length) renderReviewsWithFilter(reviews);
+
+        if (p.location) {
+            await renderMap(p.location.latitude, p.location.longitude);
+            searchNearby(p.location);
+        }
+
+        syncData(p, name);
+        initRevealObserver();
+
+    } catch (e) {
+        console.error('Error loading place:', e);
+        placeNameEl.textContent = 'Could not find this place 😟';
+    }
+}
+
+function starsHTML(rating) {
+    return Array.from({ length: 5 }, (_, i) => i < Math.round(rating) ? '★' : '☆').join('');
+}
+
+
+
+
 
     /* ═══════════════════════════════════════════════════════════
        NEARBY — FIXED photo loading
@@ -420,9 +706,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const rating = p.rating ? `⭐ ${p.rating}` : "—";
                 const type   = (p.types?.[0] || "place").replace(/_/g, " ");
 
-                // ── KEY FIX: build photo URL correctly ──
-                // p.photo_url already comes from backend as /api/google/photo?photoRef=...
-                // so we use it directly — no double-wrapping
+
                 const photoSrc = p.photo_url || PLACEHOLDER;
 
                 const card = document.createElement('a');

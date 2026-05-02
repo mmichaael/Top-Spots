@@ -62,6 +62,8 @@ h1,h2,h3,h4,h5,h6 { font-family:'Outfit',sans-serif; line-height:1.15; }
 
 html,body {
   height:100%; width:100%;
+  /* Забороняємо горизонтальний скрол глобально */
+  overflow-x:hidden;
   font-family:'Outfit',sans-serif;
   font-size:16px;
   line-height:1.6;
@@ -104,8 +106,10 @@ body::before {
 ───────────────────────────────────────────── */
 .wrapper {
   min-height:100vh;
+  width:100%;
   display:flex; flex-direction:column;
   position:relative; z-index:1;
+  overflow-x:hidden;
 }
 
 /* ─────────────────────────────────────────────
@@ -136,10 +140,6 @@ body::before {
   background-size:300% 100%;
   opacity:.55;
   animation:headerShimmer 6s ease-in-out infinite;
-}
-@keyframes headerShimmer {
-  0%,100% { background-position:0% 0%;   opacity:.4; }
-  50%      { background-position:100% 0%; opacity:.75; }
 }
 
 .logo_video_header {
@@ -252,6 +252,7 @@ body::before {
   gap:52px;
   padding:136px 52px 72px;
   position:relative; z-index:1;
+  width:100%;
 }
 
 /* ─────────────────────────────────────────────
@@ -262,11 +263,6 @@ body::before {
   max-height:170px;
   margin:0 auto -36px;
   filter:drop-shadow(0 0 36px rgba(201,168,76,0.5));
-  animation:logoLevitate 7s ease-in-out infinite;
-}
-@keyframes logoLevitate {
-  0%,100% { transform:translateY(0)   rotate(-.1deg); }
-  50%      { transform:translateY(-12px) rotate(.1deg); }
 }
 
 /* ─────────────────────────────────────────────
@@ -296,7 +292,6 @@ body::before {
   transition:transform .35s var(--spring), box-shadow .35s;
 }
 
-/* Glow border on focus */
 .search-bar::before {
   content:'';
   position:absolute; inset:-1px;
@@ -477,6 +472,8 @@ body::before {
   scroll-snap-type:x mandatory;
   scrollbar-width:thin;
   scrollbar-color:rgba(201,168,76,.35) transparent;
+  /* Запобігаємо вертикальному зсуву при скролі */
+  -webkit-overflow-scrolling:touch;
 }
 .scroll-container::-webkit-scrollbar { height:3px; }
 .scroll-container::-webkit-scrollbar-thumb {
@@ -495,7 +492,6 @@ body::before {
   position:relative;
   transition:transform .35s var(--spring), box-shadow .35s, border-color .35s;
 }
-/* Inner gradient overlay */
 .city-card::after {
   content:'';
   position:absolute; inset:0;
@@ -591,30 +587,93 @@ body::before {
   border-radius:2px;
   transition:width .3s;
 }
-
-/* ─────────────────────────────────────────────
-   THEME CARDS
-───────────────────────────────────────────── */
-.mini-card, .option-card {
-    transition:transform 0.3s var(--spring), box-shadow 0.3s ease, border-color 0.3s ease;
-}
-.mini-card:hover, .option-card:hover {
-    box-shadow:0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(201,168,76,0.15) !important;
-    transform:translateY(-4px) !important;
+/* Основна сітка */
+#categories {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 в ряд на десктопі */
+    gap: 20px;
+    margin-bottom: 50px;
 }
 
+/* Картка категорії */
 .cat-card {
-    transition:var(--transition);
-    cursor:pointer !important;
-    position:relative !important;
+    background: rgba(255, 255, 255, 0.055);
+    padding: 44px 20px;
+    border-radius: 36px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.3s ease;
 }
+
 .cat-card:hover {
-    transform:translateY(-8px) scale(1.02) !important;
-    box-shadow:0 16px 40px rgba(0,0,0,0.4), var(--glow-gold) !important;
-    border-color:rgba(201,168,76,0.3) !important;
-    background:#1a1e2e !important;
+    background: rgba(255, 255, 255, 0.08);
 }
-.cat-card:active { transform:scale(0.97) !important; }
+
+/* Стилі тексту */
+.cat-label {
+    font-size: 17px;
+    font-weight: 700;
+    color: #f0ece4;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* Обгортка іконки (загальні стилі) */
+.icon-wrapper {
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+    font-size: 26px;
+    transition: transform .3s ease;
+}
+
+.cat-card:hover .icon-wrapper {
+    transform: scale(1.1);
+}
+
+/* Кольори іконок (як були в тебе) */
+.icon-restaurant { background: rgba(255,107,74,0.12); border: 1px solid rgba(255,107,74,0.2); color: #ff6b4a; }
+.icon-hotel      { background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.2); color: #e8c97a; }
+.icon-park       { background: rgba(31,212,200,0.1);  border: 1px solid rgba(31,212,200,0.18); color: #1fd4c8; }
+.icon-museum     { background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.2); color: #a78bfa; }
+.icon-cafe       { background: rgba(201,168,76,0.1);  border: 1px solid rgba(201,168,76,0.18); color: #c9a84c; }
+.icon-shopping   { background: rgba(255,107,74,0.1);  border: 1px solid rgba(255,107,74,0.18); color: #ff6b4a; }
+
+@media (max-width: 768px) {
+    #categories {
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 14px;
+        padding: 0 10px;
+    }
+    
+    .cat-card {
+        padding: 30px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    #categories {
+        grid-template-columns: 1fr; 
+        gap: 12px;
+    }
+    
+    .cat-card {
+        padding: 20px 10px;
+ 
+    }
+    cat-label {
+        font-size: 15px;
+    }
+}
+
 
 /* ─────────────────────────────────────────────
    AI CHAT CARD (inline / widget)
@@ -913,92 +972,379 @@ body::before {
   color:var(--gold2);
 }
 
-
-
-
 /* ─────────────────────────────────────────────
    UTILS
 ───────────────────────────────────────────── */
 .visible { display:none; }
 
 /* ─────────────────────────────────────────────
-   RESPONSIVE
+   RESPONSIVE — TABLET (≤1200px)
 ───────────────────────────────────────────── */
 @media (max-width:1200px) {
   .main__page    { padding:120px 36px 56px; }
   .city-card     { width:265px; }
   .city-image    { height:182px; }
+
+  .theme-cards,
+  .cat-cards-grid,
+  [class*="cat-grid"],
+  [class*="categories-grid"] {
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+  }
 }
 
+/* ─────────────────────────────────────────────
+   RESPONSIVE — TABLET NARROW (≤1002px)
+───────────────────────────────────────────── */
 @media (max-width:1002px) {
-  .header_list {
-    position:fixed; top:0; right:-100%; bottom:0;
-    width:72%; max-width:320px;
-    background:rgba(5,8,15,.98);
-    border-left:1px solid var(--edge);
-    flex-direction:column;
-    align-items:center; justify-content:center;
-    gap:6px;
-    transition:right .42s var(--snap);
-    z-index:200;
-    backdrop-filter:blur(36px);
+
+  .theme-cards,
+  .cat-cards-grid,
+  [class*="cat-grid"],
+  [class*="categories-grid"] {
+    grid-template-columns:repeat(2,1fr);
+    gap:16px;
   }
-  .header_list.active { right:0; }
-  .burger { display:flex; }
-  .header-ul_element a { font-size:19px; padding:13px 24px; }
-  .button_header { margin-left:0; margin-top:18px; }
+  .cat-card { min-height:160px; }
+}
+
+@media (max-width: 992px) {
+    /* 1. ОБОВ'ЯЗКОВО вмикаємо видимість бургера */
+    .burger {
+        display: flex !important; /* Без цього кнопки просто нема на екрані */
+        position: relative;
+        z-index: 1001;
+    }
+
+  
+
+    .main__header {
+        height: 70px; /* Трохи компактніше для мобілок */
+        padding: 0 20px;
+    }
+
+    /* 2. Твої стилі меню (залишаємо, вони топ) */
+    .header_list {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 100%;
+        height: 100vh;
+        background: radial-gradient(circle at center, rgba(10, 15, 28, 0.98) 0%, rgba(5, 8, 15, 1) 100%);
+        backdrop-filter: blur(30px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        transition: right 0.6s cubic-bezier(0.85, 0, 0.15, 1);
+        z-index: 1000;
+        margin: 0; padding: 0;
+    }
+
+    .header_list.active {
+        right: 0;
+    }
+
+    /* Анімація появи пунктів */
+    .header-ul_element {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.5s var(--snap);
+        list-style: none;
+    }
+
+    .header_list.active .header-ul_element {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Затримки (stagger) */
+    .header_list.active .header-ul_element:nth-child(1) { transition-delay: 0.1s; }
+    .header_list.active .header-ul_element:nth-child(2) { transition-delay: 0.15s; }
+    .header_list.active .header-ul_element:nth-child(3) { transition-delay: 0.2s; }
+    .header_list.active .header-ul_element:nth-child(4) { transition-delay: 0.25s; }
+    .header_list.active .header-ul_element:nth-child(5) { transition-delay: 0.3s; }
+    .header_list.active .header-ul_element:nth-child(6) { transition-delay: 0.35s; }
+    .header_list.active .header-ul_element:nth-child(7) { transition-delay: 0.4s; }
+
+    .header-ul_element button {
+        font-size: 28px !important; 
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--t1) !important;
+        background: none;
+        border: none;
+        padding: 10px 20px;
+        transition: all 0.3s var(--ease);
+        cursor: pointer;
+    }
+
+    .header-ul_element button:hover {
+        color: var(--gold) !important;
+        transform: scale(1.1);
+        letter-spacing: 4px;
+    }
+
+    .header_list.active .button_header {
+        margin-left: 0;
+        margin-top: 20px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE — MOBILE (≤768px)
+───────────────────────────────────────────── */
+@media (max-width:768px) {
+  /* Header */
+  .main__header   { padding:0 20px; height:60px; }
+
+  /* Main layout — важливо: ніяких від'ємних margins, чіткий padding */
+  .main__page {
+    padding:80px 16px 44px;
+    gap:32px;
+    width:100%;
+    max-width:100vw;
+  }
+.logo_video{
+  width:160px; height:160px;
+}
+  /* Search */
+  .search-wrapper { width:100%; padding:0; }
+  .search-bar {
+    padding:18px 16px;
+    gap:14px;
+    border-radius:var(--r3);
+    width:100%;
+  }
+  .search-section { padding:11px 16px; }
+  .search-section input { font-size:15px; }
+  .search-button {
+    padding:12px 28px;
+    font-size:14px;
+    width:100%;
+    text-align:center;
+  }
+  .search-category { font-size:12px; padding:7px 13px; }
+  .more-btn { font-size:12px; padding:7px 13px; }
+
+  /* City cards scroll */
+  .scroll-container {
+    padding:10px 40px;
+    gap:14px;
+  }
+  .city-card      { width:240px; }
+  .city-image     { height:165px; }
+  .city-name      { font-size:17px; }
+  .city-description { font-size:12px; }
+  .scroll-button  { width:36px; height:36px; font-size:15px; }
+  .progress-bar-container { padding:0 40px; }
+
+  /* ═══ CAT CARDS: 2 в ряд на планшеті-мобайлі ═══ */
+  .theme-cards,
+  .cat-cards-grid,
+  [class*="cat-grid"],
+  [class*="categories-grid"] {
+    grid-template-columns:repeat(2,1fr);
+    gap:14px;
+  }
+  .cat-card {
+    min-height:170px;
+    padding:20px 16px !important;
+  }
+  /* Якщо є внутрішні заголовки/іконки — збільшуємо для читабельності */
+  .cat-card h3, .cat-card .card-title { font-size:16px !important; }
+  .cat-card p, .cat-card .card-desc   { font-size:13px !important; }
+  .cat-card .card-icon, .cat-card i   { font-size:28px !important; }
+
+  /* AI chat */
+  .ai-chat-card   { border-radius:var(--r2); }
+  .ai-chat-header {
+    flex-direction:row;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+    padding:12px 16px;
+  }
+  .ai-controls    { margin-left:auto; }
+  .assistant-avatar { width:42px; height:42px; font-size:20px; }
+  .ai-title h3    { font-size:15px; }
+  .chat-window    { max-height:280px; }
+  .ai-suggestions .suggestion { flex:1 1 45%; text-align:center; font-size:12px; }
+
+  /* AI widget */
+  .ai-widget { width:calc(100vw - 40px); right:-8px; bottom:72px; }
+  #ai-global-root { bottom:16px; right:16px; }
+
+  /* Footer */
+  .footer-container { flex-direction:column; gap:36px; }
+  .footer-links-grid { grid-template-columns:repeat(2,1fr); gap:24px; }
+  .footer-bottom-modern { flex-direction:column; gap:16px; text-align:center; }
+  .main-footer.modern-style { padding:44px 20px 28px; }
+  .footer-brand { max-width:100%; }
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE — MOBILE SMALL (≤480px)
+───────────────────────────────────────────── */
+@media (max-width:480px) {
+  .main__page { padding:76px 12px 32px; gap:24px; }
+
+
+  /* Search */
+  .search-bar     { padding:14px 12px; gap:12px; }
+  .search-section { padding:10px 13px; }
+  .search-section input { font-size:14px; }
+  .search-button  { padding:11px 20px; font-size:13px; }
+  .search-category { font-size:11px; padding:6px 11px; }
+  .more-btn       { font-size:11px; padding:6px 11px; }
+
+  /* Suggestions — вузький екран */
+  #suggestionsList,
+  .suggestions-portal {
+    left:0; right:0;
+    max-width:100%;
+    font-size:13px;
+  }
+
+  /* City cards */
+  .scroll-container { padding:8px 36px; gap:12px; }
+  .city-card      { width:220px; }
+  .city-image     { height:152px; }
+  .city-name      { font-size:16px; }
+  .scroll-button  { width:32px; height:32px; font-size:14px; }
+  .progress-bar-container { padding:0 36px; }
+
+  /* ═══ CAT CARDS: 1 в ряд на маленькому телефоні ═══ */
+  .theme-cards,
+  .cat-cards-grid,
+  [class*="cat-grid"],
+  [class*="categories-grid"] {
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  .cat-card {
+    min-height:130px;
+    padding:22px 20px !important;
+    /* Горизонтальний layout: іконка ліворуч, текст праворуч */
+    display:flex !important;
+    align-items:center !important;
+    gap:16px !important;
+  }
+  .cat-card .card-icon,
+  .cat-card i,
+  .cat-card svg {
+    font-size:32px !important;
+    flex-shrink:0;
+    width:40px;
+    text-align:center;
+  }
+  .cat-card h3, .cat-card .card-title { font-size:17px !important; margin-bottom:4px; }
+  .cat-card p, .cat-card .card-desc   { font-size:13px !important; line-height:1.4; }
+
+  /* AI */
+  .ai-chat-header { padding:10px 14px; }
+  .assistant-avatar { width:38px; height:38px; font-size:18px; }
+  .ai-widget { width:calc(100vw - 28px); right:-12px; }
+  #chatInput { font-size:13px; }
+
+  /* Footer */
+  .footer-links-grid { grid-template-columns:1fr; gap:18px; }
+  .main-footer.modern-style { padding:32px 14px 22px; }
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE — MOBILE XS (≤360px)
+───────────────────────────────────────────── */
+@media (max-width:360px) {
+  .main__header   { height:54px; }
+  .main__page     { padding:70px 10px 24px; gap:20px; }
+
+  .logo_video { width:140px; height:160px;  }
+#SignUp{
+margin-right: 15px;
+  width: 95px;
+  height: 33px;
+  font-size: 12px;
+}
+  .search-bar  { padding:12px 10px; gap:10px; border-radius:var(--r2); }
+  .search-section { padding:9px 12px; }
+
+  .city-card   { width:200px; }
+  .city-image  { height:142px; }
+
+  /* Cat cards — залишаємо 1 в ряд, трохи менший padding */
+  .cat-card    { padding:18px 14px !important; min-height:110px; }
+  .cat-card h3, .cat-card .card-title { font-size:15px !important; }
+  .cat-card .card-icon, .cat-card i { font-size:28px !important; }
+
+  .ai-widget   { width:calc(100vw - 20px); right:-14px; }
+  .main-footer.modern-style { padding:28px 10px 20px; }
+  .footer-links-grid { gap:14px; }
+}
+
+/* ─────────────────────────────────────────────
+   LANGUAGE SELECTOR
+───────────────────────────────────────────── */
+.language-selector {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:8px;
+  transition:all .3s ease;
+}
+.language-selector:hover {
+  background:rgba(255,255,255,0.12);
+  border-color:rgba(255,255,255,0.2);
+}
+.language-selector i { font-size:16px; color:#f0ece4; opacity:.8; }
+.language-selector select {
+  background:transparent; border:none;
+  color:#f0ece4; font-size:14px; font-weight:500;
+  cursor:pointer; outline:none;
+  font-family:'Outfit',sans-serif;
+  min-width:120px;
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  padding:4px 25px 4px 8px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23f0ece4' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 5px center;
+}
+.language-selector select option {
+  background:#1a1a2e; color:#f0ece4; padding:8px 12px;
 }
 
 @media (max-width:768px) {
-  .main__header   { padding:0 20px; height:60px; }
-  .main__page     { padding:96px 20px 44px; gap:36px; }
-  .search-bar     { padding:20px 18px; gap:16px; border-radius:var(--r3); }
-  .search-button  { padding:11px 28px; font-size:14px; }
-  .scroll-container { padding:10px 48px; gap:14px; }
-  .city-card      { width:245px; }
-  .city-image     { height:165px; }
-  .theme-cards    { grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; }
-  .footer-container { flex-direction:column; gap:40px; }
-  .footer-links-grid { grid-template-columns:repeat(2,1fr); gap:28px; }
-  .footer-bottom-modern { flex-direction:column; gap:18px; text-align:center; }
-  .main-footer.modern-style { padding:48px 24px 28px; }
-  .ai-widget { width:320px; }
-  #ai-global-root { bottom:16px; right:16px; }
-  .ai-chat-card   { border-radius:var(--r2); }
-  .ai-chat-header { flex-direction:column; align-items:flex-start; gap:8px; }
-  .ai-controls    { margin-left:auto; }
+  .language-selector { padding:6px 10px; gap:8px; }
+  .language-selector i { font-size:14px; }
+  .language-selector select { font-size:13px; min-width:100px; }
 }
 
-@media (max-width:480px) {
-  .main__page     { padding:80px 14px 36px; gap:28px; }
-  .header__topspot { font-size:13px; letter-spacing:2.5px; padding-left:14px; }
-  .search-bar     { padding:16px 14px; gap:13px; }
-  .search-section { padding:10px 14px; }
-  .search-section input { font-size:15px; }
-  .search-button  { padding:10px 22px; font-size:13px; }
-  .search-category { font-size:12px; padding:7px 12px; }
-  .more-btn       { font-size:11px; padding:6px 12px; }
-  .city-card      { width:224px; }
-  .city-image     { height:152px; }
-  .city-name      { font-size:16px; }
-  .scroll-container { padding:8px 42px; }
-  .scroll-button  { width:34px; height:34px; font-size:15px; }
-  .footer-links-grid { grid-template-columns:1fr; gap:20px; }
-  .ai-widget { width:calc(100vw - 32px); right:-14px; }
-  .theme-cards    { grid-template-columns:1fr; }
-  .theme-card     { padding:26px 20px; }
-  .ai-suggestions .suggestion { flex:1 1 45%; text-align:center; }
-  #chatInput      { font-size:13px; }
-  .main-footer.modern-style { padding:36px 16px 24px; }
-  #suggestionsList, .suggestions-portal {
-    margin-bottom: -20px;
-    max-width:calc(100vw - 50px);
-    font-size: 8px;
-}}
-
-@media (max-width:360px) {
-  .main__header   { height:56px; }
-  .main__page     { padding:74px 10px 28px; }
-  .city-card      { width:200px; }
-  .search-bar     { padding:13px 12px; }
+/* Dark mode vars */
+body {
+  --language-selector-bg: rgba(255,255,255,0.08);
+  --language-selector-border: rgba(255,255,255,0.12);
+  --language-selector-text: #f0ece4;
 }
+body.light-theme .language-selector {
+  background:rgba(29,78,216,0.08);
+  border-color:rgba(29,78,216,0.15);
+}
+body.light-theme .language-selector i,
+body.light-theme .language-selector select { color:#1d4ed8; }
+body.light-theme .language-selector select option {
+  background:#ffffff; color:#1d4ed8;
+}
+
+@keyframes selectGlow {
+  0%   { box-shadow:0 0 0 0 rgba(255,255,255,0.1); }
+  70%  { box-shadow:0 0 0 8px rgba(255,255,255,0); }
+  100% { box-shadow:0 0 0 0 rgba(255,255,255,0); }
+}
+.language-selector select:active { animation:selectGlow .6s ease-out; }

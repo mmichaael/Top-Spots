@@ -140,7 +140,7 @@ html, body {
     width: 100%;
     height: 2px;
     background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-    animation: scanLine 5s ease-in-out infinite;
+    animation: scanLine 1.5s cubic-bezier(0.4,0,0.2,1) 1;
     z-index: 0;
     opacity: 0.5;
 }
@@ -185,14 +185,24 @@ html, body {
 }
 
 .logo_img_block {
-    width: 140px;
-    height: 48px;
+    width: 180px;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
 }
 .logo_img {
-    width: 100%;
-    height: 100%;
+    width: 280px;
+    height: auto;
+    max-height: 80px;
     object-fit: contain;
     filter: brightness(1.1);
+    display: block;
+    margin-bottom: 12px; /* add space below logo to prevent text overlap */
+}
+.logo_img img{
+    width: 100%;
+    height: auto;
 }
 
 .home_page_btn {
@@ -972,7 +982,8 @@ input[type="checkbox"] {
     }
 
     .logo_header { padding: 22px 28px; }
-    .logo_img_block { width: 110px; height: 38px; }
+    .logo_img_block { width: 110px; height: auto; }
+    .logo_img { width: 100px; max-height: 40px; margin-bottom: 6px; }
 
     .main_block_for_all { padding: 30px 28px; }
 

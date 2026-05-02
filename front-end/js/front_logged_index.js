@@ -795,20 +795,36 @@ dashboard: `
         <div style="position:absolute;bottom:-30px;left:10%;width:200px;height:200px;background:rgba(31,212,200,0.05);filter:blur(60px);border-radius:50%;"></div>
     </div>
 
-    <div class="top-cards-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:44px;">
-        <div class="mini-card tilt-card" data-page="shopping" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:1px solid rgba(255,255,255,0.06);">
-            <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Shopping</span>
-            <div style="background:rgba(31,212,200,0.12);border:1px solid rgba(31,212,200,0.2);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#1fd4c8;font-size:22px;"><i class="fas fa-shopping-bag"></i></div>
-        </div>
+  
 
-        <div class="mini-card tilt-card" data-page="profile" style="background:rgba(255,255,255,0.025);padding:36px 28px;border-radius:32px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:1px solid rgba(255,255,255,0.06);">
-            <span style="font-weight:700;font-size:17px;color:#f0ece4;font-family:'Outfit',sans-serif;">Profile</span>
-            <div style="background:rgba(255,107,74,0.15);border:1px solid rgba(255,107,74,0.25);width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#ff6b4a;font-size:22px;"><i class="fas fa-user"></i></div>
-        </div>
-    </div>
+  
 
     <div class="main-options-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:44px;">
-        <div class="option-card tilt-card" data-page="nearby" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
+    
+      <div class="option-card tilt-card" data-page="nearby" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
+            <div style="background:rgba(12, 53, 51, 0.1);border:1px solid rgba(31,212,200,0.2);
+            min-width:64px;height:64px;border-radius:20px;display:flex;align-items:center;
+            justify-content:center;font-size:26px;color:#1fd4c8;"><i class="fas fa-shopping-bag"></i></div>
+            <div><h3 style="margin:0;font-size:20px;color:#f0ece4;font-weight:800;
+            font-family:'Outfit',sans-serif;">Shopping</h3><p style="margin:5px 0 0;font-size:13px;
+            color:#6b6560;">Places around you</p></div>
+        </div>
+        <div class="option-card tilt-card" data-page="settings" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
+            <div style="background:rgba(193, 47, 47, 0.12);border:1px solid rgba(198, 67, 37, 0.2);
+            min-width:64px;height:64px;border-radius:20px;display:flex;align-items:center;
+            justify-content:center;font-size:26px;color:#e8c97a;"><i class="fas fa-user"></i></div>
+            <div><h3 style="margin:0;font-size:20px;color:#f0ece4;font-weight:800;
+            font-family:'Outfit',sans-serif;">Profile</h3><p style="margin:5px 0 0;
+            font-size:13px;color:#6b6560;">Account management</p></div>
+        </div>
+    
+    
+
+
+
+
+    
+    <div class="option-card tilt-card" data-page="nearby" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
             <div style="background:rgba(31,212,200,0.1);border:1px solid rgba(31,212,200,0.2);min-width:64px;height:64px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#1fd4c8;"><i class="fas fa-location-dot"></i></div>
             <div><h3 style="margin:0;font-size:20px;color:#f0ece4;font-weight:800;font-family:'Outfit',sans-serif;">Nearby</h3><p style="margin:5px 0 0;font-size:13px;color:#6b6560;">Places around you</p></div>
         </div>
@@ -1418,6 +1434,19 @@ function renderNearbyCards(places) {
         return;
     }
 
+    // ── Фільтруємо місця без фото ─────────────────────────────
+    const filteredPlaces = places.filter(p => p.photo_url && p.photo_url.trim() !== '');
+
+    if (!filteredPlaces.length) {
+        grid.innerHTML = `
+            <div style="text-align:center;padding:48px 20px;color:#6b6560;">
+                <i class="fas fa-image" style="font-size:40px;margin-bottom:16px;opacity:.5;display:block;"></i>
+                <p style="margin:0 0 8px;font-size:15px;color:#a8a199;">No places with photos found</p>
+                <p style="margin:0;font-size:13px;">Try a different category or increase the radius</p>
+            </div>`;
+        return;
+    }
+
     // ── Track (flex slider) ───────────────────────────────────
     const wrap = document.createElement('div');
     wrap.style.cssText = 'width:100%;overflow:hidden;border-radius:20px;';
@@ -1426,7 +1455,7 @@ function renderNearbyCards(places) {
     track.id = 'nearbySliderTrack';
     track.style.cssText = 'display:flex;transition:transform .4s cubic-bezier(.4,0,.2,1);';
 
-    places.forEach(p => {
+    filteredPlaces.forEach(p => {
         const name    = p.name || p.displayName || 'Unknown';
         const addr    = (p.vicinity || p.formatted_address || 'Address not available')
                             .split(',').slice(0, 2).join(', ');
@@ -1473,7 +1502,7 @@ function renderNearbyCards(places) {
 
     // ── Навігація ─────────────────────────────────────────────
     let cur   = 0;
-    const total = places.length;
+    const total = filteredPlaces.length;
 
     const nav = document.createElement('div');
     nav.className = 'nearby-nav';
@@ -1525,7 +1554,7 @@ function renderNearbyCards(places) {
 
     go(0);
 
-    grid.style.cssText = ''; // скидаємо старі inline стилі якщо були
+    grid.style.cssText = '';
     grid.appendChild(wrap);
     grid.appendChild(nav);
     if (total > 1) grid.appendChild(dots);
@@ -1698,10 +1727,125 @@ async function initShoppingPage() {
     }
 }
 
-
 async function loadDailyTop() {
     const section = document.getElementById('shopDailyTop');
     if (!section) return;
+
+    section.style.display = 'block';
+    section.innerHTML = `
+        <style>
+            @keyframes dtPulse {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50%       { opacity: 0.5; transform: scale(0.92); }
+            }
+            @keyframes dtSlideUp {
+                from { opacity: 0; transform: translateY(18px); }
+                to   { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes dtDot {
+                0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+                40%           { transform: scale(1);   opacity: 1; }
+            }
+            .dt-loader-wrap {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 60px 20px;
+                gap: 20px;
+                animation: dtSlideUp .4s ease both;
+            }
+            .dt-loader-icon { font-size: 42px; animation: dtPulse 1.8s ease-in-out infinite; }
+            .dt-loader-title { font-size: 18px; font-weight: 700; color: #c9a84c; text-align: center; letter-spacing: .3px; }
+            .dt-loader-sub { font-size: 13px; color: rgba(255,255,255,.4); text-align: center; max-width: 260px; line-height: 1.5; }
+            .dt-loader-dots { display: flex; gap: 6px; }
+            .dt-loader-dots span { width: 8px; height: 8px; border-radius: 50%; background: #c9a84c; display: inline-block; }
+            .dt-loader-dots span:nth-child(1) { animation: dtDot 1.2s ease infinite 0s; }
+            .dt-loader-dots span:nth-child(2) { animation: dtDot 1.2s ease infinite .2s; }
+            .dt-loader-dots span:nth-child(3) { animation: dtDot 1.2s ease infinite .4s; }
+        </style>
+        <div class="dt-loader-wrap">
+            <div class="dt-loader-icon">📍</div>
+            <div class="dt-loader-title">Шукаємо найкраще поруч із вами</div>
+            <div class="dt-loader-sub">Визначаємо ваше місцезнаходження та підбираємо топ місця міста</div>
+            <div class="dt-loader-dots"><span></span><span></span><span></span></div>
+        </div>
+    `;
+
+  const restoreSection = () => {
+    section.innerHTML = `
+        <div class="section-header" style="
+            display:flex;
+            align-items:center;
+            gap:12px;
+            margin-bottom:24px;
+            padding:0 4px;
+        ">
+            <span style="font-size:28px;">🔥</span>
+            <h2 class="daily-top-city" style="
+                font-size:clamp(16px,3vw,22px);
+                font-weight:700;
+                color:#c9a84c;
+                margin:0;
+                flex:1;
+            "></h2>
+            <span class="daily-top-badge" style="
+                background:transparent;
+                border:1.5px solid #c9a84c;
+                color:#c9a84c;
+                font-size:11px;
+                font-weight:700;
+                padding:3px 10px;
+                border-radius:20px;
+                letter-spacing:.5px;
+            "></span>
+        </div>
+        <div style="position:relative;display:flex;align-items:center;gap:8px;">
+            <button id="dtsPrev" style="
+                position:absolute;left:-20px;z-index:10;
+                width:44px;height:44px;border-radius:50%;
+                background:rgba(201,168,76,.15);
+                border:1.5px solid rgba(201,168,76,.3);
+                color:#c9a84c;font-size:16px;cursor:pointer;
+                display:flex;align-items:center;justify-content:center;
+                transition:all .2s;flex-shrink:0;
+            "><i class="fas fa-chevron-left"></i></button>
+
+            <div id="dailyTopGrid" style="flex:1;min-width:0;"></div>
+
+            <button id="dtsNext" style="
+                position:absolute;right:-20px;z-index:10;
+                width:44px;height:44px;border-radius:50%;
+                background:rgba(201,168,76,.15);
+                border:1.5px solid rgba(201,168,76,.3);
+                color:#c9a84c;font-size:16px;cursor:pointer;
+                display:flex;align-items:center;justify-content:center;
+                transition:all .2s;flex-shrink:0;
+            "><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div style="
+            display:flex;align-items:center;justify-content:center;
+            gap:8px;margin-top:20px;
+        ">
+            <button id="dtsPrevMob" style="
+                width:36px;height:36px;border-radius:50%;
+                background:rgba(201,168,76,.1);
+                border:1px solid rgba(201,168,76,.2);
+                color:#c9a84c;font-size:13px;cursor:pointer;
+                display:none;align-items:center;justify-content:center;
+            "><i class="fas fa-chevron-left"></i></button>
+            <div id="dtsIndicators" style="display:flex;gap:6px;align-items:center;"></div>
+            <button id="dtsNextMob" style="
+                width:36px;height:36px;border-radius:50%;
+                background:rgba(201,168,76,.1);
+                border:1px solid rgba(201,168,76,.2);
+                color:#c9a84c;font-size:13px;cursor:pointer;
+                display:none;align-items:center;justify-content:center;
+            "><i class="fas fa-chevron-right"></i></button>
+        </div>
+    `;
+
+};
 
     const doLoad = async (latitude = null, longitude = null) => {
         try {
@@ -1718,9 +1862,10 @@ async function loadDailyTop() {
             if (!res.ok) { section.style.display = 'none'; return; }
 
             const data = await res.json();
-            if (!data.top?.length) { section.style.display = 'none'; return; }
+            const filtered = (data.top || []).filter(p => p.photo_url && p.photo_url.trim() !== '');
+            if (!filtered.length) { section.style.display = 'none'; return; }
 
-            section.style.display = 'block';
+            restoreSection();
 
             const titleEl = section.querySelector('.daily-top-city');
             if (titleEl) {
@@ -1729,46 +1874,69 @@ async function loadDailyTop() {
                     : '🔥 Trending Now · last 48h';
             }
 
-            renderDailyTop(data.top);
+            const badgeEl = section.querySelector('.daily-top-badge');
+            if (badgeEl) badgeEl.textContent = `TOP ${filtered.length}`;
+
+            renderDailyTop(filtered);
         } catch (err) {
             console.error('[DailyTop]', err);
             section.style.display = 'none';
         }
     };
 
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            pos => doLoad(pos.coords.latitude, pos.coords.longitude),
-            ()  => doLoad(),
-            { timeout: 5000, maximumAge: 600_000 }
-        );
-    } else {
-        doLoad();
+    if (!navigator.geolocation) {
+        section.style.display = 'none';
+        return;
     }
+
+    const cachedLat = sessionStorage.getItem('userLat');
+    const cachedLon = sessionStorage.getItem('userLon');
+    if (cachedLat && cachedLon) {
+        console.log('[DailyTop] Using cached coords');
+        await doLoad(parseFloat(cachedLat), parseFloat(cachedLon));
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        async pos => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            sessionStorage.setItem('userLat', lat);
+            sessionStorage.setItem('userLon', lon);
+            await doLoad(lat, lon);
+        },
+        err => {
+            console.warn('[DailyTop] Geolocation failed:', err.message);
+            section.style.display = 'none';
+        },
+        {
+            timeout: 15000,
+            maximumAge: 3600000,
+            enableHighAccuracy: false
+        }
+    );
 }
 
 function renderDailyTop(places) {
     const grid = document.getElementById('dailyTopGrid');
     if (!grid) return;
 
-    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'];
-
+    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'];
 
     function getPerPage() {
         const w = window.innerWidth;
-        if (w >= 1024) return 3;   
-        if (w >= 768)  return 2;   
-        return 1;             
+        if (w >= 1024) return 3;
+        if (w >= 768)  return 2;
+        return 1;
     }
 
-    // ── Будуємо HTML карток
     function buildCard(place, i) {
-        const photo    = place.photo_url || (typeof NO_PHOTO !== 'undefined' ? NO_PHOTO : '');
+        const photo    = place.photo_url;
         const rating   = place.rating ? parseFloat(place.rating).toFixed(1) : '—';
-        const reviews  = place.reviews ? `${Number(place.reviews).toLocaleString()} reviews` : '';
         const url      = `/html/city_page.html?placeId=${place.place_id}&name=${encodeURIComponent(place.name || '')}`;
         const addr     = (place.address || '').split(',').slice(0, 2).join(', ').trim();
         const category = (place.category || '').replace(/_/g, ' ');
+
         return `
         <div class="daily-card" style="animation-delay:${i * 0.08}s">
             <div class="daily-card-rank">${medals[i] || `#${i + 1}`}</div>
@@ -1776,16 +1944,15 @@ function renderDailyTop(places) {
                 <img src="${photo}"
                     alt="${(place.name || '').replace(/"/g,'&quot;')}"
                     loading="lazy"
-                    onerror="this.src='${photo}'"
+                    onerror="this.closest('.daily-card').style.display='none'"
                     style="width:100%;height:100%;object-fit:cover;"/>
                 <div class="daily-card-overlay"></div>
-                <div class="daily-card-category">${category}</div>
+                ${category ? `<div class="daily-card-category">${category}</div>` : ''}
             </div>
             <div class="daily-card-body">
                 <h3 class="daily-card-name">${place.name || 'Unknown'}</h3>
                 <div class="daily-card-rating">
                     <i class="fas fa-star"></i> ${rating}
-                    ${reviews ? `<span style="font-size:11px;opacity:.6;margin-left:6px;">${reviews}</span>` : ''}
                 </div>
                 <p class="daily-card-addr"><i class="fas fa-map-marker-alt"></i> ${addr || '—'}</p>
                 <a href="${url}" class="daily-card-btn"><i class="fas fa-arrow-right"></i> Open</a>
@@ -1793,16 +1960,12 @@ function renderDailyTop(places) {
         </div>`;
     }
 
-    // ── Розбиваємо картки на сторінки
     function chunkArray(arr, size) {
         const pages = [];
-        for (let i = 0; i < arr.length; i += size) {
-            pages.push(arr.slice(i, i + size));
-        }
+        for (let i = 0; i < arr.length; i += size) pages.push(arr.slice(i, i + size));
         return pages;
     }
 
-    // ── Ініціалізація слайдера
     let currentPage = 0;
     let autoTimer   = null;
 
@@ -1811,19 +1974,15 @@ function renderDailyTop(places) {
         const pages   = chunkArray(places, perPage);
         const total   = pages.length;
 
-        // Рендеримо сторінки
         const pagesHTML = pages.map((pagePlaces, pi) => {
-            const cols = pagePlaces.length === 1 ? 1
-                       : pagePlaces.length === 2 ? 2
-                       
-                       : perPage;
+            const cols = pagePlaces.length === 1 ? 1 : pagePlaces.length === 2 ? 2 : perPage;
             return `
             <div class="dts-page" style="
-                display: grid;
-                grid-template-columns: repeat(${cols}, 1fr);
-                gap: ${window.innerWidth >= 1024 ? '24px' : window.innerWidth >= 768 ? '18px' : '16px'};
-                flex-shrink: 0;
-                width: 100%;
+                display:grid;
+                grid-template-columns:repeat(${cols}, 1fr);
+                gap:${window.innerWidth >= 1024 ? '24px' : window.innerWidth >= 768 ? '18px' : '16px'};
+                flex-shrink:0;
+                width:100%;
             ">
                 ${pagePlaces.map((p, i) => buildCard(p, pi * perPage + i)).join('')}
             </div>`;
@@ -1832,40 +1991,32 @@ function renderDailyTop(places) {
         grid.innerHTML = `
             <div class="dts-viewport" style="overflow:hidden;width:100%;position:relative;">
                 <div class="dts-track" style="
-                    display: flex;
-                    width: 100%;
-                    transition: transform 0.6s cubic-bezier(0.34,1.2,0.64,1);
+                    display:flex;
+                    width:100%;
+                    transition:transform 0.6s cubic-bezier(0.34,1.2,0.64,1);
                 ">
                     ${pagesHTML}
                 </div>
-            </div>
-        `;
+            </div>`;
 
-        const track      = grid.querySelector('.dts-track');
-        const dotsEl     = document.getElementById('dtsIndicators');
-        const prevBtn    = document.getElementById('dtsPrev');
-        const nextBtn    = document.getElementById('dtsNext');
+        const track   = grid.querySelector('.dts-track');
+        const dotsEl  = document.getElementById('dtsIndicators');
+        const prevBtn = document.getElementById('dtsPrev');
+        const nextBtn = document.getElementById('dtsNext');
 
         function goTo(idx) {
             currentPage = ((idx % total) + total) % total;
             track.style.transform = `translateX(${-currentPage * 100}%)`;
-
-            // Dots
             if (dotsEl) {
                 [...dotsEl.querySelectorAll('span')].forEach((d, i) => {
-                    d.style.background = i === currentPage
-                        ? '#c9a84c'
-                        : 'rgba(255,255,255,.2)';
+                    d.style.background = i === currentPage ? '#c9a84c' : 'rgba(255,255,255,.2)';
                     d.style.transform  = i === currentPage ? 'scale(1.3)' : 'scale(1)';
                 });
             }
-
-            // Кнопки
             if (prevBtn) prevBtn.style.opacity = total <= 1 ? '0' : currentPage === 0 ? '0.35' : '1';
             if (nextBtn) nextBtn.style.opacity = total <= 1 ? '0' : currentPage === total - 1 ? '0.35' : '1';
         }
 
-        // Dots
         if (dotsEl) {
             dotsEl.innerHTML = '';
             for (let i = 0; i < total; i++) {
@@ -1873,44 +2024,31 @@ function renderDailyTop(places) {
                 dot.style.cssText = `
                     display:inline-block;width:10px;height:10px;
                     border-radius:50%;margin:0 4px;cursor:pointer;
-                    transition:background .3s, transform .3s;
+                    transition:background .3s,transform .3s;
                     background:${i === 0 ? '#c9a84c' : 'rgba(255,255,255,.2)'};
-                    transform:${i === 0 ? 'scale(1.3)' : 'scale(1)'};
-                `;
-                dot.onclick = () => {
-                    goTo(i);
-                    restartAuto();
-                };
+                    transform:${i === 0 ? 'scale(1.3)' : 'scale(1)'};`;
+                dot.onclick = () => { goTo(i); restartAuto(); };
                 dotsEl.appendChild(dot);
             }
         }
 
-        // Навігація (десктоп кнопки по боках + мобайл кнопки під слайдером)
         prevBtn?.addEventListener('click', () => { goTo(currentPage - 1); restartAuto(); });
         nextBtn?.addEventListener('click', () => { goTo(currentPage + 1); restartAuto(); });
         document.getElementById('dtsPrevMob')?.addEventListener('click', () => { goTo(currentPage - 1); restartAuto(); });
         document.getElementById('dtsNextMob')?.addEventListener('click', () => { goTo(currentPage + 1); restartAuto(); });
 
-        // Авто-гортання
         function startAuto() {
             if (total <= 1) return;
             autoTimer = setInterval(() => goTo(currentPage + 1), 6000);
         }
-        function restartAuto() {
-            clearInterval(autoTimer);
-            startAuto();
-        }
+        function restartAuto() { clearInterval(autoTimer); startAuto(); }
 
-        // Свайп на мобайлі
         let touchStartX = 0;
         const viewport = grid.querySelector('.dts-viewport');
         viewport.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
         viewport.addEventListener('touchend', e => {
             const diff = touchStartX - e.changedTouches[0].clientX;
-            if (Math.abs(diff) > 50) {
-                goTo(currentPage + (diff > 0 ? 1 : -1));
-                restartAuto();
-            }
+            if (Math.abs(diff) > 50) { goTo(currentPage + (diff > 0 ? 1 : -1)); restartAuto(); }
         }, { passive: true });
 
         goTo(0);
@@ -1919,18 +2057,12 @@ function renderDailyTop(places) {
 
     init();
 
-    // ── Перемальовуємо при зміні розміру вікна
     let resizeTimer;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => {
-            clearInterval(autoTimer);
-            currentPage = 0;
-            init();
-        }, 300);
+        resizeTimer = setTimeout(() => { clearInterval(autoTimer); currentPage = 0; init(); }, 300);
     });
 }
-
 // ── Shop Search ───────────────────────────────────────────────
 async function searchShops(city, type) {
     const loader = document.getElementById('shopLoader');

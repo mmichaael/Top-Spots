@@ -517,15 +517,41 @@ body::after {
 .rv-stars { display: flex; gap: 3px; flex-shrink: 0; }
 .rv-stars span { font-size: 0.9rem; color: var(--text-3); transition: 0.3s var(--spring); }
 .rv-stars span.on { color: var(--gold); text-shadow: 0 0 10px rgba(245,158,11,0.5); }
-
 .rv-body {
   font-size: clamp(0.8rem, 2vw, 0.875rem); color: var(--text-2); line-height: 1.7;
-  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
-  overflow: hidden;
   padding-left: clamp(10px, 2vw, 14px);
   border-left: 2px solid rgba(246, 205, 92, 0.3);
   margin-bottom: clamp(14px, 3vw, 20px);
   position: relative;
+}
+
+.rv-body-text {
+
+  transition: all 0.35s ease;
+}
+
+.rv-body-text.expanded {
+  display: block;
+
+}
+
+.rv-more-btn {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--gold);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-b);
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+.rv-more-btn:hover { opacity: 1; }
+
+.review-card.expanded {
+  flex: 0 0 clamp(280px, 85vw, 360px);
 }
 
 .rv-foot { display: flex; justify-content: flex-end; }
@@ -544,7 +570,59 @@ body::after {
   transform: translateY(-2px);
 }
 .rv-like.on { border-color: var(--purple); color: var(--purple); background: rgba(205, 246, 92, 0.15); }
+.rv-orig-wrap {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
 
+.rv-orig-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    color: var(--text-3);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--font-b);
+    opacity: 0.7;
+    transition: opacity 0.2s, color 0.2s;
+}
+.rv-orig-btn:hover { opacity: 1; color: var(--gold); }
+
+.rv-orig-lang {
+    background: rgba(31,212,200,0.12);
+    border: 1px solid rgba(31,212,200,0.25);
+    border-radius: 8px;
+    padding: 1px 6px;
+    font-size: 0.65rem;
+    color: #1fd4c8;
+    letter-spacing: 0.5px;
+}
+
+.rv-orig-text {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text-3);
+    font-style: italic;
+    line-height: 1.6;
+}
+
+.rv-orig-more {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 0.7rem;
+    color: var(--gold);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+.rv-orig-more:hover { opacity: 1; }
 /* ═══════════════════════════════════════════════════
    КАРТКИ NEARBY
 ═══════════════════════════════════════════════════ */
