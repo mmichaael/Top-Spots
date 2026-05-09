@@ -95,16 +95,46 @@ document.addEventListener("DOMContentLoaded", () => {
         placeNameEl.textContent = initialName;
         document.title = initialName;
     }
+/* ── BACK BUTTON ─────────────────────────────────────────── */
+const btnWrap = document.createElement('div');
+btnWrap.style.cssText = `position:fixed;top:12px;left:12px;z-index:9999;display:flex;flex-direction:column;gap:6px;`;
 
-    /* ── BACK BUTTON ─────────────────────────────────────────── */
-    const backBtn = document.createElement('a');
-    backBtn.href = '/new-main';
-    backBtn.id = 'backToPublic';
-    backBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M15 18l-6-6 6-6"/></svg> Back`;
-    backBtn.style.cssText = `position:fixed;top:20px;left:20px;z-index:9999;display:flex;align-items:center;gap:6px;padding:10px 18px;background:rgba(5,8,15,0.85);border:1px solid rgba(201,168,76,0.3);border-radius:40px;color:#e8c97a;font-size:13px;font-weight:600;text-decoration:none;backdrop-filter:blur(12px);font-family:'Outfit',sans-serif;transition:all .25s;`;
-    backBtn.addEventListener('mouseover', () => { backBtn.style.borderColor='rgba(201,168,76,0.7)'; backBtn.style.background='rgba(5,8,15,0.95)'; });
-    backBtn.addEventListener('mouseout',  () => { backBtn.style.borderColor='rgba(201,168,76,0.3)'; backBtn.style.background='rgba(5,8,15,0.85)'; });
-    document.body.appendChild(backBtn);
+const backBtn = document.createElement('a');
+backBtn.href = '/new-main';
+backBtn.id = 'backToPublic';
+backBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M15 18l-6-6 6-6"/></svg> Home`;
+backBtn.style.cssText = `display:flex;align-items:center;gap:5px;padding:7px 13px;background:rgba(5,8,15,0.85);border:1px solid rgba(201,168,76,0.3);border-radius:40px;color:#e8c97a;font-size:11px;font-weight:600;text-decoration:none;backdrop-filter:blur(12px);font-family:'Outfit',sans-serif;transition:all .25s;`;
+backBtn.addEventListener('mouseover', () => { backBtn.style.borderColor='rgba(201,168,76,0.7)'; backBtn.style.background='rgba(5,8,15,0.95)'; });
+backBtn.addEventListener('mouseout',  () => { backBtn.style.borderColor='rgba(201,168,76,0.3)'; backBtn.style.background='rgba(5,8,15,0.85)'; });
+
+const prevBtn = document.createElement('a');
+prevBtn.id = 'backToPrev';
+prevBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M15 18l-6-6 6-6"/></svg> Previous Place`;
+prevBtn.style.cssText = `display:none;align-items:center;gap:5px;padding:7px 13px;background:rgba(5,8,15,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:40px;color:#a8a199;font-size:11px;font-weight:600;text-decoration:none;backdrop-filter:blur(12px);font-family:'Outfit',sans-serif;transition:all .25s;cursor:pointer;`;
+prevBtn.addEventListener('mouseover', () => { prevBtn.style.borderColor='rgba(255,255,255,0.25)'; prevBtn.style.background='rgba(5,8,15,0.95)'; });
+prevBtn.addEventListener('mouseout',  () => { prevBtn.style.borderColor='rgba(255,255,255,0.1)';  prevBtn.style.background='rgba(5,8,15,0.85)'; });
+
+const historyStack = JSON.parse(sessionStorage.getItem('place_history') || '[]');
+const currentUrl = window.location.href;
+
+if (!historyStack.length || historyStack[historyStack.length - 1] !== currentUrl) {
+    historyStack.push(currentUrl);
+    sessionStorage.setItem('place_history', JSON.stringify(historyStack));
+}
+
+if (historyStack.length >= 2) {
+    const prevUrl = historyStack[historyStack.length - 2];
+    prevBtn.href = prevUrl;
+    prevBtn.style.display = 'flex';
+    prevBtn.addEventListener('click', () => {
+        historyStack.pop();
+        sessionStorage.setItem('place_history', JSON.stringify(historyStack));
+    });
+}
+
+btnWrap.appendChild(backBtn);
+btnWrap.appendChild(prevBtn);
+document.body.appendChild(btnWrap);
 
     /* ═══════════════════════════════════════════════════════════
        LIGHTBOX

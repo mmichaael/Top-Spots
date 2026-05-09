@@ -801,7 +801,7 @@ dashboard: `
 
     <div class="main-options-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:44px;">
     
-      <div class="option-card tilt-card" data-page="nearby" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
+      <div class="option-card tilt-card" data-page="shopping" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
             <div style="background:rgba(12, 53, 51, 0.1);border:1px solid rgba(31,212,200,0.2);
             min-width:64px;height:64px;border-radius:20px;display:flex;align-items:center;
             justify-content:center;font-size:26px;color:#1fd4c8;"><i class="fas fa-shopping-bag"></i></div>
@@ -809,7 +809,7 @@ dashboard: `
             font-family:'Outfit',sans-serif;">Shopping</h3><p style="margin:5px 0 0;font-size:13px;
             color:#6b6560;">Places around you</p></div>
         </div>
-        <div class="option-card tilt-card" data-page="settings" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
+        <div class="option-card tilt-card" data-page="profile" style="background:rgba(255,255,255,0.025);padding:36px;border-radius:36px;display:flex;align-items:center;gap:20px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;">
             <div style="background:rgba(193, 47, 47, 0.12);border:1px solid rgba(198, 67, 37, 0.2);
             min-width:64px;height:64px;border-radius:20px;display:flex;align-items:center;
             justify-content:center;font-size:26px;color:#e8c97a;"><i class="fas fa-user"></i></div>
@@ -1043,6 +1043,9 @@ profile: `
                             <span style="color:#fff;font-size:10px;font-weight:600;">Change</span>
                         </div>
                     </div>
+                     <button id="deleteAvatarBtn" style="display:none;position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,0.85);border:none;cursor:pointer;z-index:3;align-items:center;justify-content:center;padding:0;">
+        <i class="fas fa-times" style="color:#fff;font-size:10px;"></i>
+    </button>
                     <div id="avatarStatus" style="position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:11px;white-space:nowrap;font-weight:600;"></div>
                 </div>
                 <div class="profile-titles">
@@ -1186,7 +1189,7 @@ settings: `
             <div class="action-grid">
                 <div class="action-box"><div class="action-text"><h4>Change Password</h4><p>Update your password for security</p></div><button class="action-btn" id="openChangePasswordBtn">Update</button></div>
                 <div class="action-box"><div class="action-text"><h4>Account Email</h4><p id="settingsEmail" style="word-break:break-all;">—</p></div></div>
-                <div class="action-box"><div class="action-text"><h4>Download Data</h4><p>Get a copy of your profile as JSON</p></div><button class="action-btn secondary" id="downloadDataBtn"><i class="fas fa-download"></i></button></div>
+
                 <div class="action-box danger-zone"><div class="action-text"><h4 class="text-danger">Delete Account</h4><p>This will permanently delete your data</p></div><button class="action-btn danger" id="deleteAccountBtn">Delete</button></div>
             </div>
             <form id="changePasswordForm" style="display:none;margin-top:28px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06);">
@@ -1249,12 +1252,11 @@ let debounceTimer, isInitialLoad = false;
 const defaultCities = [
     { name:"London",    place_id:"ChIJdd4hrwug2EcRmSrV3Vo6llI", photo:"../img/def-sity_img/london.png",    rating:4.9 },
     { name:"Dubai",     place_id:"ChIJRcbZaklDXz4RYlEphFBu5r0", photo:"../img/def-sity_img/dubai.png",   rating:4.7 },
-    { name:"Paris",     place_id:"ChIJD7fiBh9u5kcRYJSMaMOCvaQ", photo:"../img/def-sity_img/paris.png",    rating:4.9 },
     { name:"New York",  place_id:"ChIJOwg_06VPwokRYv534QaPC8g", photo:"../img/def-sity_img/new-york.png",      rating:4.8 },
     { name:"Tokyo",     place_id:"ChIJ51cu8IcbXWARiRtXIothAS4", photo:"../img/def-sity_img/tokyo.png",    rating:4.9 },
     { name:"Barcelona", place_id:"ChIJ5TCOcRaYpBIRCmZHTz37sEQ", photo:"../img/def-sity_img/barcelone.png",rating:4.8 },
     { name:"Rome",      place_id:"ChIJu46S-ZZhLxMROG5lkwZ3D7k", photo:"../img/def-sity_img/rome.png",    rating:4.8 },
-    { name:"Amsterdam", place_id:"ChIJVXealLU_xkcRja_At0z9AGo", photo:"../img/def-sity_img/amsterdam.png",rating:4.8 },
+    { name:"Amsterdam", place_id:"ChIJVXealLU_xkcRja_At0z9AGY", photo:"../img/def-sity_img/amsterdam.png", rating:4.8 },
 ];
 
 function filterResults(list) {
@@ -2148,14 +2150,31 @@ async function initProfilePage(){
     set('contactEmail',profile.email);
     if(profile.has_google){const b=document.getElementById('googleBadge');if(b)b.style.display='flex';}
 
+    const deleteAvatarBtn=document.getElementById('deleteAvatarBtn');
+
     function applyAvatar(url){
         const img=document.getElementById('avatarImg'),icon=document.getElementById('avatarIcon');
         if(!img||!icon)return;
-        if(!url){img.style.display='none';icon.style.display='block';return;}
-        img.onerror=()=>{img.style.display='none';icon.style.display='block';};
-        img.src=url;img.style.display='block';icon.style.display='none';
+        if(!url){
+            img.style.display='none';
+            icon.style.display='block';
+            // ховаємо кнопку delete якщо аватара нема
+            if(deleteAvatarBtn)deleteAvatarBtn.style.display='none';
+            return;
+        }
+        img.onerror=()=>{
+            img.style.display='none';
+            icon.style.display='block';
+            if(deleteAvatarBtn)deleteAvatarBtn.style.display='none';
+        };
+        img.src=url;
+        img.style.display='block';
+        icon.style.display='none';
+        // показуємо кнопку delete якщо аватар є
+        if(deleteAvatarBtn)deleteAvatarBtn.style.display='flex';
         saveAvatar(url);
     }
+
     const cached=getAvatar();
     if(cached)applyAvatar(cached);
     if(profile.avatar_url)applyAvatar(profile.avatar_url);
@@ -2170,6 +2189,7 @@ async function initProfilePage(){
         circle.addEventListener('mouseleave',()=>hoverLayer.style.display='none');
         circle.addEventListener('click',()=>fileInput?.click());
     }
+
     if(fileInput){
         fileInput.addEventListener('change',async e=>{
             const file=e.target.files[0];if(!file)return;
@@ -2189,7 +2209,24 @@ async function initProfilePage(){
         });
     }
 
-    // Tabs
+    // ── Delete avatar ──
+    if(deleteAvatarBtn){
+        deleteAvatarBtn.addEventListener('click',async e=>{
+            e.stopPropagation(); // щоб не тригернуло fileInput через circle
+            if(!confirm('Remove your avatar?'))return;
+            if(status){status.textContent='Removing...';status.style.color='#a8a199';}
+            const result=await profileFn.deleteAvatar();
+            if(result.status===200){
+                localStorage.removeItem('topspots_avatar');
+                applyAvatar(null); // скидає на іконку і ховає кнопку
+                if(status){status.textContent='✓ Removed';status.style.color='#1fd4c8';setTimeout(()=>status.textContent='',2500);}
+            } else {
+                if(status){status.textContent='✗ Error';status.style.color='#ef4444';}
+            }
+        });
+    }
+
+    // ── Tabs ──
     const tabBtns=document.querySelectorAll('.profile-tab-btn');
     tabBtns.forEach(btn=>{
         btn.addEventListener('click',()=>{
@@ -2201,7 +2238,7 @@ async function initProfilePage(){
         });
     });
 
-    // Edit mode
+    // ── Edit mode ──
     const editBtn=document.getElementById('editProfileBtn');
     const viewMode=document.getElementById('profileViewMode');
     const editMode=document.getElementById('profileEditMode');
@@ -2493,19 +2530,7 @@ async function initSettingsPage(){
         else{if(ans)ans.textContent=result.data?.message||'Failed to change password.';}
     });
 
-    document.getElementById('downloadDataBtn')?.addEventListener('click',async function(){
-        this.disabled=true;
-        try{
-            const payload={exportedAt:new Date().toISOString(),profile:profile||{},settings:settings||{}};
-            const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
-            const url=URL.createObjectURL(blob);
-            const a=document.createElement('a');a.href=url;
-            a.download=`topspots-profile-${profile?.username||'data'}.json`;
-            document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
-            showToast('File ready for download','success');
-        }catch{showToast('Failed to prepare download','error');}
-        this.disabled=false;
-    });
+
 }
 
 // ============================================================

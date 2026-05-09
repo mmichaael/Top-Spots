@@ -60,18 +60,21 @@ input,textarea { font-family:inherit; }
 input::-ms-clear { display:none; }
 h1,h2,h3,h4,h5,h6 { font-family:'Outfit',sans-serif; line-height:1.15; }
 
-html,body {
-  height:100%; width:100%;
-  /* Забороняємо горизонтальний скрол глобально */
-  overflow-x:hidden;
-  font-family:'Outfit',sans-serif;
-  font-size:16px;
-  line-height:1.6;
-  color:var(--t1);
-  background:var(--ink);
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  scroll-behavior:smooth;
+html, body {
+  height: 100%; width: 100%;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--t1);
+  background: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+/* Горизонтальний скрол блокуємо тут, а не на body */
+body {
+  overflow-x: clip; /* clip замість hidden — не ламає скролбар */
 }
 
 /* Ambient light bleed */
@@ -118,7 +121,7 @@ body::before {
 .main__header {
   position:fixed; top:0; left:0; right:0;
   z-index:200;
-  height:87px;
+  height: 107px;
   padding:0 48px;
   display:flex; align-items:center; justify-content:space-between;
   background:rgba(5,8,15,0.75);
@@ -142,13 +145,26 @@ body::before {
   animation:headerShimmer 6s ease-in-out infinite;
 }
 
-.logo_video_header {
-  max-height:38px;
-  filter:drop-shadow(0 0 10px rgba(201,168,76,0.45));
-  transition:filter .35s;
-  margin-top: -80px;
+.logo_img_block {
+    width: 180px;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
 }
-.logo_video_header:hover { filter:drop-shadow(0 0 22px rgba(201,168,76,0.85)); }
+.logo_img {
+    width: 280px;
+    height: auto;
+    max-height: 100px;
+    object-fit: contain;
+    filter: brightness(1.1);
+    display: block;
+    margin-bottom: 12px; /* add space below logo to prevent text overlap */
+}
+.logo_img img{
+    width: 100%;
+    height: auto;
+}
 
 .header__topspot {
   font-family:'Outfit',sans-serif;
@@ -280,7 +296,7 @@ body::before {
 }
 
 .search-bar {
-  width:100%; max-width:920px;
+  width:100%; max-width:1020px;
   display:flex; flex-direction:column; gap:22px;
   padding:30px 32px 26px;
   border-radius:var(--r4);
@@ -1009,7 +1025,7 @@ body::before {
   .cat-card { min-height:160px; }
 }
 
-@media (max-width: 992px) {
+@media (max-width: 1007px) {
     /* 1. ОБОВ'ЯЗКОВО вмикаємо видимість бургера */
     .burger {
         display: flex !important; /* Без цього кнопки просто нема на екрані */
@@ -1220,32 +1236,27 @@ body::before {
   .scroll-button  { width:32px; height:32px; font-size:14px; }
   .progress-bar-container { padding:0 36px; }
 
-  /* ═══ CAT CARDS: 1 в ряд на маленькому телефоні ═══ */
   .theme-cards,
   .cat-cards-grid,
   [class*="cat-grid"],
   [class*="categories-grid"] {
-    grid-template-columns:1fr;
-    gap:12px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
   }
   .cat-card {
-    min-height:130px;
-    padding:22px 20px !important;
-    /* Горизонтальний layout: іконка ліворуч, текст праворуч */
-    display:flex !important;
-    align-items:center !important;
-    gap:16px !important;
+    min-height: 50px;        /* було 100px → вдвічі менше */
+    padding: 14px 10px;      /* було ~44px → вдвічі менше */
+    border-radius: 18px;     /* пропорційно зменшено */
   }
-  .cat-card .card-icon,
-  .cat-card i,
-  .cat-card svg {
-    font-size:32px !important;
-    flex-shrink:0;
-    width:40px;
-    text-align:center;
+  .icon-wrapper {
+    width: 44px;             /* було 68px → вдвічі */
+    height: 44px;
+    border-radius: 10px;
+    font-size: 14px;
+    margin-bottom: 8px;      /* менший відступ між іконкою і текстом */
   }
-  .cat-card h3, .cat-card .card-title { font-size:17px !important; margin-bottom:4px; }
-  .cat-card p, .cat-card .card-desc   { font-size:13px !important; line-height:1.4; }
+  .cat-card h3, .cat-card .card-title,
+  .cat-label { font-size: 12px !important; }
 
   /* AI */
   .ai-chat-header { padding:10px 14px; }

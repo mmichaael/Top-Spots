@@ -2186,7 +2186,20 @@ uploadAvatar = async (req, res) => {
         return res.status(500).json({ message: 'Server error' });
     }
 };
-
+deleteAvatar = async (req, res) => {
+    try {
+        const email = req.email;
+        if (!email) return res.status(401).json({ message: 'Unauthorized' });
+        
+        await pool.query(`UPDATE "Users" SET avatar_url = $1 WHERE email = $2`, [null, email]);
+        
+        console.log(`deleteAvatar: ${email} → avatar removed`);
+        return res.status(200).json({ message: 'Avatar deleted' }); // ← цього не було
+    } catch (error) {
+        console.log('DeleteAvatar error:', error.message);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
  
 changeUserPassword = async (req, res) => {
     try {

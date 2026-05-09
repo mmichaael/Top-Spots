@@ -429,7 +429,12 @@ class profileFunctionsHandler {
             return { status: res.status, data: await res.json() };
         } catch (err) { console.log(`uploadAvatar error: ${err.message}`); return { status: 500, data: null }; }
     };
-
+deleteAvatar = async () => {
+    try {
+        const res = await fetch('/api/user/avatar', { method: 'DELETE', credentials: 'include' });
+        return { status: res.status, data: await res.json() };
+    } catch (err) { console.log(`deleteAvatar error: ${err.message}`); return { status: 500, data: null }; }
+};
     changePassword = async (currentPassword, newPassword) => {
         try {
             const res = await fetch('/api/user/change-password', {

@@ -1,6 +1,5 @@
 import { mainPageFunctionsHandler } from './functions.js';
 
-
 // ============================================================
 // AUTH GUARD
 // ============================================================
@@ -90,16 +89,10 @@ async function requireAuth(featureName, action) {
 // MAIN PAGE LOGIC
 // ============================================================
 
-
-
-
-
-// 1. Елементи
 const burger = document.getElementById("burger");
 const navMenu = document.getElementById("navMenu");
 const body = document.body;
 
-// 2. Універсальна функція закриття бургера (щоб не дублювати)
 function closeBurger() {
     if (navMenu.classList.contains("active")) {
         navMenu.classList.remove("active");
@@ -108,32 +101,28 @@ function closeBurger() {
     }
 }
 
-// 3. Обробка ВСІХ кнопок у хедері (десктоп + бургер)
-// Вибираємо всі кнопки всередині .header_list та окрему кнопку SignUp
-document.querySelectorAll('.header-ul_element button, #SignUp').forEach(btn => {
+// SignUp — просто редірект, без модалки
+document.getElementById('SignUp')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = AUTH_URL + '?mode=register';
+});
+
+// Кнопки навігації хедера — перевірка авторизації
+document.querySelectorAll('.header-ul_element button').forEach(btn => {
     btn.addEventListener("click", async (e) => {
         e.preventDefault();
-        
-        // Отримуємо назву розділу для контексту (якщо треба)
         const sectionName = btn.innerText || btn.getAttribute('data-section');
-
-        // Викликаємо твою функцію перевірки
         await requireAuth(`access ${sectionName}`, () => {
-            // Цей код виконається ТІЛЬКИ якщо юзер залогінений
             console.log("Доступ дозволено до:", sectionName);
             closeBurger();
-            // Тут може бути редірект або скрол, якщо треба
         });
-        
-        // Якщо requireAuth викинув вікно реєстрації, 
-        // закриваємо бургер, щоб він не перекривав попап
         if (navMenu.classList.contains("active")) {
             closeBurger();
         }
     });
 });
 
-// 4. Стандартна логіка відкриття/закриття самого бургера
+// Бургер відкрити/закрити
 if (burger && navMenu) {
     burger.addEventListener("click", () => {
         const isOpen = navMenu.classList.toggle("active");
@@ -141,6 +130,7 @@ if (burger && navMenu) {
         body.style.overflow = isOpen ? "hidden" : "";
     });
 }
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("%c[SYSTEM]: Application started", "color: #10b981; font-weight: bold;");
     
@@ -151,17 +141,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const container = document.querySelector(".scroll-container");
 
     const cities = [
-        { name: "London", place_id: "ChIJdd4hrwug2EcRmSrV3Vo6llI", photo: "../img/def-sity_img/london.png", rating: 4.9 },
-        { name: "Dubai", place_id: "ChIJRcbZaklDXz4RYlEphFBu5r0", photo: "../img/def-sity_img/dubai.png", rating: 4.7 },
-        { name: "Paris", place_id: "ChIJD7fiBh9u5kcRYJSMaMOCvaQ", photo: "../img/def-sity_img/paris.png", rating: 4.9 },
-        { name: "New York", place_id: "ChIJOwg_06VPwokRYv534QaPC8g", photo: "../img/def-sity_img/new-york.png", rating: 4.8 },
-        { name: "Tokyo", place_id: "ChIJ51cu8IcbXWARiRtXIothAS4", photo: "../img/def-sity_img/tokyo.png", rating: 4.9 },
+        { name: "London",    place_id: "ChIJdd4hrwug2EcRmSrV3Vo6llI", photo: "../img/def-sity_img/london.png",    rating: 4.9 },
+        { name: "Dubai",     place_id: "ChIJRcbZaklDXz4RYlEphFBu5r0", photo: "../img/def-sity_img/dubai.png",     rating: 4.7 },
+        { name: "Paris",     place_id: "ChIJD7fiBh9u5kcRYJSMaMOCvaQ", photo: "../img/def-sity_img/paris.png",     rating: 4.9 },
+        { name: "New York",  place_id: "ChIJOwg_06VPwokRYv534QaPC8g", photo: "../img/def-sity_img/new-york.png",  rating: 4.8 },
+        { name: "Tokyo",     place_id: "ChIJ51cu8IcbXWARiRtXIothAS4", photo: "../img/def-sity_img/tokyo.png",     rating: 4.9 },
         { name: "Barcelona", place_id: "ChIJ5TCOcRaYpBIRCmZHTz37sEQ", photo: "../img/def-sity_img/barcelone.png", rating: 4.8 },
-        { name: "Rome", place_id: "ChIJu46S-ZZhLxMROG5lkwZ3D7k", photo: "../img/def-sity_img/rome.png", rating: 4.8 },
+        { name: "Rome",      place_id: "ChIJu46S-ZZhLxMROG5lkwZ3D7k", photo: "../img/def-sity_img/rome.png",     rating: 4.8 },
         { name: "Amsterdam", place_id: "ChIJVXealLU_xkcRja_At0z9AGo", photo: "../img/def-sity_img/amsterdam.png", rating: 4.8 }
     ];
 
-    // Рендер карток з обробкою авторизації
+    // ── Картки міст ──
     function renderMainCards() {
         if (!container) return;
         
@@ -177,12 +167,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `).join('');
 
-        // Додаємо івент на кожну картку
         container.querySelectorAll('.city-card').forEach(card => {
             card.addEventListener('click', async () => {
                 const placeId = card.getAttribute('data-id');
                 console.log(`[CLICK]: Card ${placeId} clicked. Checking auth...`);
-                
                 await requireAuth('view place details', () => {
                     window.location.href = `/html/details.html?id=${placeId}`;
                 });
@@ -190,7 +178,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Рендер підказок пошуку (також з перевіркою)
+    // ── Категорії — requireAuth при кліку ──
+    function initCatCards() {
+        document.querySelectorAll('.cat-card').forEach(card => {
+            card.addEventListener('click', async () => {
+                const categoryName = card.querySelector('.cat-label, h3, .card-title')?.textContent?.trim() || 'this category';
+                await requireAuth(categoryName, () => {
+                    console.log('[CAT]: Access granted to', categoryName);
+                    // сюди можна додати редірект або логіку категорії
+                });
+            });
+        });
+    }
+
+function initAiGuard() {
+    // Захист кнопок-підказок
+    document.querySelectorAll('.ai-suggestions .suggestion').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await requireAuth('AI Assistant', () => {
+                // дозволяємо клік — вставляємо текст в інпут і відправляємо
+                const chatInput = document.getElementById('chatInput');
+                if (chatInput) {
+                    chatInput.value = btn.textContent.trim();
+                    document.getElementById('sendBtn')?.click();
+                }
+            });
+        });
+    });
+
+    // Захист кнопки Send
+    document.getElementById('sendBtn')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await requireAuth('AI Assistant', () => {
+            // тут викликай свою оригінальну логіку відправки
+            // наприклад: sendMessage();
+        });
+    }, true); // true = capture, щоб спрацювало раніше за оригінальний handler
+
+    // Захист інпуту — при фокусі
+    document.getElementById('chatInput')?.addEventListener('focus', async (e) => {
+        const ok = await isLoggedIn();
+        if (!ok) {
+            e.target.blur();
+            openAuthModal('AI Assistant');
+        }
+    });
+}
+    // ── Пошук ──
     function renderSearchSuggestions(query) {
         if (!suggestionsList) return;
         const filtered = cities.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
@@ -198,7 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (filtered.length > 0) {
             suggestionsList.innerHTML = filtered.map(city => `
                 <div class="suggestion-item" data-id="${city.place_id}">
-                    <img src="${city.photo}" alt="${city.name}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;">
+                    <img src="${city.photo}" alt="${city.name}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">
                     <div class="suggestion-info">
                         <div class="suggestion-name">${city.name}</div>
                         <div class="suggestion-rating">⭐ ${city.rating}</div>
@@ -218,7 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             suggestionsList.classList.add('active');
             suggestionsList.style.display = 'block';
         } else {
-            suggestionsList.innerHTML = '<div style="padding:15px; color:#666;">No results found</div>';
+            suggestionsList.innerHTML = '<div style="padding:15px;color:#666;">No results found</div>';
         }
     }
 
@@ -238,19 +275,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // ── Ініціалізація ──
     renderMainCards();
+    initCatCards();
+    initAiGuard();
 
-    // Логіка кнопок скролу
+    // ── Скрол кнопки ──
     const rightBtn = document.querySelector(".scroll-button.right");
-    const leftBtn = document.querySelector(".scroll-button.left");
+    const leftBtn  = document.querySelector(".scroll-button.left");
     if (container) {
         const getStep = () => document.querySelector(".city-card")?.offsetWidth + 20 || 300;
-        rightBtn?.addEventListener("click", () => container.scrollBy({ left: getStep(), behavior: "smooth" }));
-        leftBtn?.addEventListener("click", () => container.scrollBy({ left: -getStep(), behavior: "smooth" }));
+        rightBtn?.addEventListener("click", () => container.scrollBy({ left:  getStep(), behavior: "smooth" }));
+        leftBtn?.addEventListener("click",  () => container.scrollBy({ left: -getStep(), behavior: "smooth" }));
     }
-
-
-
-
-
 });

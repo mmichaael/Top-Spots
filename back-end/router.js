@@ -68,7 +68,10 @@ router.patch('/api/user/profile',
     controller.checkValidityAccessToken, 
     controller.updateProfile
 );
-
+router.delete('/api/user/avatar',
+    controller.checkValidityAccessToken,
+    controller.deleteAvatar
+);
 router.post('/api/user/avatar',         
     controller.checkValidityAccessToken, 
     (req, res, next) => controller.avatarUpload.single('avatar')(req, res, next), 
