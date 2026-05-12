@@ -1,10 +1,3 @@
-/**
- * Rate Limiting Middleware
- * Protects against spam and brute-force attacks
- * - 7 requests per minute per user per search endpoint
- * - 100 requests per 10 minutes per user globally
- * - IP-based blocking after repeated violations
- */
 
 class RateLimiter {
     constructor() {
@@ -96,7 +89,7 @@ class RateLimiter {
 
     /**
      * Main rate limiting check
-     * @param {string} endpoint - Endpoint identifier (e.g., 'search', 'shop-search')
+     * @param {string} endpoint
      * @param {number} limit - Request limit for this endpoint
      * @param {number} window - Time window in milliseconds
      */

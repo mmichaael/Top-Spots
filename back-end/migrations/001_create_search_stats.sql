@@ -1,4 +1,4 @@
--- Міграція для таблиці статистики пошуків
+
 CREATE TABLE IF NOT EXISTS "SearchStats" (
     search_stat_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES "Users"(user_id) ON DELETE CASCADE,
@@ -9,6 +9,6 @@ CREATE TABLE IF NOT EXISTS "SearchStats" (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Опціонально: індекси для швидкого вибірки по користувачу
+
 CREATE INDEX IF NOT EXISTS idx_searchstats_user_id ON "SearchStats"(user_id);
 CREATE INDEX IF NOT EXISTS idx_searchstats_query ON "SearchStats"(query_text);

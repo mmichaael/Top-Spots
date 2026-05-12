@@ -105,7 +105,6 @@ html, body {
     font-family: 'DM Sans', sans-serif;
     background: var(--bg);
     color: var(--text);
-    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -116,7 +115,7 @@ html, body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     position: relative;
-    overflow: hidden;
+
 }
 
 /* ── LEFT PANEL ────────────────────────────────────────── */

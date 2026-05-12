@@ -1283,13 +1283,16 @@ async function updateSliderCards(list, isDefault=false) {
     if (!c) return;
     c.innerHTML='';
     list.slice(0,60).forEach(item=>{
+        const photo = isDefault ? item.photo : item.photo_url;
+        if (!photo) return; // нема фото — пропускаємо
+
         const card=document.createElement('div');
         card.className='city-card show';
         const name=item.name||item.description||'Place';
         card.innerHTML=`
             <div class="image-wrapper" style="height:185px;overflow:hidden;background:#090d18;position:relative;">
                 <div class="loading-spinner" style="position:absolute;width:100%;height:100%;z-index:10;">${cardLoaderHTML()}</div>
-                <img src="${modernPlaceholder}" class="city-image" style="width:100%;height:100%;object-fit:cover;opacity:0;">
+                <img class="city-image" style="width:100%;height:100%;object-fit:cover;opacity:0;">
             </div>
             <div class="city-content">
                 <h3 class="city-name"></h3>
@@ -1298,17 +1301,18 @@ async function updateSliderCards(list, isDefault=false) {
             </div>`;
         const img=card.querySelector('.city-image');
         const spinner=card.querySelector('.loading-spinner');
-        img.onload=()=>{spinner.style.display='none';img.style.opacity='1';};
-        img.onerror=()=>{spinner.style.display='none';img.src=NO_PHOTO;img.style.opacity='1';};
+        img.onload=()=>{spinner.style.display='none'; img.style.opacity='1';};
+        img.onerror=()=>{
+            // фото є але не завантажилось — ховаємо картку
+            card.style.display='none';
+        };
         card.querySelector('.city-name').textContent=name.length>40?name.slice(0,37)+'...':name;
         card.onclick=()=>{ window.location.href=`/html/city_page.html?placeId=${item.place_id}&name=${encodeURIComponent(name)}`; };
         c.appendChild(card);
-        if (isDefault && item.photo) img.src=item.photo;
-        else if (item.photo_url) img.src=item.photo_url;
+        img.src=photo; // одна строка замість двох if
     });
     syncScrollProgress();
 }
-
 async function fetchSuggestions(query) {
     try {
         const r=await fetch('/api/places/autocomplete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:query,category:currentCategory,language:'en'})});
@@ -1326,14 +1330,19 @@ async function loadDashboardCards() {
 }
 
 function syncScrollProgress() {
-    const c=document.getElementById('cityContainer'),th=document.getElementById('scrollThumb');
-    if(!c||!th)return;
+    const c=document.getElementById('cityContainer'), th=document.getElementById('scrollThumb');
+    if(!c||!th) return;
     const max=c.scrollWidth-c.clientWidth;
     if(max<=0){th.style.width='100%';th.style.transform='translateX(0)';return;}
-    const pct=(c.scrollLeft/max)*(100-20);
-    th.style.width='20%';th.style.transform=`translateX(${pct}%)`;
+    
+    const trackWidth=th.parentElement.clientWidth;
+    const thumbWidth=trackWidth*0.2; // 20% від треку
+    const maxShift=trackWidth-thumbWidth;
+    const shift=(c.scrollLeft/max)*maxShift;
+    
+    th.style.width='20%';
+    th.style.transform=`translateX(${shift}px)`;
 }
-
 async function initDashboard() {
     const greeting=document.getElementById('dashboardGreeting');
     if (greeting) profileFn.getProfile().then(p=>{ if(p?.username) greeting.textContent=`Hello, ${p.username}! 👋`; });
@@ -1783,7 +1792,7 @@ async function loadDailyTop() {
             margin-bottom:24px;
             padding:0 4px;
         ">
-            <span style="font-size:28px;">🔥</span>
+            <span style="font-size:28px;"></span>
             <h2 class="daily-top-city" style="
                 font-size:clamp(16px,3vw,22px);
                 font-weight:700;
