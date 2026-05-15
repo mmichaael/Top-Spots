@@ -989,6 +989,14 @@ shopping: () => {
         <div id="shopResultsSection" class="shop-section" style="display:none;">
             <div class="shop-section-head">
                 <span class="shop-section-badge"><i class="fas fa-fire"></i> Results</span>
+                <div id="shopSortBtns" class="shop-sort-btns">
+  <button class="shop-sort-btn active" data-sort="desc">
+    <i class="fas fa-sort-amount-down"></i> Best first
+  </button>
+  <button class="shop-sort-btn" data-sort="asc">
+    <i class="fas fa-sort-amount-up"></i> Lowest first
+  </button>
+</div>
                 <span id="shopResultsMeta" class="shop-meta"></span>
             </div>
             <div id="shopResultsGrid" class="shop-grid"></div>
@@ -1248,17 +1256,27 @@ function initTiltCards() {
 // ============================================================
 let currentCategory = 'restaurant';
 let debounceTimer, isInitialLoad = false;
-
 const defaultCities = [
-    { name:"London",    place_id:"ChIJdd4hrwug2EcRmSrV3Vo6llI", photo:"../img/def-sity_img/london.png",    rating:4.9 },
-    { name:"Dubai",     place_id:"ChIJRcbZaklDXz4RYlEphFBu5r0", photo:"../img/def-sity_img/dubai.png",   rating:4.7 },
-    { name:"New York",  place_id:"ChIJOwg_06VPwokRYv534QaPC8g", photo:"../img/def-sity_img/new-york.png",      rating:4.8 },
-    { name:"Tokyo",     place_id:"ChIJ51cu8IcbXWARiRtXIothAS4", photo:"../img/def-sity_img/tokyo.png",    rating:4.9 },
-    { name:"Barcelona", place_id:"ChIJ5TCOcRaYpBIRCmZHTz37sEQ", photo:"../img/def-sity_img/barcelone.png",rating:4.8 },
-    { name:"Rome",      place_id:"ChIJu46S-ZZhLxMROG5lkwZ3D7k", photo:"../img/def-sity_img/rome.png",    rating:4.8 },
-    { name:"Amsterdam", place_id:"ChIJVXealLU_xkcRja_At0z9AGY", photo:"../img/def-sity_img/amsterdam.png", rating:4.8 },
-];
+    { name:"London",      place_id:"ChIJdd4hrwug2EcRmSrV3Vo6llI", photo:"../img/def-sity_img/london.png",      rating:4.9 },
+    { name:"Dubai",       place_id:"ChIJRcbZaklDXz4RYlEphFBu5r0", photo:"../img/def-sity_img/dubai.png",       rating:4.7 },
+    { name:"New York",    place_id:"ChIJOwg_06VPwokRYv534QaPC8g", photo:"../img/def-sity_img/new-york.png",    rating:4.8 },
+    { name:"Tokyo",       place_id:"ChIJ51cu8IcbXWARiRtXIothAS4", photo:"../img/def-sity_img/tokyo.png",       rating:4.9 },
+    { name:"Barcelona",   place_id:"ChIJ5TCOcRaYpBIRCmZHTz37sEQ", photo:"../img/def-sity_img/barcelone.png",  rating:4.8 },
+    { name:"Rome",        place_id:"ChIJu46S-ZZhLxMROG5lkwZ3D7k", photo:"../img/def-sity_img/rome.png",       rating:4.8 },
+    { name:"Amsterdam",   place_id:"ChIJVXealLU_xkcRja_At0z9AGY", photo:"../img/def-sity_img/amsterdam.png",  rating:4.8 },
+    { name:"Kyiv",        place_id:"ChIJBUVa4U7P1EAR_kYBF9IxSXY", photo:"../img/def-sity_img/kyiv.jpg",       rating:4.9 },
+    { name:"Istanbul",    place_id:"ChIJawhoAASnyhQR0LABvJj-zOE", photo:"../img/def-sity_img/istanbul.jpg",   rating:4.8 },
+    { name:"Singapore",   place_id:"ChIJdZOLiiMR2jERxPWrUs9peIg", photo:"../img/def-sity_img/singapore.jpg", rating:4.8 },
+    { name:"Prague",      place_id:"ChIJi3lwCZyTC0cRkEAWZg-vAAQ", photo:"../img/def-sity_img/prague.jpg",     rating:4.9 },
+    { name:"Kyoto",       place_id:"ChIJ8cM8zdaoAWARPR27azYdlsA", photo:"../img/def-sity_img/kyoto.jpg",      rating:4.9 },
+    { name:"Lisbon",      place_id:"ChIJO_PkYRozGQ0R0DaQ5L3rAAQ", photo:"../img/def-sity_img/lisbon.jpg",     rating:4.8 },
+    { name:"Los Angeles", place_id:" ChIJE9on3F3HwoAR9AhGJW_fL-I", photo:"../img/def-sity_img/los-angeles.jpg", rating:4.7 },
+    { name:"Toronto",     place_id:"ChIJpTvG15DL1IkRd8S0KlBVNTI", photo:"../img/def-sity_img/toronto.jpg",   rating:4.8 },
+    { name:"Shanghai",    place_id:"ChIJMzz1sUBwsjURoWTDI5QSlQI", photo:"../img/def-sity_img/shanghai.jpg",  rating:4.7 },
+    { name:"Yerevan",     place_id:"ChIJW4v8uNqiakARalLah655FD0", photo:"../img/def-sity_img/yerevan.jpg",   rating:4.8 },
+    { name:"Berlin",      place_id:"ChIJAVkDPzdOqEcRcDteW0YgIQQ", photo:"../img/def-sity_img/berlin.jpg",    rating:4.8 },
 
+];
 function filterResults(list) {
     if (!Array.isArray(list)) return [];
     return list.filter(i=>i.rating==null||Number(i.rating)>=4.0)
@@ -1284,7 +1302,8 @@ async function updateSliderCards(list, isDefault=false) {
     c.innerHTML='';
     list.slice(0,60).forEach(item=>{
         const photo = isDefault ? item.photo : item.photo_url;
-        if (!photo) return; // нема фото — пропускаємо
+        const fallbackPhoto = '/img/default_city.jpg';
+        const imageSrc = photo || fallbackPhoto;
 
         const card=document.createElement('div');
         card.className='city-card show';
@@ -1301,15 +1320,21 @@ async function updateSliderCards(list, isDefault=false) {
             </div>`;
         const img=card.querySelector('.city-image');
         const spinner=card.querySelector('.loading-spinner');
+        let fallbackUsed = false;
         img.onload=()=>{spinner.style.display='none'; img.style.opacity='1';};
         img.onerror=()=>{
-            // фото є але не завантажилось — ховаємо картку
-            card.style.display='none';
+            if (!fallbackUsed) {
+                fallbackUsed = true;
+                img.src = fallbackPhoto;
+                return;
+            }
+            spinner.style.display='none';
+            img.style.opacity='1';
         };
         card.querySelector('.city-name').textContent=name.length>40?name.slice(0,37)+'...':name;
         card.onclick=()=>{ window.location.href=`/html/city_page.html?placeId=${item.place_id}&name=${encodeURIComponent(name)}`; };
         c.appendChild(card);
-        img.src=photo; // одна строка замість двох if
+        img.src=imageSrc;
     });
     syncScrollProgress();
 }
@@ -1666,9 +1691,8 @@ function initNearbyPage() {
     startBtn?.addEventListener('click',performNearbySearch);
     setTimeout(()=>performNearbySearch(),500);
 }
-
 // ============================================================
-// SHOPPING PAGE - DEBUG VERSION
+// SHOPPING PAGE
 // ============================================================
 
 async function initShoppingPage() {
@@ -1738,6 +1762,81 @@ async function initShoppingPage() {
     }
 }
 
+// ── Sorting ─────────────────────────────────────────────────
+let currentShops = [];   // зберігаємо оригінальний масив
+
+function sortAndRender(direction) {
+  const sorted = [...currentShops].sort((a, b) => {
+    const ra = parseFloat(a.rating) || 0;
+    const rb = parseFloat(b.rating) || 0;
+    return direction === 'asc' ? ra - rb : rb - ra;
+  });
+
+  const grid = document.getElementById('shopResultsGrid');
+  grid.innerHTML = sorted.map((s, i) => {
+    const card = buildShopCard(s, safeGet('session', 'shopping_city') || '');
+    return card.replace('class="shop-card"',
+      `class="shop-card card-appear" style="animation-delay:${i * .07}s"`);
+  }).join('');
+
+  attachImageFallbacks(grid);
+}
+
+function initShopSort() {
+  document.getElementById('shopSortBtns')?.addEventListener('click', e => {
+    const btn = e.target.closest('.shop-sort-btn');
+    if (!btn) return;
+    document.querySelectorAll('.shop-sort-btn')
+      .forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    sortAndRender(btn.dataset.sort);
+  });
+}
+// ── Shop Search ───────────────────────────────────────────────
+async function searchShops(city, type) {
+    const loader = document.getElementById('shopLoader');
+    const resultsSection = document.getElementById('shopResultsSection');
+    const resultsGrid = document.getElementById('shopResultsGrid');
+    const meta = document.getElementById('shopResultsMeta');
+    const emptyEl = document.getElementById('shopEmpty');
+
+    loader.style.display = 'flex';
+    resultsSection.style.display = 'none';
+    emptyEl.style.display = 'none';
+    resultsGrid.innerHTML = '';
+
+    try {
+        const res = await fetch('/api/shopping/search', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ city, type, language: 'en' })
+        });
+        const data = await res.json();
+        loader.style.display = 'none';
+
+        if (!data.results?.length) {
+            emptyEl.style.display = 'flex';
+            return;
+        }
+
+        meta.textContent = `${data.results.length} stores · ${data.source === 'database' ? '📦 cached' : '🌐 live'}`;
+        resultsSection.style.display = 'block';
+      currentShops = data.results;    // 
+sortAndRender('desc');          //
+attachImageFallbacks(resultsGrid);
+initShopSort();                  
+        attachImageFallbacks(resultsGrid);
+        resultsGrid.querySelectorAll('.shop-card').forEach((card, i) => {
+            card.style.animationDelay = `${i * .07}s`;
+            card.classList.add('card-appear');
+        });
+    } catch (err) {
+        loader.style.display = 'none';
+        emptyEl.style.display = 'flex';
+        console.error('[SHOPPING]', err);
+    }
+}
 async function loadDailyTop() {
     const section = document.getElementById('shopDailyTop');
     if (!section) return;
@@ -2074,48 +2173,7 @@ function renderDailyTop(places) {
         resizeTimer = setTimeout(() => { clearInterval(autoTimer); currentPage = 0; init(); }, 300);
     });
 }
-// ── Shop Search ───────────────────────────────────────────────
-async function searchShops(city, type) {
-    const loader = document.getElementById('shopLoader');
-    const resultsSection = document.getElementById('shopResultsSection');
-    const resultsGrid = document.getElementById('shopResultsGrid');
-    const meta = document.getElementById('shopResultsMeta');
-    const emptyEl = document.getElementById('shopEmpty');
 
-    loader.style.display = 'flex';
-    resultsSection.style.display = 'none';
-    emptyEl.style.display = 'none';
-    resultsGrid.innerHTML = '';
-
-    try {
-        const res = await fetch('/api/shopping/search', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ city, type, language: 'en' })
-        });
-        const data = await res.json();
-        loader.style.display = 'none';
-
-        if (!data.results?.length) {
-            emptyEl.style.display = 'flex';
-            return;
-        }
-
-        meta.textContent = `${data.results.length} stores · ${data.source === 'database' ? '📦 cached' : '🌐 Google'}`;
-        resultsSection.style.display = 'block';
-        resultsGrid.innerHTML = data.results.map(s => buildShopCard(s, city)).join('');
-        attachImageFallbacks(resultsGrid);
-        resultsGrid.querySelectorAll('.shop-card').forEach((card, i) => {
-            card.style.animationDelay = `${i * .07}s`;
-            card.classList.add('card-appear');
-        });
-    } catch (err) {
-        loader.style.display = 'none';
-        emptyEl.style.display = 'flex';
-        console.error('[SHOPPING]', err);
-    }
-}
 
 function buildShopCard(shop, city = '') {
     const rating = shop.rating ? parseFloat(shop.rating).toFixed(1) : '—';

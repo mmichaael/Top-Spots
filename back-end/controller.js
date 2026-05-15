@@ -2410,89 +2410,141 @@ deleteUserAccount = async (req, res) => {
 
 
 
-// ─────────────────────────────────────────────────────────────
-// SHOPPING SEARCH  (global — any city worldwide)
-// ─────────────────────────────────────────────────────────────
+
 searchShops = async (req, res) => {
     const { city, type, language = 'en' } = req.body;
     if (!city || !type) return res.status(400).json({ error: 'city and type required' });
 
     const lang = language.toString().toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'en';
 
+    // ВАЖЛИВО: конвертуємо тип ОДРАЗУ
+    const typeMap = {
+        supermarket: 'supermarket', 
+        clothing: 'clothing_store',
+        electronics: 'electronics_store', 
+        pharmacy: 'pharmacy',
+        shopping_mall: 'shopping_mall', 
+        furniture: 'furniture_store',
+        sport: 'sporting_goods_store', 
+        books: 'book_store',
+        building_materials: 'hardware_store', 
+        market: 'grocery_or_supermarket'
+    };
+    const googleType = typeMap[type] || type;
+
     try {
-        // 1. Try DB cache
+        // 1. Шукаємо в базі ПО GOOGLE ТИПУ
+        const searchPattern = `%${city}%`;
+        console.log(`[SHOPPING] 🔍 DB search: city="${searchPattern}", type="${googleType}"`);
+        
         const dbResult = await pool.query(
-            `SELECT * FROM places
-             WHERE full_name ILIKE $1
+            `SELECT place_id, query_name, full_name, city, types, photo_url, rating, save_count, view_count, latitude, longitude
+             FROM places
+             WHERE (city ILIKE $1 OR full_name ILIKE $1)
                AND $2 = ANY(types)
                AND photo_url IS NOT NULL
              ORDER BY save_count DESC NULLS LAST, rating DESC NULLS LAST
-             LIMIT 10`,
-            [`%${city}%`, type]
+             LIMIT 30`,
+            [searchPattern, googleType]  // ← ТЕПЕР ШУКАЄМО ПО googleType
         );
 
-        if (dbResult.rows.length >= 5) {
+        console.log(`[SHOPPING] 📊 DB: ${dbResult.rows.length} results`);
+
+        if (dbResult.rows.length > 0) {
             const ids = dbResult.rows.map(r => r.place_id);
             await pool.query(`UPDATE places SET view_count = view_count + 1 WHERE place_id = ANY($1)`, [ids]);
-            console.log(`[SHOPPING] DB hit: ${dbResult.rows.length} for ${city}/${type}`);
+            console.log(`[SHOPPING] ✅ CACHE HIT → ${dbResult.rows.length} from DB`);
             return res.status(200).json({ results: dbResult.rows, source: 'database' });
         }
 
-        // 2. Google Text Search (global)
-        console.log(`[SHOPPING] DB miss → Google for ${city}/${type}`);
-        const typeMap = {
-            supermarket: 'supermarket', clothing: 'clothing_store',
-            electronics: 'electronics_store', pharmacy: 'pharmacy',
-            shopping_mall: 'shopping_mall', furniture: 'furniture_store',
-            sport: 'sporting_goods_store', books: 'book_store',
-            building_materials: 'hardware_store', market: 'grocery_or_supermarket'
-        };
-        const googleType = typeMap[type] || type;
-        const url = `https://maps.googleapis.com/maps/api/place/textsearch/json` +
-            `?query=${encodeURIComponent(type + ' in ' + city)}` +
-            `&type=${googleType}` +
-            `&language=${encodeURIComponent(lang)}` +
-            `&key=${process.env.GOOGLE_API_KEY}`;
+        // 2. Google API
+        console.log(`[SHOPPING] ❌ CACHE MISS → Google API...`);
+        
+        let allResults = [];
+        let nextPageToken = null;
+        let pageCount = 0;
+        
+        do {
+            const url = `https://maps.googleapis.com/maps/api/place/textsearch/json` +
+                `?query=${encodeURIComponent(type + ' in ' + city)}` +
+                `&type=${googleType}` +
+                `&language=${encodeURIComponent(lang)}` +
+                `${nextPageToken ? `&pagetoken=${nextPageToken}` : ''}` +
+                `&key=${process.env.GOOGLE_API_KEY}`;
 
-        const response = await fetch(url);
-        const data = await response.json();
+            const response = await fetch(url);
+            const data = await response.json();
 
-        if (data.status === 'ZERO_RESULTS' || !data.results?.length) {
+            if (data.status === 'ZERO_RESULTS' || !data.results?.length) {
+                break;
+            }
+
+            if (data.status !== 'OK' && data.status !== 'INVALID_REQUEST') {
+                console.error(`[SHOPPING] Google error: ${data.status}`);
+                if (pageCount === 0) {
+                    return res.status(502).json({ error: data.status, details: data.error_message });
+                }
+                break;
+            }
+
+            if (data.results?.length) {
+                allResults = allResults.concat(data.results);
+                console.log(`[SHOPPING] 📄 Page ${pageCount + 1}: +${data.results.length} (total: ${allResults.length})`);
+            }
+
+            nextPageToken = data.next_page_token;
+            pageCount++;
+
+            if (nextPageToken && allResults.length < 30) {
+                console.log(`[SHOPPING] ⏳ Waiting 2s...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
+        } while (nextPageToken && allResults.length < 30 && pageCount < 2);
+
+        if (!allResults.length) {
             return res.status(200).json({ results: [], source: 'empty' });
         }
 
-        if (data.status !== 'OK') {
-            console.error(`[SHOPPING] Google error: ${data.status} — ${data.error_message}`);
-            return res.status(502).json({ error: data.status, details: data.error_message });
-        }
-
+        // 3. Save to DB
         const saved = [];
-        for (const place of data.results.slice(0, 50)) {
+        const placesToSave = allResults.slice(0, 30);
+        console.log(`[SHOPPING] 💾 Saving ${placesToSave.length}...`);
+        
+        for (const place of placesToSave) {
             const photoUrl = place.photos?.[0]
                 ? `/api/google/photo?photoRef=${encodeURIComponent(place.photos[0].photo_reference)}&maxheight=800`
                 : null;
+            
             const inserted = await pool.query(
                 `INSERT INTO places (place_id, query_name, full_name, photo_url, rating, latitude, longitude, types, city)
                  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
                  ON CONFLICT (place_id) DO UPDATE SET
                     rating    = EXCLUDED.rating,
                     photo_url = COALESCE(EXCLUDED.photo_url, places.photo_url),
-                    city      = COALESCE(EXCLUDED.city, places.city)
+                    city      = EXCLUDED.city,
+                    types     = places.types || EXCLUDED.types
                  RETURNING *`,
                 [
-                    place.place_id, place.name, place.formatted_address,
-                    photoUrl, place.rating,
+                    place.place_id,
+                    place.name,
+                    place.formatted_address,
+                    photoUrl,
+                    place.rating,
                     place.geometry?.location?.lat,
                     place.geometry?.location?.lng,
-                    [googleType], city
+                    [googleType],  // ← зберігаємо Google тип
+                    city
                 ]
             );
             if (inserted.rows[0]) saved.push(inserted.rows[0]);
         }
+        
+        console.log(`[SHOPPING] ✅ Saved ${saved.length}`);
         return res.status(200).json({ results: saved, source: 'google' });
 
     } catch (err) {
-        console.error(`[SHOPPING] error: ${err.message}`);
+        console.error(`[SHOPPING] ❌ Error:`, err);
         return res.status(500).json({ error: 'Server error' });
     }
 };
@@ -2516,8 +2568,6 @@ _getCityFromCoords = async (latitude, longitude) => {
 
         if (!adm1) return null;
 
-        // "Kyivs'ka oblast" → split → ["Kyivs'ka", "oblast"] → беремо [0] → "Kyivs'ka"
-        // Але нам треба "Kyiv" — тому прибираємо s'ka або s'kyi з кінця першого слова
         const raw = adm1.long_name; // "Kyivs'ka oblast" або "Kyiv Oblast"
         
         // Беремо перше слово і чистимо суфікси
@@ -2564,7 +2614,7 @@ _fetchFromGoogle = async (cityName, latitude, longitude, cityId) => {
 
                 const photoRef = p.photos[0].photo_reference;
 
-                // ✅ Резолвимо реальний URL фото через redirect на бекенді
+  
                 const photoUrl = await this._resolvePhotoUrl(photoRef);
                 if (!photoUrl) continue; // якщо фото не резолвилось — пропускаємо
 

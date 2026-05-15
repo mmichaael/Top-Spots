@@ -292,13 +292,63 @@ html, body {
     padding: 40px 44px;
     position: relative;
     z-index: 5;
+    overflow: hidden;
+    /* висота підлаштовується під активну форму */
+    align-items: flex-start;
+    padding-top: 52px;
 }
 
 .main_block {
     width: 100%;
     max-width: 420px;
+    /* position: absolute — ПРИБИРАЄМО, замість цього: */
     position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
     transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Активна форма — видима, не зміщена */
+.main_block.auth_active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateX(0px);
+    pointer-events: all;
+    z-index: 2;
+}
+
+/* Неактивна — прихована і зміщена вправо */
+.main_block.auth_inactive,
+.main_block.invalidRegLogForm {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(calc(-50% + 40px));
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Щоб контейнер мав висоту — мінімальна висота */
+.main_block_for_all {
+    min-height: calc(100vh - 90px);
+}
+
+@media (max-width: 900px) {
+    .main_block {
+        left: 0;
+        transform: translateX(0);
+        position: relative;
+        top: auto;
+    }
+    .main_block.auth_active {
+        transform: translateX(0);
+    }
+    .main_block.auth_inactive,
+    .main_block.invalidRegLogForm {
+        transform: translateX(40px);
+        position: absolute;
+        top: 0; left: 0; right: 0;
+    }
 }
 
 /* ── GREETING ──────────────────────────────────────────── */
@@ -1042,4 +1092,27 @@ input[type="checkbox"] {
     box-shadow: 0 0 0 3px rgba(0,229,255,0.07),
                 0 0 24px rgba(0,229,255,0.1);
     color: #fff;
+    /* ── FIX: форми не накладаються ────────────────────────── */
+.main_block_for_all {
+    position: relative; /* потрібно для absolute дітей */
+    overflow: hidden;
+}
+
+.main_block {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    /* висота контейнера підлаштовується під активну форму */
+}
+
+/* Активна форма тримає висоту контейнера */
+.main_block.auth_active {
+    position: relative;
+}
+
+.main_block.auth_inactive,
+.main_block.invalidRegLogForm {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    pointer-events: none;
+}
 }

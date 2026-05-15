@@ -3017,19 +3017,9 @@ input:checked + .ios-slider:before { transform:translateX(22px); }
 .daily-card:nth-child(1){animation-delay:0s,0s}
 .daily-card:nth-child(2){animation-delay:.12s,.8s}
 .daily-card:nth-child(3){animation-delay:.24s,1.6s}
-@keyframes cardAppear {
-    from { opacity:0; transform:translateY(-50px) rotateX(20deg) scale(.85); }
-    to   { opacity:1; transform:translateY(0) rotateX(0) scale(1); }
-}
-@keyframes cardFloat {
-    0%,100% { transform:translateY(0) rotate(-.5deg); }
-    25%      { transform:translateY(-8px) rotate(.3deg); }
-    50%      { transform:translateY(0) rotate(-.3deg); }
-    75%      { transform:translateY(-4px) rotate(.5deg); }
-}
+
 .daily-card:hover {
-    animation: none !important;
-    transform: translateY(-16px) scale(1.05) rotateZ(-2deg);
+
     border-color: rgba(201,168,76,.5);
     box-shadow: 0 28px 64px rgba(0,0,0,.7), 0 0 40px rgba(201,168,76,.3), inset 0 1px 0 rgba(255,255,255,.1);
     z-index: 20;
@@ -3048,10 +3038,7 @@ input:checked + .ios-slider:before { transform:translateX(22px); }
     box-shadow:0 2px 8px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.4), 0 0 16px rgba(201,168,76,.5);
     z-index:3; animation:pinSpin 4s linear infinite;
 }
-@keyframes pinSpin {
-    0%,100%{transform:translateX(-50%) rotate(0deg)}
-    50%    {transform:translateX(-50%) rotate(180deg)}
-}
+
 .daily-card-rank {
     position:absolute; top:-8px; right:16px; font-size:32px; z-index:4;
     filter:drop-shadow(0 4px 12px rgba(0,0,0,.8));
@@ -3649,6 +3636,32 @@ input:checked + .ios-slider:before { transform:translateX(22px); }
     white-space: nowrap;
     box-shadow: var(--s3);
 }
+
+.shop-sort-btns {
+  display: flex; gap: 8px; margin-left: auto;
+}
+.shop-sort-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: var(--t2); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'Outfit', sans-serif;
+  transition: all 0.2s ease;
+}
+.shop-sort-btn:hover {
+  background: rgba(201,168,76,0.08);
+  border-color: rgba(201,168,76,0.25);
+  color: var(--gold2);
+}
+.shop-sort-btn.active {
+  background: var(--gold3);
+  border-color: rgba(201,168,76,0.4);
+  color: var(--gold2);
+}
+
+
 .shop-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .shop-toast.success { border-color: rgba(16,185,129,0.4); }
 .shop-toast.error   { border-color: rgba(239,68,68,0.4); }
